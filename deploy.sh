@@ -365,7 +365,7 @@ docker system prune -a
 ### 数据库备份（如果使用本地数据库）
 ```bash
 # 备份数据库
-docker exec cardesignspace-backend mysqldump -h 49.235.98.5 -u cardesignspace -p cardesignspace > backup.sql
+docker exec cardesignspace-backend mysqldump -h your-database-host -u your-db-user -p your_database_name > backup.sql
 ```
 
 ## 🆘 故障排除
@@ -376,8 +376,8 @@ docker exec cardesignspace-backend mysqldump -h 49.235.98.5 -u cardesignspace -p
 3. 查看详细错误日志: `docker-compose logs`
 
 ### 数据库连接失败
-1. 检查数据库服务器是否可达: `ping 49.235.98.5`
-2. 检查数据库端口: `telnet 49.235.98.5 3306`
+1. 检查数据库服务器是否可达: `ping your-database-host`
+2. 检查数据库端口: `telnet your-database-host 3306`
 3. 验证数据库凭据
 
 ### 域名无法访问

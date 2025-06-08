@@ -28,9 +28,7 @@ const corsOptions = {
       'http://localhost:8080',
       'http://localhost:3000',
       'http://www.cardesignspace.com',
-      'https://www.cardesignspace.com',
-      'http://49.235.98.5',
-      'https://49.235.98.5'
+      'https://www.cardesignspace.com'
     ];
     
     // 从环境变量读取额外允许的源

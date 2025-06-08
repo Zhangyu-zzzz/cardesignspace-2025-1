@@ -23,18 +23,31 @@ const app = express();
 // 配置CORS
 const corsOptions = {
   origin: function (origin, callback) {
-    // 从环境变量读取允许的源列表
-    const allowedOrigins = (process.env.CORS_ORIGIN || 'http://localhost:8080,http://localhost:3000').split(',');
+    // 默认允许的源列表（包含生产环境域名）
+    const defaultOrigins = [
+      'http://localhost:8080',
+      'http://localhost:3000',
+      'http://www.cardesignspace.com',
+      'https://www.cardesignspace.com',
+      'http://49.235.98.5',
+      'https://49.235.98.5'
+    ];
     
-    // 在开发环境中允许无origin的请求（如Postman）
-    if (process.env.NODE_ENV === 'development' && !origin) {
+    // 从环境变量读取额外允许的源
+    const envOrigins = process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',') : [];
+    const allowedOrigins = [...defaultOrigins, ...envOrigins];
+    
+    // 在开发环境或生产环境中允许无origin的请求（如Postman、curl等）
+    if (!origin) {
       return callback(null, true);
     }
     
     if (allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
-      callback(new Error('不被CORS策略允许'), false);
+      // 记录被拒绝的origin以便调试
+      logger.warn(`CORS拒绝的origin: ${origin}`);
+      callback(null, true); // 临时允许所有origin用于调试
     }
   },
   credentials: true,

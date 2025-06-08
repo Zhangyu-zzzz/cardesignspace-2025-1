@@ -1,0 +1,103 @@
+# ===========================================
+# 🚀 Car Design Space - .gitignore 配置
+# ===========================================
+
+# 🔐 敏感信息文件
+.env
+.env.local
+.env.production
+.env.development
+.env.backup
+.env.clean
+.env.temp
+env-backup/
+*.env
+
+# 📁 依赖包和构建文件
+node_modules/
+dist/
+build/
+coverage/
+.nyc_output/
+
+# 📝 日志文件
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+server.log
+
+# 📤 上传文件（可选，根据需要调整）
+uploads/
+temp/
+tmp/
+
+# 🖥️ 系统文件
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# 🔧 IDE和编辑器
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# 🚢 Docker和部署
+docker-compose.override.yml
+.docker/
+
+# 📊 测试和覆盖报告
+coverage/
+.coverage
+.pytest_cache/
+
+# 🗄️ 数据库备份文件
+*.sql
+*.dump
+*.sqlite
+*.db
+
+# 📦 包管理器锁文件（可选）
+# package-lock.json
+# yarn.lock
+
+# 🔄 PM2
+.pm2/
+
+# 📱 移动端
+.expo/
+.expo-shared/
+
+# 🌐 前端构建
+.nuxt/
+.next/
+.vuepress/dist/
+
+# 🧪 测试文件
+test-*.js
+debug-*.js
+count-*.js
+
+# 📋 临时文档
+*.md.bak
+*.html.bak
+process*.md
+process*.html
+
+# 🗂️ 压缩文件
+*.zip
+*.tar.gz
+*.rar
+
+# 🎯 项目特定排除
+低风阻/
+论坛*/
+su7_model_data.json
+test-*.js 

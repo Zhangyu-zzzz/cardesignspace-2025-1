@@ -2698,4 +2698,127 @@ export default {
   font-size: 12px;
   color: #909399;
 }
+
+/* 图片预览对话框样式 */
+.image-preview-dialog {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-height: 80vh;
+  overflow: hidden;
+}
+
+.preview-image-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  max-height: 60vh;
+  overflow: hidden;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  background: #f5f5f5;
+  margin-bottom: 20px;
+}
+
+.preview-image-container img {
+  max-width: 100%;
+  max-height: 60vh;
+  object-fit: contain;
+  border-radius: 8px;
+}
+
+.preview-info {
+  width: 100%;
+  max-width: 600px;
+  padding: 20px;
+  background: #f9f9f9;
+  border-radius: 8px;
+  margin-top: 10px;
+}
+
+.preview-info h3 {
+  margin: 0 0 15px 0;
+  color: #333;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.preview-info p {
+  margin: 8px 0;
+  color: #666;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.preview-info strong {
+  color: #333;
+  font-weight: 600;
+}
+
+/* 编辑图片对话框中的大图预览 */
+.image-preview-large {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  max-height: 400px;
+  overflow: hidden;
+  border-radius: 8px;
+  border: 1px solid #e4e7ed;
+  background: #f5f5f5;
+  padding: 10px;
+}
+
+.image-preview-large img {
+  max-width: 100%;
+  max-height: 400px;
+  object-fit: contain;
+  border-radius: 4px;
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+  .image-preview-dialog {
+    max-height: 85vh;
+  }
+  
+  .preview-image-container {
+    max-height: 50vh;
+  }
+  
+  .preview-image-container img {
+    max-height: 50vh;
+  }
+  
+  .preview-info {
+    padding: 15px;
+  }
+  
+  .image-preview-large {
+    max-height: 300px;
+  }
+  
+  .image-preview-large img {
+    max-height: 300px;
+  }
+}
+
+@media (max-width: 480px) {
+  .preview-image-container {
+    max-height: 40vh;
+  }
+  
+  .preview-image-container img {
+    max-height: 40vh;
+  }
+  
+  .image-preview-large {
+    max-height: 250px;
+  }
+  
+  .image-preview-large img {
+    max-height: 250px;
+  }
+}
 </style> 

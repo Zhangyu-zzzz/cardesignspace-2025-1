@@ -61,32 +61,15 @@
                 
                 <!-- 用户头像菜单 -->
                 <div class="user-menu-wrapper">
-                  <el-dropdown trigger="click" @command="handleUserMenuCommand" placement="bottom-end">
-                    <div class="user-profile-trigger">
-                      <el-avatar 
-                        :size="36" 
-                        :src="user.avatar" 
-                        icon="el-icon-user-solid"
-                        class="user-avatar"
-                      ></el-avatar>
-                      <span class="username">{{ user.username }}</span>
-                      <i class="el-icon-arrow-down dropdown-arrow"></i>
-                    </div>
-                    <el-dropdown-menu slot="dropdown" class="user-dropdown-menu">
-                      <el-dropdown-item command="profile">
-                        <i class="el-icon-user"></i>
-                        <span>个人主页</span>
-                      </el-dropdown-item>
-                      <el-dropdown-item command="favorites">
-                        <i class="el-icon-star-off"></i>
-                        <span>我的收藏</span>
-                      </el-dropdown-item>
-                      <el-dropdown-item divided command="logout">
-                        <i class="el-icon-switch-button"></i>
-                        <span>退出登录</span>
-                      </el-dropdown-item>
-                    </el-dropdown-menu>
-                  </el-dropdown>
+                  <div class="user-profile-trigger" @click="goToProfile">
+                    <el-avatar 
+                      :size="36" 
+                      :src="user.avatar" 
+                      icon="el-icon-user-solid"
+                      class="user-avatar clickable-avatar"
+                    ></el-avatar>
+                    <span class="username clickable-username">{{ user.username }}</span>
+                  </div>
                 </div>
               </div>
             </template>
@@ -228,6 +211,11 @@ export default {
     // 导航到我的上传页面
     goToMyUploads() {
       this.$router.push({ path: '/profile', query: { tab: 'uploads' } })
+    },
+
+    // 导航到个人主页
+    goToProfile() {
+      this.$router.push('/profile')
     }
   }
 }
@@ -460,80 +448,48 @@ export default {
 
 /* 用户菜单 */
 .user-menu-wrapper {
-  display: flex;
-  align-items: center;
+  margin-left: 20px;
 }
 
 .user-profile-trigger {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 6px 12px;
-  border-radius: 24px;
+  gap: 10px;
   cursor: pointer;
+  padding: 8px 12px;
+  border-radius: 20px;
   transition: all 0.3s ease;
-  border: 1px solid transparent;
 }
 
 .user-profile-trigger:hover {
   background-color: #f5f7fa;
-  border-color: #e4e7ed;
 }
 
 .user-avatar {
   transition: all 0.3s ease;
-  border: 2px solid #e8f4fd;
 }
 
-.user-avatar:hover {
-  border-color: #409EFF;
+.user-profile-trigger:hover .user-avatar {
+  transform: scale(1.05);
 }
 
 .username {
-  color: #2c3e50;
   font-weight: 500;
-  font-size: 14px;
-  white-space: nowrap;
-  max-width: 120px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.dropdown-arrow {
-  color: #909399;
-  font-size: 12px;
-  transition: transform 0.3s ease;
-}
-
-/* 用户下拉菜单 */
-.user-dropdown-menu {
-  border-radius: 8px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-  border: 1px solid #e4e7ed;
-  margin-top: 8px;
-}
-
-.user-dropdown-menu .el-dropdown-menu__item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 12px 16px;
+  color: #606266;
   font-size: 14px;
   transition: all 0.3s ease;
 }
 
-.user-dropdown-menu .el-dropdown-menu__item i {
-  width: 16px;
-  text-align: center;
-  color: #666;
-}
-
-.user-dropdown-menu .el-dropdown-menu__item:hover {
-  background-color: #ecf5ff;
-}
-
-.user-dropdown-menu .el-dropdown-menu__item:hover i {
+.user-profile-trigger:hover .username {
   color: #409EFF;
+}
+
+.clickable-avatar {
+  cursor: pointer;
+}
+
+.clickable-username {
+  cursor: pointer;
 }
 
 /* 响应式设计 */

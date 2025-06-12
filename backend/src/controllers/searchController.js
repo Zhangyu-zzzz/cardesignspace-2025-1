@@ -1,10 +1,8 @@
 const { Op } = require('sequelize');
-const mongoose = require('mongoose');
 const Brand = require('../models/mysql/Brand');
 const Series = require('../models/mysql/Series');
 const Model = require('../models/mysql/Model');
 const Image = require('../models/mysql/Image');
-const HotSearch = require('../models/mongodb/HotSearch');
 
 // 通用搜索功能
 exports.search = async (req, res, next) => {
@@ -20,9 +18,6 @@ exports.search = async (req, res, next) => {
     
     const offset = (page - 1) * limit;
     let results = {};
-    
-    // 记录热搜
-    await recordSearch(q);
     
     // 根据类型执行不同的搜索
     if (!type || type === 'all') {
@@ -59,24 +54,6 @@ exports.search = async (req, res, next) => {
     res.json({
       status: 'success',
       data: results
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-// 获取热门搜索
-exports.getHotSearches = async (req, res, next) => {
-  try {
-    const { limit = 10 } = req.query;
-    
-    const hotSearches = await HotSearch.find()
-      .sort({ count: -1, last_search_time: -1 })
-      .limit(parseInt(limit));
-    
-    res.json({
-      status: 'success',
-      data: hotSearches
     });
   } catch (error) {
     next(error);
@@ -299,27 +276,4 @@ async function searchImages(query, limit, offset = 0) {
       pages: Math.ceil(count / limit)
     }
   };
-}
-
-// 记录搜索词
-async function recordSearch(query) {
-  try {
-    // 清理搜索词
-    const cleanQuery = query.trim().toLowerCase();
-    
-    // 忽略太短的搜索词
-    if (cleanQuery.length < 2) return;
-    
-    // 更新或创建搜索记录
-    await HotSearch.findOneAndUpdate(
-      { keyword: cleanQuery },
-      { 
-        $inc: { count: 1 },
-        $set: { last_search_time: new Date() }
-      },
-      { upsert: true }
-    );
-  } catch (error) {
-    console.error('Error recording search:', error);
-  }
 } 

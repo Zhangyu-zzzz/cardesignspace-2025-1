@@ -1,5 +1,4 @@
 const Image = require('../models/mysql/Image');
-const ImageMetadata = require('../models/mongodb/ImageMetadata');
 const UserFavorite = require('../models/mysql/UserFavorite');
 const { sequelize } = require('../config/mysql');
 const { Op } = require('sequelize');
@@ -99,9 +98,6 @@ exports.getImageById = async (req, res, next) => {
       });
     }
     
-    // 从MongoDB获取元数据
-    const metadata = await ImageMetadata.findOne({ image_id: id });
-    
     // 检查用户是否收藏
     let isFavorite = false;
     if (req.user) {
@@ -125,7 +121,6 @@ exports.getImageById = async (req, res, next) => {
       status: 'success',
       data: {
         ...image.toJSON(),
-        metadata: metadata || {},
         is_favorite: isFavorite
       }
     });

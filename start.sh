@@ -15,7 +15,7 @@ echo -e "${GREEN}开始启动汽车官方图片网站${NC}"
 echo -e "${BLUE}====================================${NC}"
 
 # 检查数据库是否运行
-echo -e "${YELLOW}[提示] 请确保您的MySQL和MongoDB数据库已经启动${NC}"
+echo -e "${YELLOW}[提示] 请确保您的MySQL数据库已经启动${NC}"
 echo -e "${YELLOW}[提示] 请确保在backend目录下已创建.env文件并配置好数据库连接信息${NC}"
 echo
 

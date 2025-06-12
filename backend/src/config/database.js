@@ -1,5 +1,4 @@
 const { Sequelize } = require('sequelize');
-const mongoose = require('mongoose');
 const logger = require('./logger');
 
 // 加载环境变量
@@ -36,26 +35,7 @@ const testMySQLConnection = async () => {
   }
 };
 
-// MongoDB连接配置
-const connectMongoDB = async () => {
-  try {
-    const mongoURI = `mongodb://${process.env.MONGO_HOST}:${process.env.MONGO_PORT}/${process.env.MONGO_DATABASE}`;
-    
-    await mongoose.connect(mongoURI, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true
-    });
-    
-    logger.info('MongoDB连接成功');
-    return true;
-  } catch (error) {
-    logger.error('MongoDB连接失败:', error);
-    return false;
-  }
-};
-
 module.exports = {
   sequelize,
-  testMySQLConnection,
-  connectMongoDB
+  testMySQLConnection
 }; 

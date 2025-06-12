@@ -1,4 +1,4 @@
-const { Model, Series, Brand, Image } = require('../models/mysql');
+const { Model, Series, Brand, Image, User } = require('../models/mysql');
 const { Op } = require('sequelize');
 const logger = require('../config/logger');
 
@@ -82,7 +82,17 @@ exports.getModelById = async (req, res) => {
     const model = await Model.findByPk(req.params.id, {
       include: [
         { model: Brand, as: 'Brand' },
-        { model: Image, as: 'Images' }
+        { 
+          model: Image, 
+          as: 'Images',
+          include: [
+            {
+              model: User,
+              attributes: ['id', 'username', 'avatar'],
+              required: false
+            }
+          ]
+        }
       ]
     });
     
@@ -214,6 +224,13 @@ exports.getModelImages = async (req, res) => {
   try {
     const images = await Image.findAll({
       where: { modelId: req.params.id },
+      include: [
+        {
+          model: User,
+          attributes: ['id', 'username', 'avatar'],
+          required: false // 允许没有关联用户的图片
+        }
+      ],
       order: [['uploadDate', 'DESC']]
     });
     

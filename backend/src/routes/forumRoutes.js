@@ -726,6 +726,155 @@ router.get('/user-likes', authenticateToken, async (req, res) => {
   }
 });
 
+// 更新帖子
+router.put('/posts/:id', authenticateToken, upload.array('images', 9), async (req, res) => {
+  try {
+    const postId = req.params.id;
+    const userId = req.user.id;
+    const { content, topics, existingImages } = req.body;
+
+    // 检查帖子是否存在
+    const post = await Post.findByPk(postId);
+    if (!post) {
+      return res.status(404).json({ success: false, message: '帖子不存在' });
+    }
+
+    // 检查权限：只有作者或管理员可以编辑
+    if (post.userId !== userId && req.user.role !== 'admin') {
+      return res.status(403).json({ success: false, message: '没有权限编辑此帖子' });
+    }
+
+    // 验证内容
+    if (!content || content.trim().length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: '帖子内容不能为空'
+      });
+    }
+
+    console.log('收到编辑帖子请求:', {
+      postId,
+      content: content.substring(0, 50) + '...',
+      topics: topics,
+      userId: req.user.id,
+      newFilesCount: req.files ? req.files.length : 0,
+      existingImagesCount: existingImages ? JSON.parse(existingImages || '[]').length : 0
+    });
+
+    let imageUrls = [];
+    
+    // 处理保留的已有图片
+    if (existingImages) {
+      try {
+        const parsedExistingImages = JSON.parse(existingImages);
+        if (Array.isArray(parsedExistingImages)) {
+          imageUrls = [...parsedExistingImages];
+        }
+      } catch (e) {
+        console.log('已有图片解析失败，使用空数组');
+      }
+    }
+    
+    // 处理新上传的图片
+    if (req.files && req.files.length > 0) {
+      console.log(`开始上传 ${req.files.length} 张新图片到腾讯云COS...`);
+      
+      for (const file of req.files) {
+        try {
+          const imagePath = generateForumImagePath(file.originalname, req.user.id);
+          console.log('生成的图片路径:', imagePath);
+          
+          const result = await uploadToCOS(file.buffer, imagePath, file.mimetype);
+          console.log('COS上传结果:', result);
+          
+          if (result && result.url) {
+            imageUrls.push(result.url);
+            console.log('图片上传成功:', result.url);
+          } else if (result && result.Location) {
+            const imageUrl = `https://${result.Location}`;
+            imageUrls.push(imageUrl);
+            console.log('图片上传成功(兼容模式):', imageUrl);
+          } else {
+            console.error('图片上传失败 - 无效的响应:', result);
+            throw new Error('图片上传失败');
+          }
+        } catch (uploadError) {
+          console.error('图片上传到COS失败:', uploadError);
+          return res.status(500).json({
+            success: false,
+            message: `图片上传失败: ${uploadError.message}`
+          });
+        }
+      }
+    }
+
+    // 处理话题
+    let parsedTopics = [];
+    if (topics) {
+      try {
+        parsedTopics = JSON.parse(topics);
+        // 确保话题是数组且不超过3个
+        if (Array.isArray(parsedTopics)) {
+          parsedTopics = parsedTopics.slice(0, 3);
+        } else {
+          parsedTopics = [];
+        }
+      } catch (e) {
+        console.log('话题解析失败，使用空数组');
+        parsedTopics = [];
+      }
+    }
+
+    // 更新帖子
+    await post.update({
+      content: content.trim(),
+      images: imageUrls,
+      topics: parsedTopics,
+      updatedAt: new Date()
+    });
+
+    console.log('帖子更新成功:', {
+      postId: post.id,
+      userId: req.user.id,
+      totalImagesCount: imageUrls.length,
+      topicsCount: parsedTopics.length
+    });
+
+    // 获取更新后的帖子信息
+    const updatedPost = await Post.findByPk(postId, {
+      include: [
+        {
+          model: User,
+          attributes: ['id', 'username', 'avatar']
+        }
+      ]
+    });
+
+    res.json({
+      success: true,
+      message: '帖子更新成功',
+      data: {
+        id: updatedPost.id,
+        content: updatedPost.content,
+        images: updatedPost.images,
+        topics: updatedPost.topics,
+        likesCount: updatedPost.likesCount,
+        commentsCount: updatedPost.commentsCount,
+        createdAt: updatedPost.createdAt,
+        updatedAt: updatedPost.updatedAt,
+        User: updatedPost.User
+      }
+    });
+  } catch (error) {
+    console.error('更新帖子失败:', error);
+    res.status(500).json({
+      success: false,
+      message: '更新帖子失败',
+      error: error.message
+    });
+  }
+});
+
 // 删除帖子
 router.delete('/posts/:id', authenticateToken, async (req, res) => {
   try {

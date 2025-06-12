@@ -15,55 +15,175 @@
             <img :src="userAvatar" :alt="currentUser.username" />
           </div>
           <div class="editor-content">
-            <!-- 话题选择 -->
-            <div class="topic-selector">
-              <el-select
-                v-model="selectedTopics"
-                multiple
-                filterable
-                allow-create
-                default-first-option
-                placeholder="选择或创建话题 (可选)"
-                class="topic-select"
-                :multiple-limit="3"
-              >
-                <el-option
-                  v-for="topic in availableTopics"
-                  :key="topic"
-                  :label="topic"
-                  :value="topic"
-                >
-                  <span style="float: left">#{{ topic }}</span>
-                </el-option>
-              </el-select>
-            </div>
             <el-input
               type="textarea"
-              :rows="3"
-              placeholder="分享新鲜事..."
+              :rows="4"
+              placeholder="有什么新鲜事想分享给大家？"
               v-model="newPostContent"
               maxlength="500"
               show-word-limit
+              resize="none"
+              class="post-textarea"
             />
-            <div class="editor-actions">
-              <div class="editor-tools">
-                <el-upload
-                  ref="imageUpload"
-                  :file-list="imageList"
-                  :auto-upload="false"
-                  :on-change="handleImageChange"
-                  :on-remove="handleImageRemove"
-                  list-type="picture-card"
-                  accept="image/*"
-                  multiple
-                  :limit="9"
+            
+            <!-- 显示已选择的话题 -->
+            <div class="selected-topics-display" v-if="selectedTopics.length > 0">
+              <el-tag
+                v-for="topic in selectedTopics"
+                :key="topic"
+                closable
+                @close="removeSelectedTopic(topic)"
+                size="small"
+                type="primary"
+                class="topic-tag-display"
+              >
+                #{{ topic }}
+              </el-tag>
+            </div>
+
+            <!-- 上传的图片预览 -->
+            <div class="uploaded-images" v-if="imageList.length > 0">
+              <div class="image-grid">
+                <!-- 已上传的图片 -->
+                <div 
+                  v-for="(file, index) in imageList" 
+                  :key="index"
+                  class="image-item"
+                >
+                  <img :src="getImagePreviewUrl(file)" :alt="`图片${index + 1}`" />
+                  <div class="image-overlay">
+                    <i class="el-icon-close" @click="removeImage(index)"></i>
+                  </div>
+                </div>
+                
+                <!-- 添加更多图片按钮 -->
+                <div 
+                  v-if="imageList.length < 9"
+                  class="add-image-item"
+                  @click="triggerImageUpload"
                 >
                   <i class="el-icon-plus"></i>
-                </el-upload>
+                </div>
               </div>
-              <div class="publish-actions">
-                <el-button @click="clearPost">取消</el-button>
-                <el-button type="primary" @click="publishPost" :loading="publishing">
+            </div>
+            
+            <!-- 工具栏和发布按钮 -->
+            <div class="editor-toolbar">
+              <div class="toolbar-left">
+                <div class="toolbar-item">
+                  <emoji-picker @emoji-selected="handleEmojiSelect">
+                    <template slot="reference">
+                      <div class="tool-btn">
+                        <i class="el-icon-sunny"></i>
+                        <span>表情</span>
+                      </div>
+                    </template>
+                  </emoji-picker>
+                </div>
+                
+                <div class="toolbar-item">
+                  <el-upload
+                    ref="hiddenImageUpload"
+                    :file-list="[]"
+                    :auto-upload="false"
+                    :on-change="handleImageChange"
+                    accept="image/*"
+                    multiple
+                    :limit="9"
+                    :show-file-list="false"
+                    class="hidden-uploader"
+                  >
+                    <div class="tool-btn">
+                      <i class="el-icon-picture"></i>
+                      <span>图片</span>
+                    </div>
+                  </el-upload>
+                </div>
+                
+                <div class="toolbar-item">
+                  <div class="tool-btn disabled">
+                    <i class="el-icon-video-camera"></i>
+                    <span>视频</span>
+                  </div>
+                </div>
+                
+                <div class="toolbar-item">
+                  <el-popover
+                    placement="top-start"
+                    width="280"
+                    trigger="click"
+                    v-model="topicSelectorVisible"
+                    popper-class="topic-selector-popover"
+                  >
+                    <div class="topic-selector-content">
+                      <div class="topic-selector-header">
+                        <span>选择话题</span>
+                        <span class="topic-count">{{ selectedTopics.length }}/3</span>
+                      </div>
+                      <div class="selected-topics" v-if="selectedTopics.length > 0">
+                        <el-tag
+                          v-for="topic in selectedTopics"
+                          :key="topic"
+                          closable
+                          @close="removeSelectedTopic(topic)"
+                          size="small"
+                          type="primary"
+                        >
+                          #{{ topic }}
+                        </el-tag>
+                      </div>
+                      <el-input
+                        v-model="newTopicInput"
+                        placeholder="搜索或创建话题..."
+                        size="small"
+                        @keyup.enter.native="addNewTopic"
+                        clearable
+                      />
+                      <div class="available-topics" v-if="filteredTopics.length > 0">
+                        <div class="topic-list-header">推荐话题</div>
+                        <div
+                          v-for="topic in filteredTopics"
+                          :key="topic"
+                          class="topic-option"
+                          @click="selectTopic(topic)"
+                          :class="{ disabled: selectedTopics.includes(topic) }"
+                        >
+                          <span class="topic-name">#{{ topic }}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <template slot="reference">
+                      <div class="tool-btn" :class="{ active: topicSelectorVisible }">
+                        <i class="el-icon-price-tag"></i>
+                        <span>话题</span>
+                      </div>
+                    </template>
+                  </el-popover>
+                </div>
+                
+                <div class="toolbar-item">
+                  <div class="tool-btn disabled">
+                    <i class="el-icon-headset"></i>
+                    <span>音频</span>
+                  </div>
+                </div>
+                
+                <div class="toolbar-item">
+                  <div class="tool-btn disabled">
+                    <i class="el-icon-more"></i>
+                    <span>更多</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="toolbar-right">
+                <el-button 
+                  type="primary" 
+                  @click="publishPost" 
+                  :loading="publishing"
+                  class="publish-btn"
+                  :disabled="!newPostContent.trim() && imageList.length === 0"
+                >
                   发布
                 </el-button>
               </div>
@@ -132,12 +252,18 @@
                     <span class="post-time">{{ formatTime(post.createdAt) }}</span>
                   </div>
                 </div>
-                <el-dropdown v-if="canDeletePost(post)" @command="handlePostAction">
+                <!-- 帖子操作菜单（只对作者显示） -->
+                <el-dropdown v-if="canManagePost(post)" @command="handlePostAction" trigger="click">
                   <span class="el-dropdown-link">
                     <i class="el-icon-more"></i>
                   </span>
                   <el-dropdown-menu slot="dropdown">
-                    <el-dropdown-item :command="{action: 'delete', postId: post.id}">删除</el-dropdown-item>
+                    <el-dropdown-item :command="{action: 'edit', postId: post.id}">
+                      <i class="el-icon-edit"></i> 编辑
+                    </el-dropdown-item>
+                    <el-dropdown-item :command="{action: 'delete', postId: post.id}" divided>
+                      <i class="el-icon-delete"></i> 删除
+                    </el-dropdown-item>
                   </el-dropdown-menu>
                 </el-dropdown>
               </div>
@@ -158,7 +284,7 @@
                   </el-tag>
                 </div>
                 
-                <p>{{ post.content }}</p>
+                <div class="post-text" v-html="renderTextWithEmoji(post.content)"></div>
                 
                 <!-- 图片展示 -->
                 <div class="post-images" v-if="post.images && post.images.length > 0" :class="{'single-image': post.images.length === 1}">
@@ -212,23 +338,27 @@
               </div>
 
               <!-- 评论区域 -->
-              <div class="comments-section" v-if="post.showComments">
+              <div class="comments-section" v-if="post.showComments" :data-post-id="post.id">
                 <div class="comment-input" v-if="isAuthenticated">
-                  <el-input
-                    v-model="post.newComment"
-                    placeholder="写评论..."
-                    size="small"
-                  >
-                    <el-button 
-                      slot="append" 
-                      size="small" 
-                      type="primary"
-                      @click="submitComment(post)"
-                      :loading="post.commenting"
-                    >
-                      发送
-                    </el-button>
-                  </el-input>
+                  <div class="comment-input-row">
+                    <el-input
+                      v-model="post.newComment"
+                      placeholder="写评论..."
+                      size="small"
+                      class="comment-input-field"
+                    />
+                    <div class="comment-input-actions">
+                      <emoji-picker @emoji-selected="emoji => handleCommentEmojiSelect(post, emoji)" />
+                      <el-button 
+                        size="small" 
+                        type="primary"
+                        @click="submitComment(post)"
+                        :loading="post.commenting"
+                      >
+                        发送
+                      </el-button>
+                    </div>
+                  </div>
                 </div>
                 <div class="comments-list">
                   <div class="comment-item" v-for="comment in post.Comments" :key="comment.id">
@@ -248,7 +378,7 @@
                         </span>
                         <span class="comment-time">{{ formatTime(comment.createdAt) }}</span>
                       </div>
-                      <p class="comment-text">{{ comment.content }}</p>
+                      <p class="comment-text" v-html="renderTextWithEmoji(comment.content)"></p>
                       
                       <!-- 回复按钮 -->
                       <div class="comment-actions" v-if="isAuthenticated">
@@ -263,30 +393,34 @@
                       </div>
                       
                       <!-- 回复输入框 -->
-                      <div class="reply-input" v-if="comment.showReplyInput">
+                      <div class="reply-input" v-if="comment.showReplyInput" :data-comment-id="comment.id">
                         <el-input
                           v-model="comment.replyContent"
                           :placeholder="`回复 @${getUserName(comment.User)}:`"
                           size="small"
                           type="textarea"
                           :rows="2"
-                        >
-                        </el-input>
+                        />
                         <div class="reply-actions">
-                          <el-button 
-                            size="mini" 
-                            @click="cancelReply(comment)"
-                          >
-                            取消
-                          </el-button>
-                          <el-button 
-                            size="mini" 
-                            type="primary"
-                            @click="submitReply(post, comment)"
-                            :loading="comment.replying"
-                          >
-                            回复
-                          </el-button>
+                          <div class="reply-tools">
+                            <emoji-picker @emoji-selected="emoji => handleReplyEmojiSelect(comment, emoji)" />
+                          </div>
+                          <div class="reply-buttons">
+                            <el-button 
+                              size="mini" 
+                              @click="cancelReply(comment)"
+                            >
+                              取消
+                            </el-button>
+                            <el-button 
+                              size="mini" 
+                              type="primary"
+                              @click="submitReply(post, comment)"
+                              :loading="comment.replying"
+                            >
+                              回复
+                            </el-button>
+                          </div>
                         </div>
                       </div>
                       
@@ -309,7 +443,7 @@
                               </span>
                               <span class="reply-time">{{ formatTime(reply.createdAt) }}</span>
                             </div>
-                            <p class="reply-text">{{ reply.content }}</p>
+                            <p class="reply-text" v-html="renderTextWithEmoji(reply.content)"></p>
                             
                             <!-- 回复的回复按钮 -->
                             <div class="comment-actions" v-if="isAuthenticated">
@@ -324,7 +458,7 @@
                             </div>
                             
                             <!-- 回复的回复输入框 -->
-                            <div class="reply-input nested-reply" v-if="reply.showReplyInput">
+                            <div class="reply-input nested-reply" v-if="reply.showReplyInput" :data-comment-id="reply.id">
                               <el-input
                                 v-model="reply.replyContent"
                                 :placeholder="`回复 @${getUserName(reply.User)}:`"
@@ -334,20 +468,25 @@
                               >
                               </el-input>
                               <div class="reply-actions">
-                                <el-button 
-                                  size="mini" 
-                                  @click="cancelReply(reply)"
-                                >
-                                  取消
-                                </el-button>
-                                <el-button 
-                                  size="mini" 
-                                  type="primary"
-                                  @click="submitReply(post, reply)"
-                                  :loading="reply.replying"
-                                >
-                                  回复
-                                </el-button>
+                                <div class="reply-tools">
+                                  <emoji-picker @emoji-selected="emoji => handleReplyEmojiSelect(reply, emoji)" />
+                                </div>
+                                <div class="reply-buttons">
+                                  <el-button 
+                                    size="mini" 
+                                    @click="cancelReply(reply)"
+                                  >
+                                    取消
+                                  </el-button>
+                                  <el-button 
+                                    size="mini" 
+                                    type="primary"
+                                    @click="submitReply(post, reply)"
+                                    :loading="reply.replying"
+                                  >
+                                    回复
+                                  </el-button>
+                                </div>
                               </div>
                             </div>
                             
@@ -370,7 +509,7 @@
                                     </span>
                                     <span class="nested-reply-time">{{ formatTime(nestedReply.createdAt) }}</span>
                                   </div>
-                                  <p class="nested-reply-text">{{ nestedReply.content }}</p>
+                                  <p class="nested-reply-text" v-html="renderTextWithEmoji(nestedReply.content)"></p>
                                   
                                   <!-- 更深层回复的回复按钮 -->
                                   <div class="comment-actions" v-if="isAuthenticated">
@@ -385,7 +524,7 @@
                                   </div>
                                   
                                   <!-- 更深层的回复输入框 -->
-                                  <div class="reply-input nested-reply-input" v-if="nestedReply.showReplyInput">
+                                  <div class="reply-input nested-reply-input" v-if="nestedReply.showReplyInput" :data-comment-id="nestedReply.id">
                                     <el-input
                                       v-model="nestedReply.replyContent"
                                       :placeholder="`回复 @${getUserName(nestedReply.User)}:`"
@@ -395,20 +534,25 @@
                                     >
                                     </el-input>
                                     <div class="reply-actions">
-                                      <el-button 
-                                        size="mini" 
-                                        @click="cancelReply(nestedReply)"
-                                      >
-                                        取消
-                                      </el-button>
-                                      <el-button 
-                                        size="mini" 
-                                        type="primary"
-                                        @click="submitReply(post, nestedReply)"
-                                        :loading="nestedReply.replying"
-                                      >
-                                        回复
-                                      </el-button>
+                                      <div class="reply-tools">
+                                        <emoji-picker @emoji-selected="emoji => handleReplyEmojiSelect(nestedReply, emoji)" />
+                                      </div>
+                                      <div class="reply-buttons">
+                                        <el-button 
+                                          size="mini" 
+                                          @click="cancelReply(nestedReply)"
+                                        >
+                                          取消
+                                        </el-button>
+                                        <el-button 
+                                          size="mini" 
+                                          type="primary"
+                                          @click="submitReply(post, nestedReply)"
+                                          :loading="nestedReply.replying"
+                                        >
+                                          回复
+                                        </el-button>
+                                      </div>
                                     </div>
                                   </div>
                                   
@@ -431,7 +575,7 @@
                                           </span>
                                           <span class="deeper-reply-time">{{ formatTime(deepReply.createdAt) }}</span>
                                         </div>
-                                        <p class="deeper-reply-text">{{ deepReply.content }}</p>
+                                        <p class="deeper-reply-text" v-html="renderTextWithEmoji(deepReply.content)"></p>
                                         
                                         <!-- 第4层回复的回复按钮 -->
                                         <div class="comment-actions" v-if="isAuthenticated">
@@ -446,30 +590,34 @@
                                         </div>
                                         
                                         <!-- 第4层的回复输入框 -->
-                                        <div class="reply-input deeper-reply-input" v-if="deepReply.showReplyInput">
+                                        <div class="reply-input deeper-reply-input" v-if="deepReply.showReplyInput" :data-comment-id="deepReply.id">
                                           <el-input
                                             v-model="deepReply.replyContent"
                                             :placeholder="`回复 @${getUserName(deepReply.User)}:`"
                                             size="small"
                                             type="textarea"
                                             :rows="2"
-                                          >
-                                          </el-input>
+                                          />
                                           <div class="reply-actions">
-                                            <el-button 
-                                              size="mini" 
-                                              @click="cancelReply(deepReply)"
-                                            >
-                                              取消
-                                            </el-button>
-                                            <el-button 
-                                              size="mini" 
-                                              type="primary"
-                                              @click="submitReply(post, deepReply)"
-                                              :loading="deepReply.replying"
-                                            >
-                                              回复
-                                            </el-button>
+                                            <div class="reply-tools">
+                                              <emoji-picker @emoji-selected="emoji => handleReplyEmojiSelect(deepReply, emoji)" />
+                                            </div>
+                                            <div class="reply-buttons">
+                                              <el-button 
+                                                size="mini" 
+                                                @click="cancelReply(deepReply)"
+                                              >
+                                                取消
+                                              </el-button>
+                                              <el-button 
+                                                size="mini" 
+                                                type="primary"
+                                                @click="submitReply(post, deepReply)"
+                                                :loading="deepReply.replying"
+                                              >
+                                                回复
+                                              </el-button>
+                                            </div>
                                           </div>
                                         </div>
                                       </div>
@@ -617,12 +765,172 @@
   </div>
 </template>
 
+<!-- 编辑帖子对话框 -->
+<el-dialog
+  title="编辑帖子"
+  :visible.sync="editDialogVisible"
+  width="600px"
+  :close-on-click-modal="false"
+  @close="cancelEdit"
+>
+  <div class="edit-post-form">
+    <el-input
+      type="textarea"
+      :rows="4"
+      placeholder="有什么新鲜事想分享给大家？"
+      v-model="editPostContent"
+      maxlength="500"
+      show-word-limit
+      resize="none"
+    />
+    
+    <!-- 编辑中的话题 -->
+    <div class="edit-topics-display" v-if="editSelectedTopics.length > 0">
+      <el-tag
+        v-for="topic in editSelectedTopics"
+        :key="topic"
+        closable
+        @close="removeEditTopic(topic)"
+        size="small"
+        type="primary"
+        class="topic-tag-display"
+      >
+        #{{ topic }}
+      </el-tag>
+    </div>
+
+    <!-- 编辑中的图片 -->
+    <div class="edit-images" v-if="editImageList.length > 0">
+      <div class="image-grid">
+        <div 
+          v-for="(image, index) in editImageList" 
+          :key="index"
+          class="image-item"
+        >
+          <img :src="getEditImageUrl(image)" :alt="`图片${index + 1}`" />
+          <div class="image-overlay">
+            <i class="el-icon-close" @click="removeEditImage(index)"></i>
+          </div>
+        </div>
+        
+        <div 
+          v-if="editImageList.length < 9"
+          class="add-image-item"
+          @click="triggerEditImageUpload"
+        >
+          <i class="el-icon-plus"></i>
+        </div>
+      </div>
+    </div>
+
+    <!-- 编辑工具栏 -->
+    <div class="edit-toolbar">
+      <div class="edit-tools">
+        <emoji-picker @emoji-selected="handleEditEmojiSelect">
+          <template slot="reference">
+            <div class="tool-btn">
+              <i class="el-icon-sunny"></i>
+              <span>表情</span>
+            </div>
+          </template>
+        </emoji-picker>
+        
+        <el-upload
+          ref="editImageUpload"
+          :file-list="[]"
+          :auto-upload="false"
+          :on-change="handleEditImageChange"
+          accept="image/*"
+          multiple
+          :limit="9"
+          :show-file-list="false"
+          class="hidden-uploader"
+        >
+          <div class="tool-btn">
+            <i class="el-icon-picture"></i>
+            <span>图片</span>
+          </div>
+        </el-upload>
+        
+        <el-popover
+          placement="top-start"
+          width="280"
+          trigger="click"
+          v-model="editTopicSelectorVisible"
+          popper-class="topic-selector-popover"
+        >
+          <div class="topic-selector-content">
+            <div class="topic-selector-header">
+              <span>选择话题</span>
+              <span class="topic-count">{{ editSelectedTopics.length }}/3</span>
+            </div>
+            <div class="selected-topics" v-if="editSelectedTopics.length > 0">
+              <el-tag
+                v-for="topic in editSelectedTopics"
+                :key="topic"
+                closable
+                @close="removeEditTopic(topic)"
+                size="small"
+                type="primary"
+              >
+                #{{ topic }}
+              </el-tag>
+            </div>
+            <el-input
+              v-model="editNewTopicInput"
+              placeholder="搜索或创建话题..."
+              size="small"
+              @keyup.enter.native="addEditTopic"
+              clearable
+            />
+            <div class="available-topics" v-if="filteredTopics.length > 0">
+              <div class="topic-list-header">推荐话题</div>
+              <div
+                v-for="topic in filteredTopics"
+                :key="topic"
+                class="topic-option"
+                @click="selectEditTopic(topic)"
+                :class="{ disabled: editSelectedTopics.includes(topic) }"
+              >
+                <span class="topic-name">#{{ topic }}</span>
+              </div>
+            </div>
+          </div>
+          <template slot="reference">
+            <div class="tool-btn" :class="{ active: editTopicSelectorVisible }">
+              <i class="el-icon-price-tag"></i>
+              <span>话题</span>
+            </div>
+          </template>
+        </el-popover>
+      </div>
+    </div>
+  </div>
+  
+  <div slot="footer" class="dialog-footer">
+    <el-button @click="cancelEdit">取消</el-button>
+    <el-button 
+      type="primary" 
+      @click="saveEdit" 
+      :loading="editingSaving"
+      :disabled="!editPostContent.trim() && editImageList.length === 0"
+    >
+      保存
+    </el-button>
+  </div>
+</el-dialog>
+
 <script>
 import { mapState } from 'vuex'
 import axios from 'axios'
+import EmojiPicker from '@/components/EmojiPicker.vue'
+import { parseEmojiToHtml } from '@/utils/emoji'
 
 export default {
   name: 'Forum',
+  components: {
+    EmojiPicker
+  },
   data() {
     return {
       posts: [],
@@ -653,7 +961,20 @@ export default {
         posts: 0,
         users: 0,
         todayPosts: 0
-      }
+      },
+      topicSelectorVisible: false,
+      newTopicInput: '',
+      filteredTopics: [],
+      
+      // 编辑帖子
+      editDialogVisible: false,
+      editPostContent: '',
+      editSelectedTopics: [],
+      editImageList: [],
+      editingSaving: false,
+      editTopicSelectorVisible: false,
+      editNewTopicInput: '',
+      currentEditPostId: null
     }
   },
   computed: {
@@ -663,6 +984,15 @@ export default {
     },
     userAvatar() {
       return this.getUserAvatar(this.currentUser)
+    },
+    // 过滤可用话题
+    filteredTopics() {
+      if (!this.newTopicInput) {
+        return this.availableTopics.slice(0, 10) // 限制显示数量
+      }
+      return this.availableTopics.filter(topic => 
+        topic.toLowerCase().includes(this.newTopicInput.toLowerCase())
+      ).slice(0, 10)
     }
   },
   mounted() {
@@ -693,6 +1023,49 @@ export default {
     getUserName(user) {
       if (!user) return '未知用户'
       return user.username || '未知用户'
+    },
+
+    // 处理表情选择 - 发帖
+    handleEmojiSelect(emoji) {
+      this.newPostContent += emoji
+      // 聚焦到输入框
+      this.$nextTick(() => {
+        const textarea = this.$el.querySelector('.post-editor textarea')
+        if (textarea) {
+          textarea.focus()
+          // 将光标移到最后
+          textarea.setSelectionRange(this.newPostContent.length, this.newPostContent.length)
+        }
+      })
+    },
+
+    // 处理评论表情选择
+    handleCommentEmojiSelect(post, emoji) {
+      post.newComment += emoji
+      // 聚焦到评论输入框
+      this.$nextTick(() => {
+        const commentInput = this.$el.querySelector(`[data-post-id="${post.id}"] .comment-input input`)
+        if (commentInput) {
+          commentInput.focus()
+        }
+      })
+    },
+
+    // 处理回复表情选择
+    handleReplyEmojiSelect(comment, emoji) {
+      comment.replyContent += emoji
+      // 聚焦到回复输入框
+      this.$nextTick(() => {
+        const replyTextarea = this.$el.querySelector(`[data-comment-id="${comment.id}"] .reply-input textarea`)
+        if (replyTextarea) {
+          replyTextarea.focus()
+        }
+      })
+    },
+
+    // 渲染包含表情的文本
+    renderTextWithEmoji(text) {
+      return parseEmojiToHtml(text)
     },
 
     // 加载帖子列表
@@ -814,8 +1187,8 @@ export default {
 
     // 发布帖子
     async publishPost() {
-      if (!this.newPostContent.trim()) {
-        this.$message.warning('请输入帖子内容')
+      if (!this.newPostContent.trim() && this.imageList.length === 0) {
+        this.$message.warning('请输入帖子内容或上传图片')
         return
       }
 
@@ -830,13 +1203,17 @@ export default {
         }
         
         // 添加图片
-        this.imageList.forEach(file => {
+        this.imageList.forEach((file, index) => {
           if (file.raw) {
             formData.append('images', file.raw)
           }
         })
 
-        const response = await axios.post('/api/forum/posts', formData)
+        const response = await axios.post('/api/forum/posts', formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data'
+          }
+        })
 
         if (response.data.success) {
           this.$message.success('发布成功！图片已保存到云空间')
@@ -854,19 +1231,48 @@ export default {
 
     // 清空帖子编辑器
     clearPost() {
+      // 清理图片预览URL，避免内存泄漏
+      this.imageList.forEach(file => {
+        if (file.raw) {
+          URL.revokeObjectURL(URL.createObjectURL(file.raw))
+        }
+      })
+      
       this.newPostContent = ''
       this.selectedTopics = []
       this.imageList = []
-      if (this.$refs.imageUpload) {
-        this.$refs.imageUpload.clearFiles()
-      }
+      this.topicSelectorVisible = false
+      this.newTopicInput = ''
     },
 
     // 处理图片上传
     handleImageChange(file, fileList) {
-      this.imageList = fileList
+      if (file && file.raw) {
+        // 检查文件类型
+        const isImage = file.raw.type.startsWith('image/')
+        if (!isImage) {
+          this.$message.error('只能上传图片文件!')
+          return false
+        }
+        
+        // 检查文件大小 (5MB)
+        const isLt5M = file.raw.size / 1024 / 1024 < 5
+        if (!isLt5M) {
+          this.$message.error('图片大小不能超过 5MB!')
+          return false
+        }
+        
+        // 避免重复添加
+        const existingFile = this.imageList.find(item => 
+          item.name === file.name && item.size === file.size
+        )
+        if (!existingFile) {
+          this.imageList.push(file)
+        }
+      }
     },
 
+    // 移除图片（保持原方法兼容性）
     handleImageRemove(file, fileList) {
       this.imageList = fileList
     },
@@ -969,19 +1375,24 @@ export default {
 
     // 处理帖子操作
     async handlePostAction(command) {
-      if (command.action === 'delete') {
+      if (command.action === 'edit') {
+        await this.editPost(command.postId)
+      } else if (command.action === 'delete') {
         try {
-          await this.$confirm('确定要删除这个帖子吗？', '提示', {
-            confirmButtonText: '确定',
+          await this.$confirm('删除后无法恢复，确定要删除这个帖子吗？', '删除帖子', {
+            confirmButtonText: '确定删除',
             cancelButtonText: '取消',
-            type: 'warning'
+            type: 'warning',
+            dangerouslyUseHTMLString: true,
+            message: '<div style="color: #f56c6c; font-weight: 600;">此操作不可逆！</div><div style="margin-top: 8px;">删除帖子后，所有评论和互动数据都将被清除。</div>'
           })
 
           const response = await axios.delete(`/api/forum/posts/${command.postId}`)
 
           if (response.data.success) {
-            this.$message.success('删除成功')
+            this.$message.success('帖子已删除')
             this.loadPosts()
+            this.loadSidebarData() // 重新加载侧边栏数据
           }
         } catch (error) {
           if (error !== 'cancel') {
@@ -992,12 +1403,33 @@ export default {
       }
     },
 
+    // 编辑帖子
+    async editPost(postId) {
+      try {
+        // 获取帖子详情
+        const response = await axios.get(`/api/forum/posts/${postId}`)
+        
+        if (response.data.success) {
+          const post = response.data.data
+          
+          // 填充编辑表单
+          this.editPostContent = post.content
+          this.editSelectedTopics = post.topics ? [...post.topics] : []
+          this.editImageList = post.images ? post.images.map(img => ({ url: img })) : []
+          this.currentEditPostId = postId
+          
+          // 显示编辑对话框
+          this.editDialogVisible = true
+        }
+      } catch (error) {
+        console.error('获取帖子详情失败:', error)
+        this.$message.error('无法加载帖子信息')
+      }
+    },
+
     // 检查是否可以删除帖子
     canDeletePost(post) {
-      return this.isAuthenticated && (
-        post.userId === this.currentUser.id || 
-        this.currentUser.role === 'admin'
-      )
+      return this.canManagePost(post)
     },
 
     // 预览图片
@@ -1253,6 +1685,246 @@ export default {
         comment.replying = false
       }
     },
+
+    // 移除选中的话题
+    removeSelectedTopic(topic) {
+      this.selectedTopics = this.selectedTopics.filter(t => t !== topic)
+    },
+
+    // 选择话题
+    selectTopic(topic) {
+      if (!this.selectedTopics.includes(topic) && this.selectedTopics.length < 3) {
+        this.selectedTopics.push(topic)
+      }
+      this.newTopicInput = ''
+      this.topicSelectorVisible = false
+    },
+
+    // 添加新话题
+    addNewTopic() {
+      const newTopic = this.newTopicInput.trim()
+      if (newTopic && !this.selectedTopics.includes(newTopic) && this.selectedTopics.length < 3) {
+        this.selectedTopics.push(newTopic)
+        this.newTopicInput = ''
+        this.topicSelectorVisible = false
+      }
+    },
+
+    // 获取图片预览URL
+    getImagePreviewUrl(file) {
+      if (file.raw) {
+        return URL.createObjectURL(file.raw)
+      }
+      return file.url || ''
+    },
+
+    // 移除图片
+    removeImage(index) {
+      this.imageList.splice(index, 1)
+    },
+
+    // 触发图片上传
+    triggerImageUpload() {
+      if (this.imageList.length >= 9) {
+        this.$message.warning('最多只能上传9张图片')
+        return
+      }
+      this.$refs.hiddenImageUpload.$refs.input.click()
+    },
+
+    // 检查是否可以管理帖子
+    canManagePost(post) {
+      console.log('=== 权限检查调试信息 ===')
+      console.log('当前用户:', this.currentUser)
+      console.log('是否已认证:', this.isAuthenticated)
+      console.log('帖子信息:', post)
+      console.log('帖子用户ID (post.User.id):', post.User && post.User.id)
+      console.log('帖子用户ID (post.userId):', post.userId)
+      console.log('当前用户ID:', this.currentUser.id)
+      
+      const canManage = this.isAuthenticated && (
+        (post.User && post.User.id === this.currentUser.id) || 
+        (post.userId === this.currentUser.id) ||
+        this.currentUser.role === 'admin'
+      )
+      
+      console.log('是否可以管理:', canManage)
+      console.log('========================')
+      
+      return canManage
+    },
+
+    // 处理编辑表情选择
+    handleEditEmojiSelect(emoji) {
+      this.editPostContent += emoji
+      // 聚焦到输入框
+      this.$nextTick(() => {
+        const textarea = this.$el.querySelector('.edit-post-form textarea')
+        if (textarea) {
+          textarea.focus()
+          // 将光标移到最后
+          textarea.setSelectionRange(this.editPostContent.length, this.editPostContent.length)
+        }
+      })
+    },
+
+    // 处理编辑图片上传
+    handleEditImageChange(file, fileList) {
+      if (file && file.raw) {
+        // 检查文件类型
+        const isImage = file.raw.type.startsWith('image/')
+        if (!isImage) {
+          this.$message.error('只能上传图片文件!')
+          return false
+        }
+        
+        // 检查文件大小 (5MB)
+        const isLt5M = file.raw.size / 1024 / 1024 < 5
+        if (!isLt5M) {
+          this.$message.error('图片大小不能超过 5MB!')
+          return false
+        }
+        
+        // 避免重复添加
+        const existingFile = this.editImageList.find(item => 
+          item.name === file.name && item.size === file.size
+        )
+        if (!existingFile) {
+          this.editImageList.push(file)
+        }
+      }
+    },
+
+    // 移除编辑图片（保持原方法兼容性）
+    handleEditImageRemove(file, fileList) {
+      this.editImageList = fileList
+    },
+
+    // 保存编辑帖子
+    async saveEdit() {
+      if (!this.editPostContent.trim() && this.editImageList.length === 0) {
+        this.$message.warning('请输入帖子内容或上传图片')
+        return
+      }
+
+      this.editingSaving = true
+      try {
+        const formData = new FormData()
+        formData.append('content', this.editPostContent.trim())
+        
+        // 添加话题
+        if (this.editSelectedTopics.length > 0) {
+          formData.append('topics', JSON.stringify(this.editSelectedTopics))
+        }
+        
+        // 区分新图片和已有图片
+        const newImages = []
+        const existingImages = []
+        
+        this.editImageList.forEach((image) => {
+          if (image.raw) {
+            // 新上传的图片
+            newImages.push(image.raw)
+          } else if (image.url) {
+            // 已有的图片
+            existingImages.push(image.url)
+          }
+        })
+        
+        // 添加新图片
+        newImages.forEach((file) => {
+          formData.append('images', file)
+        })
+        
+        // 添加保留的已有图片
+        if (existingImages.length > 0) {
+          formData.append('existingImages', JSON.stringify(existingImages))
+        }
+
+        const response = await axios.put(`/api/forum/posts/${this.currentEditPostId}`, formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data'
+          }
+        })
+
+        if (response.data.success) {
+          this.$message.success('帖子更新成功！')
+          this.cancelEdit()
+          this.loadPosts() // 重新加载帖子列表
+          this.loadSidebarData() // 重新加载侧边栏数据
+        }
+      } catch (error) {
+        console.error('更新帖子失败:', error)
+        this.$message.error('更新帖子失败：' + (error.response && error.response.data && error.response.data.message || error.message))
+      } finally {
+        this.editingSaving = false
+      }
+    },
+
+    // 取消编辑帖子
+    cancelEdit() {
+      this.editDialogVisible = false
+      this.editPostContent = ''
+      this.editSelectedTopics = []
+      this.editImageList = []
+      this.editTopicSelectorVisible = false
+      this.editNewTopicInput = ''
+    },
+
+    // 移除编辑图片
+    removeEditImage(index) {
+      this.editImageList.splice(index, 1)
+    },
+
+    // 触发编辑图片上传
+    triggerEditImageUpload() {
+      if (this.editImageList.length >= 9) {
+        this.$message.warning('最多只能上传9张图片')
+        return
+      }
+      this.$refs.editImageUpload.$refs.input.click()
+    },
+
+    // 选择编辑话题
+    selectEditTopic(topic) {
+      if (!this.editSelectedTopics.includes(topic) && this.editSelectedTopics.length < 3) {
+        this.editSelectedTopics.push(topic)
+      }
+      this.editNewTopicInput = ''
+      this.editTopicSelectorVisible = false
+    },
+
+    // 添加新编辑话题
+    addEditTopic() {
+      const newTopic = this.editNewTopicInput.trim()
+      if (newTopic && !this.editSelectedTopics.includes(newTopic) && this.editSelectedTopics.length < 3) {
+        this.editSelectedTopics.push(newTopic)
+        this.editNewTopicInput = ''
+        this.editTopicSelectorVisible = false
+      }
+    },
+
+    // 移除编辑话题
+    removeEditTopic(topic) {
+      this.editSelectedTopics = this.editSelectedTopics.filter(t => t !== topic)
+    },
+
+    // 获取编辑图片URL
+    getEditImageUrl(image) {
+      // 如果是新上传的文件，使用createObjectURL
+      if (image.raw) {
+        return URL.createObjectURL(image.raw)
+      }
+      // 如果是已有图片的字符串
+      if (typeof image === 'string') {
+        return this.getImageUrl(image)
+      }
+      // 如果是对象形式的已有图片
+      if (image.url) {
+        return this.getImageUrl(image.url)
+      }
+      return ''
+    }
   }
 }
 </script>
@@ -1316,12 +1988,30 @@ export default {
   height: 40px;
   border-radius: 8px;
   object-fit: cover;
-  /* border: 1px solid #e4e7ed; */
-  /* box-shadow: 0 2px 8px rgba(0,0,0,0.06); */
 }
 
 .editor-content {
   flex: 1;
+}
+
+.post-textarea {
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.post-textarea .el-textarea__inner {
+  border: none !important;
+  box-shadow: none !important;
+  resize: none !important;
+  font-size: 16px;
+  line-height: 1.5;
+  padding: 0 !important;
+  background: transparent !important;
+}
+
+.post-textarea .el-textarea__inner:focus {
+  border: none !important;
+  box-shadow: none !important;
 }
 
 .topic-selector {
@@ -1346,6 +2036,7 @@ export default {
 .editor-tools {
   display: flex;
   align-items: center;
+  gap: 8px;
 }
 
 .publish-actions {
@@ -2156,30 +2847,86 @@ export default {
   color: #409EFF;
 }
 
-/* 移除Element UI默认边框样式 */
-.el-upload--picture-card {
+/* 图片上传组件样式优化 - 使用更强的优先级 */
+::v-deep .el-upload--picture-card {
   border: 1px dashed #c0c4cc !important;
   border-radius: 8px !important;
-  width: 20px !important;
-  height: 20px !important;
+  width: 80px !important;
+  height: 80px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transition: all 0.3s ease !important;
+  line-height: 1 !important;
 }
 
-.el-upload-list--picture-card .el-upload-list__item {
+::v-deep .el-upload--picture-card:hover {
+  border-color: #409EFF !important;
+}
+
+::v-deep .el-upload-list--picture-card .el-upload-list__item {
   border: 1px solid #e4e7ed !important;
   border-radius: 8px !important;
-  width: 20px !important;
-  height: 20px !important;
+  width: 120px !important;
+  height: 120px !important;
+  margin-right: 8px !important;
+  margin-bottom: 8px !important;
+  overflow: hidden !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
 }
 
-.el-upload--picture-card i {
-  font-size: 16px !important;
-  color: #8c939d;
+::v-deep .el-upload--picture-card i {
+  font-size: 20px !important;
+  color: #8c939d !important;
+  margin: 0 !important;
 }
 
-.el-upload-list--picture-card .el-upload-list__item-thumbnail {
-  width: 50% !important;
-  height: 50% !important;
+::v-deep .el-upload-list--picture-card .el-upload-list__item-thumbnail {
+  width: 100% !important;
+  height: 100% !important;
   object-fit: cover !important;
+  border-radius: 6px !important;
+}
+
+/* 修复图片预览容器 */
+::v-deep .el-upload-list--picture-card .el-upload-list__item-name {
+  display: none !important;
+}
+
+::v-deep .el-upload-list--picture-card .el-upload-list__item-status-label {
+  display: none !important;
+}
+
+::v-deep .el-upload-list--picture-card .el-upload-list__item-actions {
+  position: absolute !important;
+  top: 0 !important;
+  right: 0 !important;
+  background: rgba(0, 0, 0, 0.5) !important;
+  border-radius: 0 0 0 8px !important;
+}
+
+/* 上传列表容器优化 */
+::v-deep .el-upload-list--picture-card {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 8px !important;
+  margin: 0 !important;
+}
+
+/* 确保编辑器工具栏中的上传组件正确显示 */
+.editor-tools ::v-deep .el-upload-list {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  align-items: flex-start !important;
+  gap: 8px !important;
+}
+
+.editor-tools {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 /* 评论样式 */
@@ -2226,6 +2973,27 @@ export default {
   font-weight: 500;
 }
 
+/* 评论输入框样式 */
+.comment-input {
+  margin-bottom: 12px;
+}
+
+.comment-input-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.comment-input-field {
+  flex: 1;
+}
+
+.comment-input-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 /* 评论操作按钮 */
 .comment-actions {
   margin-top: 6px;
@@ -2251,7 +3019,18 @@ export default {
   display: flex;
   gap: 8px;
   margin-top: 8px;
-  justify-content: flex-end;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.reply-tools {
+  display: flex;
+  align-items: center;
+}
+
+.reply-buttons {
+  display: flex;
+  gap: 8px;
 }
 
 /* 回复列表样式 */
@@ -2409,5 +3188,453 @@ export default {
 .deeper-reply-input {
   margin-top: 4px;
   margin-left: 16px;
+}
+
+/* 表情相关样式 */
+.post-text {
+  color: #333;
+  line-height: 1.6;
+  margin: 0 0 12px 0;
+  font-size: 15px;
+  font-weight: 500;
+}
+
+/* 表情文本样式 */
+::v-deep .emoji-text {
+  font-size: 16px;
+  display: inline-block;
+  vertical-align: middle;
+  margin: 0 1px;
+}
+
+.comment-text ::v-deep .emoji-text {
+  font-size: 14px;
+}
+
+.reply-text ::v-deep .emoji-text {
+  font-size: 14px;
+}
+
+.nested-reply-text ::v-deep .emoji-text {
+  font-size: 14px;
+}
+
+.deeper-reply-text ::v-deep .emoji-text {
+  font-size: 14px;
+}
+
+.topic-selector-tool {
+  margin-right: 12px;
+}
+
+.topic-selector-popover {
+  padding: 16px !important;
+  border-radius: 12px !important;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12) !important;
+  border: 1px solid #e4e7ed !important;
+}
+
+.topic-selector-content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.topic-selector-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 600;
+  color: #333;
+}
+
+.topic-count {
+  font-size: 12px;
+  color: #909399;
+  background: #f5f7fa;
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+
+.selected-topics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  max-height: 60px;
+  overflow-y: auto;
+}
+
+.available-topics {
+  max-height: 150px;
+  overflow-y: auto;
+}
+
+.topic-list-header {
+  font-weight: 600;
+  color: #333;
+  font-size: 13px;
+  margin-bottom: 6px;
+}
+
+.topic-option {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 12px;
+  background-color: #f8f9fa;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-bottom: 4px;
+}
+
+.topic-option:hover:not(.disabled) {
+  background-color: #ecf5ff;
+  transform: translateX(2px);
+}
+
+.topic-option.disabled {
+  opacity: 0.5;
+  pointer-events: none;
+  background-color: #f0f0f0;
+}
+
+.topic-name {
+  font-size: 14px;
+  color: #409EFF;
+  font-weight: 500;
+}
+
+/* 工具按钮统一样式 */
+.tool-button {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  transition: all 0.3s ease;
+  color: #606266;
+  font-size: 14px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+
+.tool-button:hover {
+  background-color: #f5f7fa;
+  color: #409EFF;
+}
+
+.tool-button.active {
+  background-color: #ecf5ff;
+  color: #409EFF;
+}
+
+.tool-button i {
+  font-size: 16px;
+}
+
+.tool-button span {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.topic-selector-tool {
+  display: inline-block;
+}
+
+.new-topic-input {
+  width: 100%;
+}
+
+.add-topic-button {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  background-color: #409EFF;
+  border-radius: 4px;
+  color: white;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.add-topic-button:hover {
+  background-color: #67C23A;
+}
+
+.topic-tag-display {
+  margin-right: 4px;
+  margin-bottom: 4px;
+}
+
+/* 话题显示样式 */
+.selected-topics-display {
+  margin-top: 8px;
+  margin-bottom: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.topic-tag-display {
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.topic-tag-display:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(64, 158, 255, 0.3);
+}
+
+/* 上传图片预览区域 */
+.uploaded-images {
+  margin: 12px 0;
+}
+
+/* 工具栏样式 */
+.editor-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #f0f2f5;
+}
+
+.toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.toolbar-item {
+  display: flex;
+  align-items: center;
+}
+
+.tool-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  color: #8C9199;
+  background: transparent;
+  border: none;
+  min-width: 50px;
+}
+
+.tool-btn:hover:not(.disabled) {
+  background-color: #f8f9fa;
+  color: #409EFF;
+  transform: translateY(-2px);
+}
+
+.tool-btn.active {
+  color: #409EFF;
+  background-color: #ecf5ff;
+}
+
+.tool-btn.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.tool-btn i {
+  font-size: 18px;
+}
+
+.tool-btn span {
+  font-size: 12px;
+  font-weight: 500;
+}
+
+/* 隐藏上传组件 */
+.hidden-uploader {
+  display: inline-block;
+}
+
+.hidden-uploader .el-upload {
+  display: contents;
+}
+
+/* 发布按钮样式 */
+.toolbar-right {
+  display: flex;
+  align-items: center;
+}
+
+.publish-btn {
+  background: #409EFF !important;
+  border: none !important;
+  border-radius: 20px !important;
+  padding: 10px 24px !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  box-shadow: 0 4px 12px rgba(64, 158, 255, 0.3) !important;
+  transition: all 0.3s ease !important;
+}
+
+.publish-btn:hover:not(.is-disabled) {
+  background: #66b1ff !important;
+  transform: translateY(-2px) !important;
+  box-shadow: 0 6px 20px rgba(64, 158, 255, 0.4) !important;
+}
+
+.publish-btn.is-disabled {
+  background: #e4e7ed !important;
+  color: #c0c4cc !important;
+  box-shadow: none !important;
+}
+
+/* 图片上传器优化 */
+.image-uploader ::v-deep .el-upload--picture-card {
+  width: 100px !important;
+  height: 100px !important;
+  line-height: 100px !important;
+  border: 1px dashed #d9d9d9 !important;
+  border-radius: 8px !important;
+}
+
+.image-uploader ::v-deep .el-upload-list--picture-card .el-upload-list__item {
+  width: 100px !important;
+  height: 100px !important;
+  border-radius: 8px !important;
+}
+
+.image-uploader ::v-deep .el-upload-list--picture-card .el-upload-list__item-thumbnail {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+}
+
+.image-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 100px);
+  gap: 8px;
+  margin: 12px 0;
+}
+
+.image-item {
+  position: relative;
+  width: 100px;
+  height: 100px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid #e4e7ed;
+}
+
+.image-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.image-overlay {
+  position: absolute;
+  top: 0;
+  right: 0;
+  background: rgba(0, 0, 0, 0.6);
+  color: white;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border-bottom-left-radius: 4px;
+}
+
+.image-overlay:hover {
+  background: rgba(255, 0, 0, 0.8);
+}
+
+.add-image-item {
+  width: 100px;
+  height: 100px;
+  background-color: #f8f9fa;
+  border: 1px dashed #c0c4cc;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.add-image-item:hover {
+  border-color: #409EFF;
+  background-color: #ecf5ff;
+}
+
+.add-image-item i {
+  color: #8c939d;
+  font-size: 24px;
+}
+
+/* 编辑帖子对话框样式 */
+.edit-post-form {
+  padding: 0;
+}
+
+.edit-post-form .el-textarea__inner {
+  border: 1px solid #dcdfe6;
+  border-radius: 8px;
+  padding: 12px;
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.edit-post-form .el-textarea__inner:focus {
+  border-color: #409EFF;
+  box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.2);
+}
+
+.edit-topics-display {
+  margin: 12px 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.edit-images {
+  margin: 12px 0;
+}
+
+.edit-toolbar {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #f0f2f5;
+}
+
+.edit-tools {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.dialog-footer {
+  text-align: right;
+  padding-top: 16px;
+}
+
+.dialog-footer .el-button {
+  margin-left: 8px;
+}
+
+/* 下拉菜单图标样式 */
+.el-dropdown-menu__item i {
+  margin-right: 6px;
+  font-size: 14px;
+  color: #909399;
+}
+
+.el-dropdown-menu__item:hover i {
+  color: #409EFF;
 }
 </style> 

@@ -88,14 +88,48 @@
               <div class="image-overlay">
                 <div class="image-title" v-if="image.title">{{ image.title }}</div>
                 <div class="image-user-info" v-if="image.User">
-                  <el-avatar :size="20" :src="image.User.avatar" icon="el-icon-user-solid"></el-avatar>
-                  <span class="username">{{ image.User.username }}</span>
+                  <el-avatar 
+                    :size="20" 
+                    :src="image.User.avatar" 
+                    icon="el-icon-user-solid"
+                    @click.native="goToUserProfile(image.User.id)"
+                    class="clickable-avatar"
+                  ></el-avatar>
+                  <span 
+                    class="username clickable-username" 
+                    @click="goToUserProfile(image.User.id)"
+                  >{{ image.User.username }}</span>
                   <span class="upload-date">{{ formatDate(image.uploadDate) }}</span>
                 </div>
                 <div class="image-user-info" v-else>
                   <el-avatar :size="20" icon="el-icon-user-solid"></el-avatar>
                   <span class="username">匿名用户</span>
                   <span class="upload-date">{{ formatDate(image.uploadDate) }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 车型参数展示 -->
+        <div class="model-specs-section" v-if="orderedSpecs && orderedSpecs.length > 0">
+          <h2 class="specs-title">
+            <i class="el-icon-data-line"></i>
+            车型参数
+          </h2>
+          <div class="specs-container">
+            <div class="specs-grid">
+              <div 
+                v-for="spec in orderedSpecs" 
+                :key="spec.key" 
+                class="spec-item"
+              >
+                <div class="spec-icon">
+                  <i :class="getSpecIcon(spec.key)"></i>
+                </div>
+                <div class="spec-content">
+                  <div class="spec-label">{{ spec.label }}</div>
+                  <div class="spec-value">{{ spec.value }}</div>
                 </div>
               </div>
             </div>
@@ -124,7 +158,16 @@
       // 解析specs JSON字符串
       parsedSpecs() {
         try {
-          return this.model.specs ? JSON.parse(this.model.specs) : null;
+          // 如果specs已经是对象，直接返回
+          if (typeof this.model.specs === 'object' && this.model.specs !== null) {
+            return this.model.specs;
+          }
+          // 如果specs是字符串，尝试解析
+          if (typeof this.model.specs === 'string') {
+            return JSON.parse(this.model.specs);
+          }
+          // 其他情况返回null
+          return null;
         } catch (e) {
           console.error('解析specs失败:', e);
           return null;
@@ -148,6 +191,58 @@
       // 获取所有图片URL列表用于预览
       allImageUrls() {
         return this.filteredImages.map(img => this.getImageUrl(img));
+      },
+      // 获取车型参数
+      orderedSpecs() {
+        if (!this.parsedSpecs || typeof this.parsedSpecs !== 'object') {
+          return [];
+        }
+        
+        // 定义参数顺序和中文标签的映射，匹配数据库中的实际键名
+        const specOrder = [
+          { key: '长', label: '长', unit: 'mm' },
+          { key: 'length', label: '长', unit: 'mm' },
+          { key: '长度', label: '长', unit: 'mm' },
+          { key: '宽', label: '宽', unit: 'mm' },
+          { key: 'width', label: '宽', unit: 'mm' },
+          { key: '宽度', label: '宽', unit: 'mm' },
+          { key: '高', label: '高', unit: 'mm' },
+          { key: 'height', label: '高', unit: 'mm' },
+          { key: '高度', label: '高', unit: 'mm' },
+          { key: '轴距', label: '轴距', unit: 'mm' },
+          { key: 'wheelbase', label: '轴距', unit: 'mm' },
+          { key: '前轮胎', label: '轮胎', unit: '' },
+          { key: '后轮胎', label: '轮胎', unit: '' },
+          { key: '轮胎', label: '轮胎', unit: '' },
+          { key: 'tire', label: '轮胎', unit: '' },
+          { key: 'tireSize', label: '轮胎', unit: '' }
+        ];
+        
+        const result = [];
+        
+        // 按顺序查找参数，避免重复添加相同标签的参数
+        specOrder.forEach(spec => {
+          if (this.parsedSpecs[spec.key] && !result.find(r => r.label === spec.label)) {
+            let value = this.parsedSpecs[spec.key];
+            // 对于轮胎参数，如果有前后轮胎，优先显示前轮胎，或者合并显示
+            if (spec.label === '轮胎' && spec.key === '前轮胎' && this.parsedSpecs['后轮胎']) {
+              // 如果前后轮胎相同，只显示一个，如果不同，显示前轮胎规格
+              value = this.parsedSpecs['前轮胎'];
+            }
+            
+            result.push({
+              key: spec.key,
+              label: spec.label,
+              value: value + (spec.unit ? spec.unit : ''),
+              rawValue: value
+            });
+          }
+        });
+        
+        console.log('解析的参数:', this.parsedSpecs);
+        console.log('排序后的参数:', result);
+        
+        return result;
       }
     },
     methods: {
@@ -223,6 +318,37 @@
         } finally {
           this.loading = false;
         }
+      },
+      // 获取车型参数图标
+      getSpecIcon(key) {
+        const icons = {
+          // 长度相关 - 使用水平箭头表示长度
+          '长': 'el-icon-right',
+          'length': 'el-icon-right',
+          '长度': 'el-icon-right',
+          // 宽度相关 - 使用双向箭头表示宽度
+          '宽': 'el-icon-sort',
+          'width': 'el-icon-sort',
+          '宽度': 'el-icon-sort',
+          // 高度相关 - 使用向上箭头表示高度
+          '高': 'el-icon-top',
+          'height': 'el-icon-top',
+          '高度': 'el-icon-top',
+          // 轴距相关 - 使用连接线表示轴距
+          '轴距': 'el-icon-minus',
+          'wheelbase': 'el-icon-minus',
+          // 轮胎相关 - 使用圆形图标表示轮胎
+          '前轮胎': 'el-icon-refresh',
+          '后轮胎': 'el-icon-refresh',
+          '轮胎': 'el-icon-refresh',
+          'tire': 'el-icon-refresh',
+          'tireSize': 'el-icon-refresh'
+        };
+        return icons[key] || 'el-icon-data-line';
+      },
+      // 跳转到用户个人主页
+      goToUserProfile(userId) {
+        this.$router.push(`/user/${userId}`);
       }
     },
     mounted() {
@@ -462,6 +588,27 @@
     opacity: 0.8;
   }
   
+  /* 可点击的头像和用户名样式 */
+  .clickable-avatar {
+    cursor: pointer;
+    transition: all 0.3s ease;
+  }
+  
+  .clickable-avatar:hover {
+    transform: scale(1.1);
+    opacity: 0.8;
+  }
+  
+  .clickable-username {
+    cursor: pointer;
+    transition: all 0.3s ease;
+  }
+  
+  .clickable-username:hover {
+    color: #409EFF !important;
+    text-decoration: underline;
+  }
+  
   .no-images {
     text-align: center;
     padding: 40px;
@@ -525,6 +672,210 @@
     
     .grid-image {
       height: 180px;
+    }
+  }
+
+  /* 车型参数展示样式 */
+  .model-specs-section {
+    margin: 40px 10px 20px 10px;
+    padding: 25px;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    border: 1px solid #e3e6ea;
+  }
+
+  .specs-title {
+    margin: 0 0 25px 0;
+    font-size: 22px;
+    color: #2c3e50;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding-bottom: 15px;
+    border-bottom: 2px solid #3498db;
+    position: relative;
+  }
+
+  .specs-title::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    width: 60px;
+    height: 2px;
+    background: linear-gradient(90deg, #3498db, #2980b9);
+    border-radius: 1px;
+  }
+
+  .specs-title i {
+    color: #3498db;
+    font-size: 24px;
+  }
+
+  .specs-container {
+    padding: 10px 0;
+  }
+
+  .specs-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+    margin-top: 10px;
+  }
+
+  .spec-item {
+    display: flex;
+    align-items: center;
+    padding: 20px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+    transition: all 0.3s ease;
+    border: 1px solid #f1f3f4;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .spec-item::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 4px;
+    height: 100%;
+    background: linear-gradient(45deg, #3498db, #2980b9);
+    transition: width 0.3s ease;
+  }
+
+  .spec-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
+  }
+
+  .spec-item:hover::before {
+    width: 6px;
+  }
+
+  .spec-icon {
+    width: 48px;
+    height: 48px;
+    background: linear-gradient(135deg, #3498db, #2980b9);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 16px;
+    box-shadow: 0 4px 12px rgba(52, 152, 219, 0.3);
+    transition: all 0.3s ease;
+  }
+
+  .spec-item:hover .spec-icon {
+    transform: scale(1.05);
+    box-shadow: 0 6px 20px rgba(52, 152, 219, 0.4);
+  }
+
+  .spec-icon i {
+    color: white;
+    font-size: 20px;
+    font-weight: bold;
+  }
+
+  .spec-content {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .spec-label {
+    font-size: 14px;
+    color: #7f8c8d;
+    font-weight: 500;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .spec-value {
+    font-size: 18px;
+    color: #2c3e50;
+    font-weight: 700;
+    line-height: 1.2;
+    word-break: break-all;
+  }
+
+  /* 响应式设计 */
+  @media (max-width: 768px) {
+    .model-specs-section {
+      margin: 30px 5px 15px 5px;
+      padding: 20px 15px;
+    }
+
+    .specs-title {
+      font-size: 20px;
+      margin-bottom: 20px;
+    }
+
+    .specs-grid {
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 15px;
+    }
+
+    .spec-item {
+      padding: 15px;
+    }
+
+    .spec-icon {
+      width: 40px;
+      height: 40px;
+      margin-right: 12px;
+    }
+
+    .spec-icon i {
+      font-size: 18px;
+    }
+
+    .spec-value {
+      font-size: 16px;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .model-specs-section {
+      margin: 20px 5px 10px 5px;
+      padding: 15px 10px;
+    }
+
+    .specs-title {
+      font-size: 18px;
+      margin-bottom: 15px;
+    }
+
+    .specs-grid {
+      grid-template-columns: 1fr;
+      gap: 12px;
+    }
+
+    .spec-item {
+      padding: 12px;
+    }
+
+    .spec-icon {
+      width: 36px;
+      height: 36px;
+      margin-right: 10px;
+    }
+
+    .spec-icon i {
+      font-size: 16px;
+    }
+
+    .spec-label {
+      font-size: 12px;
+    }
+
+    .spec-value {
+      font-size: 15px;
     }
   }
   </style>

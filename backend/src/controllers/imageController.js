@@ -1,7 +1,10 @@
 const Image = require('../models/mysql/Image');
+const ImageCuration = require('../models/mysql/ImageCuration');
+const ImageAsset = require('../models/mysql/ImageAsset');
 const UserFavorite = require('../models/mysql/UserFavorite');
 const { sequelize } = require('../config/mysql');
 const { Op } = require('sequelize');
+const { chooseBestUrl } = require('../services/assetService');
 
 // 获取车型的图片
 exports.getImagesByCarId = async (req, res, next) => {
@@ -24,7 +27,25 @@ exports.getImagesByCarId = async (req, res, next) => {
     // 查询图片
     const { count, rows: images } = await Image.findAndCountAll({
       where: whereCondition,
-      order: [['sort_order', 'DESC'], ['created_at', 'DESC']],
+      include: [
+        {
+          model: ImageCuration,
+          as: 'Curation',
+          required: false,
+          where: {
+            isCurated: true,
+            [Op.or]: [
+              { validUntil: null },
+              { validUntil: { [Op.gt]: new Date() } }
+            ]
+          }
+        }
+      ],
+      order: [
+        [{ model: ImageCuration, as: 'Curation' }, 'isCurated', 'DESC'],
+        [{ model: ImageCuration, as: 'Curation' }, 'curationScore', 'DESC'],
+        ['created_at', 'DESC']
+      ],
       limit: parseInt(limit),
       offset: offset
     });
@@ -329,19 +350,50 @@ exports.getImagesByModelId = async (req, res, next) => {
       whereCondition.category = category;
     }
     
-    // 查询图片
+    // 查询图片（精选优先 + 时间顺序）
     const { count, rows: images } = await Image.findAndCountAll({
       where: whereCondition,
-      order: [['createdAt', 'DESC'], ['id', 'ASC']], // 使用正确的字段名
+      order: [
+        [{ model: ImageCuration, as: 'Curation' }, 'isCurated', 'DESC'],
+        [{ model: ImageCuration, as: 'Curation' }, 'curationScore', 'DESC'],
+        ['createdAt', 'DESC'],
+        ['id', 'ASC'],
+      ],
+      include: [
+        {
+          model: ImageAsset,
+          as: 'Assets',
+          attributes: ['variant', 'url', 'width', 'height', 'size'],
+          required: false,
+        },
+        {
+          model: ImageCuration,
+          as: 'Curation',
+          required: false,
+          attributes: ['isCurated', 'curationScore', 'validUntil'],
+        },
+      ],
       limit: parseInt(limit),
       offset: offset
     });
     
     console.log(`找到 ${images.length} 张图片`);
     
+    // 输出时附加 bestUrl 字段（优先 webp，回退 jpeg）
+    const items = images.map((img) => {
+      const data = img.toJSON();
+      const assetsMap = Array.isArray(data.Assets)
+        ? data.Assets.reduce((acc, a) => {
+            acc[a.variant] = a.url;
+            return acc;
+          }, {})
+        : {};
+      return { ...data, bestUrl: chooseBestUrl(assetsMap, true) || data.url };
+    });
+
     res.json({
       success: true,
-      data: images,
+      data: items,
       pagination: {
         total: count,
         page: parseInt(page),

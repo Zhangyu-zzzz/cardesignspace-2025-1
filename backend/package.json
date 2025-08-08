@@ -6,7 +6,9 @@
   "scripts": {
     "start": "node src/app.js",
     "dev": "nodemon src/app.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "db:tk01:migrate": "node scripts/run-tk01-migration.js",
+    "db:tk01:rollback": "node scripts/run-tk01-rollback.js"
   },
   "dependencies": {
     "axios": "^1.10.0",

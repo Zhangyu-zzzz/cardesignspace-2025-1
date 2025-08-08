@@ -13,6 +13,8 @@
 env-backup/
 *.env
 
+docs/temp/
+
 # 📁 依赖包和构建文件
 node_modules/
 dist/

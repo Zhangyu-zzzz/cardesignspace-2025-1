@@ -75,13 +75,11 @@
               v-for="(image, index) in filteredImages"
               :key="image.id || index"
               class="image-card"
+              @click="openImageViewer(index)"
             >
-              <el-image
-                :src="getImageUrl(image)"
+              <img 
+                :src="getImageUrl(image)" 
                 :alt="image.title || model.name"
-                fit="cover"
-                :preview-src-list="allImageUrls"
-                :initial-index="index"
                 class="grid-image"
               />
               <!-- 添加图片信息覆盖层 -->
@@ -92,12 +90,12 @@
                     :size="20" 
                     :src="image.User.avatar" 
                     icon="el-icon-user-solid"
-                    @click.native="goToUserProfile(image.User.id)"
+                    @click.native.stop="goToUserProfile(image.User.id)"
                     class="clickable-avatar"
                   ></el-avatar>
                   <span 
                     class="username clickable-username" 
-                    @click="goToUserProfile(image.User.id)"
+                    @click.stop="goToUserProfile(image.User.id)"
                   >{{ image.User.username }}</span>
                   <span class="upload-date">{{ formatDate(image.uploadDate) }}</span>
                 </div>
@@ -110,6 +108,14 @@
             </div>
           </div>
         </div>
+
+        <!-- 自定义图片查看器 -->
+        <ImageViewer
+          :visible="imageViewerVisible"
+          :images="filteredImages"
+          :initial-index="selectedImageIndex"
+          @close="closeImageViewer"
+        />
 
         <!-- 车型参数展示 -->
         <div class="model-specs-section" v-if="orderedSpecs && orderedSpecs.length > 0">
@@ -141,9 +147,13 @@
   
   <script>
   import { brandAPI, modelAPI, imageAPI } from '@/services/api';
+  import ImageViewer from '@/components/ImageViewer.vue';
   
   export default {
     name: 'ModelDetail',
+    components: {
+      ImageViewer
+    },
     data() {
       return {
         model: {},
@@ -151,7 +161,9 @@
         images: [],
         loading: true,
         error: null,
-        activeTab: 'all'
+        activeTab: 'all',
+        imageViewerVisible: false,
+        selectedImageIndex: 0,
       };
     },
     computed: {
@@ -200,34 +212,85 @@
         
         // 定义参数顺序和中文标签的映射，匹配数据库中的实际键名
         const specOrder = [
+          // 车身尺寸参数 - 首先检查 dimensions 嵌套对象
+          { key: 'dimensions.length', label: '长', unit: 'mm' },
           { key: '长', label: '长', unit: 'mm' },
           { key: 'length', label: '长', unit: 'mm' },
           { key: '长度', label: '长', unit: 'mm' },
+          
+          { key: 'dimensions.width', label: '宽', unit: 'mm' },
           { key: '宽', label: '宽', unit: 'mm' },
           { key: 'width', label: '宽', unit: 'mm' },
           { key: '宽度', label: '宽', unit: 'mm' },
+          
+          { key: 'dimensions.height', label: '高', unit: 'mm' },
           { key: '高', label: '高', unit: 'mm' },
           { key: 'height', label: '高', unit: 'mm' },
           { key: '高度', label: '高', unit: 'mm' },
+          
+          { key: 'dimensions.wheelbase', label: '轴距', unit: 'mm' },
           { key: '轴距', label: '轴距', unit: 'mm' },
           { key: 'wheelbase', label: '轴距', unit: 'mm' },
-          { key: '前轮胎', label: '轮胎', unit: '' },
-          { key: '后轮胎', label: '轮胎', unit: '' },
+          
+          // 轮胎参数
+          { key: 'front_tire', label: '前轮胎', unit: '' },
+          { key: 'rear_tire', label: '后轮胎', unit: '' },
+          { key: '前轮胎', label: '前轮胎', unit: '' },
+          { key: '后轮胎', label: '后轮胎', unit: '' },
           { key: '轮胎', label: '轮胎', unit: '' },
           { key: 'tire', label: '轮胎', unit: '' },
-          { key: 'tireSize', label: '轮胎', unit: '' }
+          { key: 'tireSize', label: '轮胎', unit: '' },
+          
+          // 其他参数
+          { key: 'doors', label: '车门数', unit: '门' },
+          { key: 'drive', label: '驱动方式', unit: '' },
+          { key: 'body_structure', label: '车身结构', unit: '' }
         ];
         
         const result = [];
         
+        // 辅助函数：根据键路径获取嵌套对象的值
+        const getNestedValue = (obj, keyPath) => {
+          const keys = keyPath.split('.');
+          let value = obj;
+          for (const key of keys) {
+            if (value && typeof value === 'object' && key in value) {
+              value = value[key];
+            } else {
+              return undefined;
+            }
+          }
+          return value;
+        };
+        
         // 按顺序查找参数，避免重复添加相同标签的参数
         specOrder.forEach(spec => {
-          if (this.parsedSpecs[spec.key] && !result.find(r => r.label === spec.label)) {
-            let value = this.parsedSpecs[spec.key];
-            // 对于轮胎参数，如果有前后轮胎，优先显示前轮胎，或者合并显示
-            if (spec.label === '轮胎' && spec.key === '前轮胎' && this.parsedSpecs['后轮胎']) {
-              // 如果前后轮胎相同，只显示一个，如果不同，显示前轮胎规格
-              value = this.parsedSpecs['前轮胎'];
+          let value;
+          
+          // 检查是否是嵌套键路径
+          if (spec.key.includes('.')) {
+            value = getNestedValue(this.parsedSpecs, spec.key);
+          } else {
+            value = this.parsedSpecs[spec.key];
+          }
+          
+          // 如果找到值且没有重复的标签
+          if (value !== undefined && value !== null && !result.find(r => r.label === spec.label)) {
+            // 特殊处理：如果是轮胎相关参数，检查前后轮胎是否相同
+            if (spec.label === '前轮胎' && this.parsedSpecs.rear_tire) {
+              // 如果前后轮胎相同，只显示一个"轮胎"标签
+              if (value === this.parsedSpecs.rear_tire) {
+                // 检查是否已经添加了轮胎参数
+                if (!result.find(r => r.label === '轮胎')) {
+                  result.push({
+                    key: 'front_tire',
+                    label: '轮胎',
+                    value: value + spec.unit,
+                    rawValue: value
+                  });
+                }
+                return; // 跳过添加前轮胎
+              }
             }
             
             result.push({
@@ -326,29 +389,54 @@
           '长': 'el-icon-right',
           'length': 'el-icon-right',
           '长度': 'el-icon-right',
+          'dimensions.length': 'el-icon-right',
+          
           // 宽度相关 - 使用双向箭头表示宽度
           '宽': 'el-icon-sort',
           'width': 'el-icon-sort',
           '宽度': 'el-icon-sort',
+          'dimensions.width': 'el-icon-sort',
+          
           // 高度相关 - 使用向上箭头表示高度
           '高': 'el-icon-top',
           'height': 'el-icon-top',
           '高度': 'el-icon-top',
+          'dimensions.height': 'el-icon-top',
+          
           // 轴距相关 - 使用连接线表示轴距
           '轴距': 'el-icon-minus',
           'wheelbase': 'el-icon-minus',
+          'dimensions.wheelbase': 'el-icon-minus',
+          
           // 轮胎相关 - 使用圆形图标表示轮胎
           '前轮胎': 'el-icon-refresh',
           '后轮胎': 'el-icon-refresh',
           '轮胎': 'el-icon-refresh',
+          'front_tire': 'el-icon-refresh',
+          'rear_tire': 'el-icon-refresh',
           'tire': 'el-icon-refresh',
-          'tireSize': 'el-icon-refresh'
+          'tireSize': 'el-icon-refresh',
+          
+          // 其他参数
+          'doors': 'el-icon-house',
+          '车门数': 'el-icon-house',
+          'drive': 'el-icon-setting',
+          '驱动方式': 'el-icon-setting',
+          'body_structure': 'el-icon-office-building',
+          '车身结构': 'el-icon-office-building'
         };
         return icons[key] || 'el-icon-data-line';
       },
       // 跳转到用户个人主页
       goToUserProfile(userId) {
         this.$router.push(`/user/${userId}`);
+      },
+      openImageViewer(index) {
+        this.selectedImageIndex = index;
+        this.imageViewerVisible = true;
+      },
+      closeImageViewer() {
+        this.imageViewerVisible = false;
       }
     },
     mounted() {
@@ -523,6 +611,7 @@
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
     background-color: #fff;
     position: relative;
+    cursor: pointer; /* Added cursor pointer for clickability */
   }
   
   .image-card:hover {
@@ -534,7 +623,7 @@
     width: 100%;
     height: 240px;
     display: block;
-    cursor: pointer;
+    object-fit: cover; /* Changed to object-fit: cover */
   }
   
   .grid-image img {

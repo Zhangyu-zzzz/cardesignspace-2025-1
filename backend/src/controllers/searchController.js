@@ -276,4 +276,22 @@ async function searchImages(query, limit, offset = 0) {
       pages: Math.ceil(count / limit)
     }
   };
-} 
+}
+
+// 获取热门搜索
+exports.getHotSearches = async (req, res, next) => {
+  try {
+    // 返回一些热门搜索关键词
+    const hotSearches = [
+      '宝马', '奔驰', '奥迪', '丰田', '本田', '大众', '福特', '现代',
+      'SUV', '轿车', '跑车', '新能源', '电动车', '混动', '豪华车', '家用车'
+    ];
+    
+    res.json({
+      status: 'success',
+      data: hotSearches
+    });
+  } catch (error) {
+    next(error);
+  }
+}; 

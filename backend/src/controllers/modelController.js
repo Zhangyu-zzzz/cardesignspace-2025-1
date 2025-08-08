@@ -1,19 +1,37 @@
 const { Model, Series, Brand, Image, User } = require('../models/mysql');
 const { Op } = require('sequelize');
+const { sequelize } = require('../config/mysql');
 const logger = require('../config/logger');
 
 // 获取所有车型
 exports.getAllModels = async (req, res) => {
   try {
-    const { brandId, search } = req.query;
+    const { brandId, search, page = 1, limit = 20, latest = false } = req.query;
     
     // 构建查询条件 - 只显示启用的车型
     const whereCondition = {
       isActive: true  // 只显示启用的车型
     };
+    
+    // 如果是首页请求最新车型，优化查询
+    if (latest === 'true') {
+      console.log('获取最新车型数据，使用分页查询');
+    }
+    
     const includeConditions = [
-      { model: Brand, as: 'Brand' },
-      { model: Image, as: 'Images' }
+      { 
+        model: Brand, 
+        as: 'Brand',
+        attributes: ['id', 'name', 'logo', 'country'] // 只选择需要的字段
+      },
+      { 
+        model: Image, 
+        as: 'Images',
+        attributes: ['id', 'url', 'filename', 'title'], // 只选择需要的字段，移除category
+        required: false, // 允许没有图片的车型也显示
+        limit: 1, // 每个车型只获取第一张图片
+        order: [['createdAt', 'ASC']] // 获取最早的图片作为缩略图
+      }
     ];
     
     if (brandId) {
@@ -49,19 +67,135 @@ exports.getAllModels = async (req, res) => {
       console.log(`搜索关键词: ${decodedSearch}, 匹配的品牌数量: ${brandIds.length}`);
     }
     
-    // 修改关联关系，包含Brand和Images，按创建时间降序排序
-    const models = await Model.findAll({
-      where: whereCondition,
-      include: includeConditions,
-      order: [['createdAt', 'DESC'], ['name', 'ASC']]  // 优先按创建时间降序，再按名称升序
-    });
+    // 添加分页支持
+    const offset = (parseInt(page) - 1) * parseInt(limit);
     
-    console.log(`查询结果: 找到 ${models.length} 个启用的车型`);
+    // 对于最新车型的请求，特殊处理
+    let finalModels;
+    let finalCount;
+    
+    if (latest === 'true') {
+      // 获取所有启用的车型进行排序（不包含图片，减少数据传输）
+      const allModels = await Model.findAll({
+        where: whereCondition,
+        include: [
+          { 
+            model: Brand, 
+            as: 'Brand',
+            attributes: ['id', 'name', 'logo', 'country']
+          }
+        ],
+        order: [['createdAt', 'DESC'], ['name', 'ASC']]
+      });
+      
+      // 在JavaScript中进行年份排序
+      allModels.sort((a, b) => {
+        // 从车型名称中提取年份
+        const extractYear = (name) => {
+          const match = name.match(/^(20\d{2})/);
+          return match ? parseInt(match[1]) : 0;
+        };
+        
+        const yearA = extractYear(a.name);
+        const yearB = extractYear(b.name);
+        
+        // 按年份降序排序（新年份在前）
+        if (yearA !== yearB) {
+          return yearB - yearA;
+        }
+        
+        // 如果年份相同，按名称排序
+        return a.name.localeCompare(b.name, 'zh-CN');
+      });
+      
+      // 手动分页
+      finalCount = allModels.length;
+      const paginatedModels = allModels.slice(offset, offset + parseInt(limit));
+      
+      // 为每个车型添加第一张图片
+      finalModels = await Promise.all(paginatedModels.map(async (model) => {
+        const firstImage = await Image.findOne({
+          where: { modelId: model.id },
+          attributes: ['id', 'url', 'filename', 'title'],
+          order: [['createdAt', 'ASC']]
+        });
+        
+        // 转换为普通对象并添加图片
+        const modelData = model.toJSON();
+        modelData.Images = firstImage ? [firstImage] : [];
+        
+        return modelData;
+      }));
+      
+      console.log(`最新车型排序完成: 总计 ${finalCount} 个，当前页 ${finalModels.length} 个`);
+    } else {
+      // 常规查询（包括按品牌筛选）
+      const { count, rows: models } = await Model.findAndCountAll({
+        where: whereCondition,
+        include: [
+          { 
+            model: Brand, 
+            as: 'Brand',
+            attributes: ['id', 'name', 'logo', 'country']
+          }
+        ],
+        order: [
+          ['createdAt', 'DESC'], // 创建时间降序
+          ['name', 'ASC'] // 名称升序
+        ],
+        limit: parseInt(limit),
+        offset: offset,
+        distinct: true // 确保计数正确
+      });
+      
+      // 为每个车型添加第一张图片
+      const modelsWithImages = await Promise.all(models.map(async (model) => {
+        const firstImage = await Image.findOne({
+          where: { modelId: model.id },
+          attributes: ['id', 'url', 'filename', 'title'],
+          order: [['createdAt', 'ASC']]
+        });
+        
+        // 转换为普通对象并添加图片
+        const modelData = model.toJSON();
+        modelData.Images = firstImage ? [firstImage] : [];
+        
+        return modelData;
+      }));
+      
+      // 按年份排序，确保一致性
+      modelsWithImages.sort((a, b) => {
+        // 从车型名称中提取年份
+        const extractYear = (name) => {
+          const match = name.match(/^(20\d{2})/);
+          return match ? parseInt(match[1]) : 0;
+        };
+        
+        const yearA = extractYear(a.name);
+        const yearB = extractYear(b.name);
+        
+        // 按年份降序排序（新年份在前）
+        if (yearA !== yearB) {
+          return yearB - yearA;
+        }
+        
+        // 如果年份相同，按名称排序
+        return a.name.localeCompare(b.name, 'zh-CN');
+      });
+      
+      finalModels = modelsWithImages;
+      finalCount = count;
+    }
+    
+    console.log(`查询结果: 找到 ${finalModels.length} 个启用的车型, 总计 ${finalCount} 个`);
     
     res.status(200).json({
       success: true,
-      count: models.length,
-      data: models
+      count: finalModels.length,
+      total: finalCount,
+      page: parseInt(page),
+      totalPages: Math.ceil(finalCount / parseInt(limit)),
+      data: finalModels
     });
   } catch (error) {
     logger.error(`获取车型列表失败: ${error.message}`);
@@ -247,4 +381,4 @@ exports.getModelImages = async (req, res) => {
       error: error.message
     });
   }
-}; 
+};

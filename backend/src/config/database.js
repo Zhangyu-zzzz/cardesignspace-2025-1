@@ -1,8 +1,11 @@
 const { Sequelize } = require('sequelize');
 const logger = require('./logger');
+const path = require('path');
 
 // 加载环境变量
-require('dotenv').config();
+require('dotenv').config({
+  path: path.resolve(__dirname, '../../.env.production')
+});
 
 // MySQL连接配置 - 从环境变量读取
 const sequelize = new Sequelize(

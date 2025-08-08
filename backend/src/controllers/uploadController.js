@@ -1,4 +1,3 @@
-const multer = require('multer');
 const { v4: uuidv4 } = require('uuid');
 const { Op } = require('sequelize');
 const { uploadToCOS, generateUploadPath, deleteFromCOS } = require('../config/cos');
@@ -8,28 +7,6 @@ const activityService = require('../services/activityService');
 // 导入模型并确保关联关系
 const { Brand, Model, Image } = require('../models/mysql');
 const User = require('../models/mysql/User');
-
-// 配置multer内存存储
-const storage = multer.memoryStorage();
-
-// 文件过滤器
-const fileFilter = (req, file, cb) => {
-  // 检查文件类型
-  if (file.mimetype.startsWith('image/')) {
-    cb(null, true);
-  } else {
-    cb(new Error('只允许上传图片文件'), false);
-  }
-};
-
-// multer配置
-const upload = multer({
-  storage: storage,
-  fileFilter: fileFilter,
-  limits: {
-    fileSize: 10 * 1024 * 1024, // 10MB限制
-  }
-});
 
 /**
  * 获取所有车型列表（用于下拉选择）
@@ -61,244 +38,239 @@ exports.getModelsForUpload = async (req, res) => {
 /**
  * 单文件上传
  */
-exports.uploadSingleImage = [
-  upload.single('image'),
-  async (req, res) => {
+exports.uploadSingleImage = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        status: 'error',
+        message: '没有上传文件'
+      });
+    }
+
+    const {
+      modelId,
+      title,
+      description,
+      category = 'general',
+      isFeatured = false,
+      path
+    } = req.body;
+
+    // 验证必填字段
+    if (!modelId) {
+      return res.status(400).json({
+        status: 'error',
+        message: '请选择车型'
+      });
+    }
+
+    // 检查车型是否存在
+    const model = await Model.findByPk(modelId);
+    if (!model) {
+      return res.status(404).json({
+        status: 'error',
+        message: '指定的车型不存在'
+      });
+    }
+
+    // 生成COS存储路径
+    const cosKey = await generateUploadPath(req.file.originalname, modelId, category, path);
+
     try {
-      if (!req.file) {
-        return res.status(400).json({
-          status: 'error',
-          message: '请选择要上传的图片文件'
-        });
-      }
+      // 上传到腾讯云COS
+      const cosResult = await uploadToCOS(
+        req.file.buffer,
+        cosKey,
+        req.file.mimetype
+      );
 
-      const {
-        modelId,
-        title,
-        description,
-        category = 'general',
-        isFeatured = false
-      } = req.body;
+      // 保存到数据库
+      const imageData = {
+        modelId: parseInt(modelId),
+        userId: req.user.id, // 添加用户ID
+        title: title || '',
+        description: description || '',
+        url: cosResult.url,
+        filename: req.file.originalname,
+        fileSize: req.file.size,
+        fileType: req.file.mimetype,
+        category: category,
+        isFeatured: isFeatured === 'true' || isFeatured === true
+      };
 
-      // 验证必填字段
-      if (!modelId) {
-        return res.status(400).json({
-          status: 'error',
-          message: '请选择车型'
-        });
-      }
+      const savedImage = await Image.create(imageData);
 
-      // 检查车型是否存在
-      const model = await Model.findByPk(modelId);
-      if (!model) {
-        return res.status(404).json({
-          status: 'error',
-          message: '指定的车型不存在'
-        });
-      }
+      // 上传成功后给用户增加积分
+      const pointsToAdd = 10; // 每张图片10积分
+      const newPoints = await authController.updateUserPoints(req.user.id, pointsToAdd);
 
-      // 生成COS存储路径
-      const cosKey = generateUploadPath(req.file.originalname, modelId, category);
+      // 记录上传活动
+      await activityService.recordUploadActivity(
+        req.user.id,
+        savedImage.id,
+        savedImage.title
+      );
 
+      res.json({
+        status: 'success',
+        message: `图片上传成功，获得${pointsToAdd}积分！`,
+        data: {
+          id: savedImage.id,
+          url: cosResult.url,
+          title: savedImage.title,
+          category: savedImage.category,
+          modelId: savedImage.modelId,
+          userId: savedImage.userId,
+          uploadDate: savedImage.uploadDate,
+          pointsEarned: pointsToAdd,
+          userTotalPoints: newPoints
+        }
+      });
+
+    } catch (cosError) {
+      console.error('COS上传失败:', cosError);
+      return res.status(500).json({
+        status: 'error',
+        message: '图片上传到云存储失败',
+        details: cosError.message
+      });
+    }
+
+  } catch (error) {
+    console.error('图片上传处理失败:', error);
+    res.status(500).json({
+      status: 'error',
+      message: '图片上传处理失败',
+      details: error.message
+    });
+  }
+};
+
+/**
+ * 多文件上传
+ */
+exports.uploadMultipleImages = async (req, res) => {
+  try {
+    if (!req.files || req.files.length === 0) {
+      return res.status(400).json({
+        status: 'error',
+        message: '请选择要上传的图片文件'
+      });
+    }
+
+    const {
+      modelId,
+      category = 'general',
+      isFeatured = false
+    } = req.body;
+
+    // 验证必填字段
+    if (!modelId) {
+      return res.status(400).json({
+        status: 'error',
+        message: '请选择车型'
+      });
+    }
+
+    // 检查车型是否存在
+    const model = await Model.findByPk(modelId);
+    if (!model) {
+      return res.status(404).json({
+        status: 'error',
+        message: '指定的车型不存在'
+      });
+    }
+
+    const uploadResults = [];
+    const errors = [];
+
+    // 批量上传处理
+    for (let i = 0; i < req.files.length; i++) {
+      const file = req.files[i];
+      
       try {
+        // 生成COS存储路径
+        const cosKey = await generateUploadPath(file.originalname, modelId, category);
+
         // 上传到腾讯云COS
         const cosResult = await uploadToCOS(
-          req.file.buffer,
+          file.buffer,
           cosKey,
-          req.file.mimetype
+          file.mimetype
         );
 
         // 保存到数据库
         const imageData = {
           modelId: parseInt(modelId),
           userId: req.user.id, // 添加用户ID
-          title: title || '',
-          description: description || '',
+          title: `${model.name} - ${file.originalname}`,
+          description: '',
           url: cosResult.url,
-          filename: req.file.originalname,
-          fileSize: req.file.size,
-          fileType: req.file.mimetype,
+          filename: file.originalname,
+          fileSize: file.size,
+          fileType: file.mimetype,
           category: category,
-          isFeatured: isFeatured === 'true' || isFeatured === true
+          isFeatured: i === 0 && (isFeatured === 'true' || isFeatured === true) // 第一张设为特色图片
         };
 
         const savedImage = await Image.create(imageData);
 
-        // 上传成功后给用户增加积分
-        const pointsToAdd = 10; // 每张图片10积分
-        const newPoints = await authController.updateUserPoints(req.user.id, pointsToAdd);
-
-        // 记录上传活动
-        await activityService.recordUploadActivity(
-          req.user.id,
-          savedImage.id,
-          savedImage.title
-        );
-
-        res.json({
-          status: 'success',
-          message: `图片上传成功，获得${pointsToAdd}积分！`,
-          data: {
-            id: savedImage.id,
-            url: cosResult.url,
-            title: savedImage.title,
-            category: savedImage.category,
-            modelId: savedImage.modelId,
-            userId: savedImage.userId,
-            uploadDate: savedImage.uploadDate,
-            pointsEarned: pointsToAdd,
-            userTotalPoints: newPoints
-          }
+        uploadResults.push({
+          success: true,
+          filename: file.originalname,
+          id: savedImage.id,
+          url: cosResult.url,
+          title: savedImage.title
         });
 
-      } catch (cosError) {
-        console.error('COS上传失败:', cosError);
-        return res.status(500).json({
-          status: 'error',
-          message: '图片上传到云存储失败',
-          details: cosError.message
+      } catch (error) {
+        console.error(`文件 ${file.originalname} 上传失败:`, error);
+        errors.push({
+          filename: file.originalname,
+          error: error.message
         });
       }
-
-    } catch (error) {
-      console.error('图片上传处理失败:', error);
-      res.status(500).json({
-        status: 'error',
-        message: '图片上传处理失败',
-        details: error.message
-      });
     }
-  }
-];
 
-/**
- * 多文件上传
- */
-exports.uploadMultipleImages = [
-  upload.array('images', 10), // 最多10个文件
-  async (req, res) => {
-    try {
-      if (!req.files || req.files.length === 0) {
-        return res.status(400).json({
-          status: 'error',
-          message: '请选择要上传的图片文件'
-        });
-      }
+    // 批量上传成功后给用户增加积分
+    const pointsPerImage = 10;
+    const totalPointsEarned = uploadResults.length * pointsPerImage;
+    const newPoints = await authController.updateUserPoints(req.user.id, totalPointsEarned);
 
-      const {
-        modelId,
-        category = 'general',
-        isFeatured = false
-      } = req.body;
-
-      // 验证必填字段
-      if (!modelId) {
-        return res.status(400).json({
-          status: 'error',
-          message: '请选择车型'
-        });
-      }
-
-      // 检查车型是否存在
-      const model = await Model.findByPk(modelId);
-      if (!model) {
-        return res.status(404).json({
-          status: 'error',
-          message: '指定的车型不存在'
-        });
-      }
-
-      const uploadResults = [];
-      const errors = [];
-
-      // 批量上传处理
-      for (let i = 0; i < req.files.length; i++) {
-        const file = req.files[i];
-        
-        try {
-          // 生成COS存储路径
-          const cosKey = generateUploadPath(file.originalname, modelId, category);
-
-          // 上传到腾讯云COS
-          const cosResult = await uploadToCOS(
-            file.buffer,
-            cosKey,
-            file.mimetype
-          );
-
-          // 保存到数据库
-          const imageData = {
-            modelId: parseInt(modelId),
-            userId: req.user.id, // 添加用户ID
-            title: `${model.name} - ${file.originalname}`,
-            description: '',
-            url: cosResult.url,
-            filename: file.originalname,
-            fileSize: file.size,
-            fileType: file.mimetype,
-            category: category,
-            isFeatured: i === 0 && (isFeatured === 'true' || isFeatured === true) // 第一张设为特色图片
-          };
-
-          const savedImage = await Image.create(imageData);
-
-          uploadResults.push({
-            success: true,
-            filename: file.originalname,
-            id: savedImage.id,
-            url: cosResult.url,
-            title: savedImage.title
-          });
-
-        } catch (error) {
-          console.error(`文件 ${file.originalname} 上传失败:`, error);
-          errors.push({
-            filename: file.originalname,
-            error: error.message
-          });
-        }
-      }
-
-      // 批量上传成功后给用户增加积分
-      const pointsPerImage = 10;
-      const totalPointsEarned = uploadResults.length * pointsPerImage;
-      const newPoints = await authController.updateUserPoints(req.user.id, totalPointsEarned);
-
-      // 记录每张图片的上传活动
-      for (const result of uploadResults) {
-        await activityService.recordUploadActivity(
-          req.user.id,
-          result.id,
-          result.title
-        );
-      }
-
-      res.json({
-        status: uploadResults.length > 0 ? 'success' : 'error',
-        message: `批量上传完成，成功：${uploadResults.length}个，失败：${errors.length}个${totalPointsEarned > 0 ? `，获得${totalPointsEarned}积分！` : ''}`,
-        data: {
-          successful: uploadResults,
-          failed: errors,
-          summary: {
-            total: req.files.length,
-            successful: uploadResults.length,
-            failed: errors.length
-          },
-          pointsEarned: totalPointsEarned,
-          userTotalPoints: newPoints
-        }
-      });
-
-    } catch (error) {
-      console.error('批量图片上传处理失败:', error);
-      res.status(500).json({
-        status: 'error',
-        message: '批量图片上传处理失败',
-        details: error.message
-      });
+    // 记录每张图片的上传活动
+    for (const result of uploadResults) {
+      await activityService.recordUploadActivity(
+        req.user.id,
+        result.id,
+        result.title
+      );
     }
+
+    res.json({
+      status: uploadResults.length > 0 ? 'success' : 'error',
+      message: `批量上传完成，成功：${uploadResults.length}个，失败：${errors.length}个${totalPointsEarned > 0 ? `，获得${totalPointsEarned}积分！` : ''}`,
+      data: {
+        successful: uploadResults,
+        failed: errors,
+        summary: {
+          total: req.files.length,
+          successful: uploadResults.length,
+          failed: errors.length
+        },
+        pointsEarned: totalPointsEarned,
+        userTotalPoints: newPoints
+      }
+    });
+
+  } catch (error) {
+    console.error('批量图片上传处理失败:', error);
+    res.status(500).json({
+      status: 'error',
+      message: '批量图片上传处理失败',
+      details: error.message
+    });
   }
-];
+};
 
 /**
  * 更新图片信息
@@ -496,18 +468,14 @@ exports.getImagesList = async (req, res) => {
 const getAllBrands = async (req, res) => {
   try {
     const brands = await Brand.findAll({
-      include: [{
-        model: Model,
-        as: 'Models',
-        required: false
-      }],
+      attributes: ['id', 'name', 'logo', 'country', 'description', 'founded_year', 'createdAt', 'updatedAt'],
       order: [['name', 'ASC']]
     });
     
-    // 设置防缓存头
-    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-    res.setHeader('Pragma', 'no-cache');
-    res.setHeader('Expires', '0');
+    // 设置缓存头，允许浏览器缓存5分钟
+    res.setHeader('Cache-Control', 'public, max-age=300');
+    res.setHeader('Pragma', '');
+    res.setHeader('Expires', new Date(Date.now() + 300000).toUTCString());
     
     res.json({
       status: 'success',

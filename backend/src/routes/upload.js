@@ -4,6 +4,24 @@ const uploadController = require('../controllers/uploadController');
 const { optionalAuth, authenticateToken } = require('../middleware/auth');
 const multer = require('multer');
 
+// 配置主要的multer中间件用于图片上传
+const storage = multer.memoryStorage();
+
+const imageUpload = multer({
+  storage: storage,
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB限制
+  },
+  fileFilter: (req, file, cb) => {
+    // 检查文件类型
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('只允许上传图片文件'), false);
+    }
+  }
+});
+
 // 配置multer中间件用于品牌Logo上传
 const logoUpload = multer({ 
   storage: multer.memoryStorage(),
@@ -23,11 +41,11 @@ const logoUpload = multer({
 // 获取车型列表（用于上传页面选择）
 router.get('/models', uploadController.getModelsForUpload);
 
-// 单文件上传（需要认证）- 控制器中包含multer中间件
-router.post('/single', authenticateToken, uploadController.uploadSingleImage);
+// 单文件上传（需要认证）- 添加multer中间件
+router.post('/single', authenticateToken, imageUpload.single('image'), uploadController.uploadSingleImage);
 
-// 多文件上传（需要认证）- 控制器中包含multer中间件
-router.post('/multiple', authenticateToken, uploadController.uploadMultipleImages);
+// 多文件上传（需要认证）- 添加multer中间件
+router.post('/multiple', authenticateToken, imageUpload.array('images', 10), uploadController.uploadMultipleImages);
 
 // 更新图片信息
 router.put('/image/:id', uploadController.updateImage);

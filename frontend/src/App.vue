@@ -8,9 +8,33 @@
           <div class="navbar-left">
             <!-- 网站Logo -->
             <div class="navbar-logo" @click="$router.push('/')">
+              <i class="el-icon-car logo-icon"></i>
               <span class="logo-text">CARDESIGNSPACE</span>
             </div>
-            
+          </div>
+
+          <!-- 中间搜索区域 -->
+          <div class="navbar-center">
+            <div class="search-box">
+              <el-input 
+                placeholder="搜索您感兴趣的汽车品牌或车型" 
+                v-model="searchKeyword"
+                class="search-input"
+                @keyup.enter.native="handleSearch"
+                clearable
+                size="medium"
+              >
+                <el-button 
+                  slot="append" 
+                  icon="el-icon-search"
+                  @click="handleSearch"
+                ></el-button>
+              </el-input>
+            </div>
+          </div>
+          
+          <!-- 右侧导航菜单 -->
+          <div class="navbar-right">
             <!-- 导航菜单 -->
             <div class="navbar-menu">
               <el-menu mode="horizontal" router class="nav-menu-items">
@@ -20,15 +44,9 @@
                 <el-menu-item index="/upload" class="nav-item">
                   <span>图片上传</span>
                 </el-menu-item>
-                <el-menu-item index="/search" class="nav-item">
-                  <span>搜索</span>
-                </el-menu-item>
               </el-menu>
             </div>
-          </div>
-          
-          <!-- 右侧用户区域 -->
-          <div class="navbar-right">
+
             <!-- 用户未登录时显示登录注册 -->
             <template v-if="!user">
               <div class="auth-buttons">
@@ -61,15 +79,36 @@
                 
                 <!-- 用户头像菜单 -->
                 <div class="user-menu-wrapper">
-                  <div class="user-profile-trigger" @click="goToProfile">
-                    <el-avatar 
-                      :size="36" 
-                      :src="user.avatar" 
-                      icon="el-icon-user-solid"
-                      class="user-avatar clickable-avatar"
-                    ></el-avatar>
-                    <span class="username clickable-username">{{ user.username }}</span>
-                  </div>
+                  <el-dropdown @command="handleUserMenuCommand" placement="bottom-end">
+                    <div class="user-profile-trigger">
+                      <el-avatar 
+                        :size="36" 
+                        :src="user.avatar" 
+                        icon="el-icon-user-solid"
+                        class="user-avatar clickable-avatar"
+                      ></el-avatar>
+                      <span class="username clickable-username">{{ user.username }}</span>
+                      <i class="el-icon-arrow-down el-icon--right"></i>
+                    </div>
+                    <el-dropdown-menu slot="dropdown" class="user-dropdown-menu">
+                      <el-dropdown-item command="profile">
+                        <i class="el-icon-user"></i>
+                        个人资料
+                      </el-dropdown-item>
+                      <el-dropdown-item command="favorites">
+                        <i class="el-icon-star-on"></i>
+                        我的收藏
+                      </el-dropdown-item>
+                      <el-dropdown-item command="uploads">
+                        <i class="el-icon-upload"></i>
+                        我的上传
+                      </el-dropdown-item>
+                      <el-dropdown-item divided command="logout">
+                        <i class="el-icon-switch-button"></i>
+                        退出登录
+                      </el-dropdown-item>
+                    </el-dropdown-menu>
+                  </el-dropdown>
                 </div>
               </div>
             </template>
@@ -95,6 +134,7 @@
 import AuthDialog from './components/AuthDialog.vue'
 import NotificationCenter from './components/NotificationCenter.vue'
 import axios from 'axios'
+import { authAPI } from './services/api'
 import { mapState, mapActions } from 'vuex'
 
 export default {
@@ -106,7 +146,8 @@ export default {
   data() {
     return {
       authDialogVisible: false,
-      authMode: 'login'
+      authMode: 'login',
+      searchKeyword: '',
     }
   },
   computed: {
@@ -183,6 +224,9 @@ export default {
         case 'favorites':
           this.$router.push({ path: '/profile', query: { tab: 'favorites' } })
           break
+        case 'uploads':
+          this.goToMyUploads()
+          break
         case 'logout':
           this.handleLogout()
           break
@@ -190,15 +234,26 @@ export default {
     },
     
     // 退出登录
-    handleLogout() {
+    async handleLogout() {
       this.$confirm('确定要退出登录吗？', '提示', {
         confirmButtonText: '确定',
         cancelButtonText: '取消',
         type: 'warning'
-      }).then(() => {
-        this.clearUserData()
-        this.$message.success('已退出登录')
-      }).catch(() => {})
+      }).then(async () => {
+        try {
+          // 调用后端退出登录API
+          await authAPI.logout()
+          this.clearUserData()
+          this.$message.success('已退出登录')
+        } catch (error) {
+          console.error('调用退出登录API失败:', error)
+          // 即使API调用失败，也清除本地数据
+          this.clearUserData()
+          this.$message.success('已退出登录')
+        }
+      }).catch(() => {
+        // 用户取消退出
+      })
     },
     
     // 清除用户数据
@@ -216,6 +271,15 @@ export default {
     // 导航到个人主页
     goToProfile() {
       this.$router.push('/profile')
+    },
+
+    // 处理搜索
+    handleSearch() {
+      if (!this.searchKeyword.trim()) return;
+      this.$router.push({
+        path: '/search',
+        query: { keyword: this.searchKeyword.trim() }
+      });
     }
   }
 }
@@ -248,9 +312,10 @@ export default {
   justify-content: space-between;
   align-items: center;
   height: 60px;
-  max-width: 1400px;
   margin: 0 auto;
   padding: 0 24px;
+  background: #ffffff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
 }
 
 /* 左侧导航区域 */
@@ -258,27 +323,47 @@ export default {
   display: flex;
   align-items: center;
   gap: 32px;
+  min-width: 200px;
 }
 
-.navbar-logo {
+.navbar-center {
+  flex: 1;
+  max-width: 600px;
+  margin: 0 20px;
+}
+
+.search-box {
+  width: 100%;
+}
+
+.search-input {
+  width: 100%;
+}
+
+.search-input .el-input__inner {
+  border-radius: 20px 0 0 20px;
+  border-right: none;
+  padding-left: 20px;
+}
+
+.search-input .el-input-group__append {
+  border-radius: 0 20px 20px 0;
+  padding: 0 20px;
+  background: #409EFF;
+  border-color: #409EFF;
+}
+
+.search-input .el-input-group__append .el-button {
+  border: none;
+  color: white;
+  padding: 0;
+  margin: 0;
+}
+
+.navbar-right {
   display: flex;
   align-items: center;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  padding: 6px 10px;
-  border-radius: 6px;
-}
-
-.navbar-logo:hover {
-  background-color: #f8f9fa;
-}
-
-.logo-text {
-  font-size: 24px;
-  font-weight: 1000;
-  /* color: #2c3e50; */
-  color: #409EFF;
-  white-space: nowrap;
+  gap: 20px;
 }
 
 .navbar-menu {
@@ -363,6 +448,7 @@ export default {
 .navbar-right {
   display: flex;
   align-items: center;
+  flex-shrink: 0;
 }
 
 /* 登录注册按钮 */
@@ -492,6 +578,61 @@ export default {
   cursor: pointer;
 }
 
+/* 用户下拉菜单样式 */
+.user-dropdown-menu {
+  margin-top: 8px;
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e4e7ed;
+  overflow: hidden;
+}
+
+.user-dropdown-menu .el-dropdown-menu__item {
+  padding: 12px 16px;
+  font-size: 14px;
+  color: #606266;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.user-dropdown-menu .el-dropdown-menu__item:hover {
+  background-color: #f5f7fa;
+  color: #409EFF;
+}
+
+.user-dropdown-menu .el-dropdown-menu__item.is-divided {
+  border-top: 1px solid #e4e7ed;
+}
+
+.user-dropdown-menu .el-dropdown-menu__item i {
+  font-size: 16px;
+  width: 16px;
+  text-align: center;
+}
+
+/* 退出登录项特殊样式 */
+.user-dropdown-menu .el-dropdown-menu__item[data-command="logout"] {
+  color: #f56c6c;
+}
+
+.user-dropdown-menu .el-dropdown-menu__item[data-command="logout"]:hover {
+  background-color: #fef0f0;
+  color: #f56c6c;
+}
+
+/* 下拉箭头图标 */
+.user-profile-trigger .el-icon-arrow-down {
+  font-size: 12px;
+  color: #c0c4cc;
+  transition: all 0.3s ease;
+}
+
+.user-profile-trigger:hover .el-icon-arrow-down {
+  color: #409EFF;
+}
+
 /* 响应式设计 */
 @media (max-width: 1024px) {
   .navbar {
@@ -499,33 +640,62 @@ export default {
   }
   
   .navbar-left {
-    gap: 24px;
+    gap: 20px;
+  }
+  
+  .logo-text {
+    font-size: 20px;
+  }
+  
+  .logo-icon {
+    font-size: 18px;
+  }
+  
+  .nav-menu-items .el-menu-item {
+    padding: 0 10px;
+    margin: 0 2px;
+  }
+  
+  .nav-menu-items .el-menu-item span {
+    font-size: 13px;
+  }
+}
+
+@media (max-width: 768px) {
+  .navbar {
+    padding: 0 12px;
+  }
+  
+  .navbar-left {
+    min-width: auto;
   }
   
   .logo-text {
     display: none;
   }
   
-  .nav-menu-items .el-menu-item span {
+  .navbar-center {
+    margin: 0 10px;
+  }
+  
+  .search-input .el-input__inner {
+    padding-left: 15px;
+  }
+  
+  .search-input .el-input-group__append {
+    padding: 0 15px;
+  }
+  
+  .navbar-menu {
     display: none;
   }
   
-  .nav-menu-items .el-menu-item {
-    padding: 0 12px;
-  }
-}
-
-@media (max-width: 768px) {
-  .navbar {
-    padding: 0 16px;
-  }
-  
-  .navbar-left {
-    gap: 16px;
+  .navbar-right {
+    flex-shrink: 0;
   }
   
   .user-functions {
-    gap: 12px;
+    gap: 8px;
   }
   
   .username {
@@ -533,45 +703,12 @@ export default {
   }
   
   .points-display {
-    padding: 6px 10px;
-    font-size: 13px;
+    padding: 4px 6px;
+    font-size: 12px;
   }
   
   .user-profile-trigger {
-    padding: 4px 8px;
-  }
-  
-  .user-avatar {
-    width: 32px !important;
-    height: 32px !important;
-  }
-}
-
-@media (max-width: 480px) {
-  .navbar {
-    padding: 0 12px;
-  }
-  
-  .navbar-left {
-    gap: 12px;
-  }
-  
-  .navbar-logo i {
-    font-size: 24px;
-  }
-  
-  .nav-menu-items .el-menu-item {
-    padding: 0 8px;
-    margin: 0 2px;
-  }
-  
-  .user-functions {
-    gap: 8px;
-  }
-  
-  .points-display {
-    padding: 4px 8px;
-    font-size: 12px;
+    padding: 4px 6px;
   }
   
   .user-avatar {
@@ -580,17 +717,173 @@ export default {
   }
   
   .auth-buttons {
-    gap: 8px;
+    gap: 6px;
   }
   
   .login-btn {
-    padding: 6px 12px;
-    font-size: 13px;
+    padding: 4px 8px;
+    font-size: 11px;
   }
   
   .register-btn {
-    padding: 6px 14px;
-    font-size: 13px;
+    padding: 4px 10px;
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 480px) {
+  .navbar {
+    padding: 0 8px;
+  }
+  
+  .navbar-left {
+    gap: 6px;
+    flex: 1;
+    min-width: 0;
+  }
+  
+  .navbar-logo {
+    flex-shrink: 0;
+  }
+  
+  .logo-text {
+    font-size: 11px;
+  }
+  
+  .logo-icon {
+    font-size: 9px;
+  }
+  
+  .navbar-menu {
+    flex: 1;
+    min-width: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  
+  .navbar-menu::-webkit-scrollbar {
+    display: none;
+  }
+  
+  .nav-menu-items {
+    flex-wrap: nowrap;
+    min-width: max-content;
+  }
+  
+  .nav-menu-items .el-menu-item {
+    padding: 0 3px;
+    margin: 0;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  
+  .nav-menu-items .el-menu-item span {
+    font-size: 9px;
+  }
+  
+  .navbar-right {
+    flex-shrink: 0;
+  }
+  
+  .user-functions {
+    gap: 6px;
+  }
+  
+  .points-display {
+    padding: 3px 5px;
+    font-size: 10px;
+  }
+  
+  .user-avatar {
+    width: 24px !important;
+    height: 24px !important;
+  }
+  
+  .auth-buttons {
+    gap: 4px;
+  }
+  
+  .login-btn {
+    padding: 4px 6px;
+    font-size: 10px;
+  }
+  
+  .register-btn {
+    padding: 4px 8px;
+    font-size: 10px;
+  }
+}
+
+@media (max-width: 360px) {
+  .navbar {
+    padding: 0 6px;
+  }
+  
+  .navbar-left {
+    gap: 4px;
+  }
+  
+  .logo-text {
+    font-size: 9px;
+  }
+  
+  .logo-icon {
+    font-size: 8px;
+  }
+  
+  .nav-menu-items .el-menu-item {
+    padding: 0 2px;
+  }
+  
+  .nav-menu-items .el-menu-item span {
+    font-size: 8px;
+  }
+  
+  .login-btn {
+    padding: 3px 5px;
+    font-size: 9px;
+  }
+  
+  .register-btn {
+    padding: 3px 6px;
+    font-size: 9px;
+  }
+}
+
+@media (max-width: 320px) {
+  .navbar {
+    padding: 0 4px;
+  }
+  
+  .navbar-left {
+    gap: 4px;
+  }
+  
+  .logo-text {
+    display: none;
+  }
+  
+  .logo-icon {
+    font-size: 12px;
+  }
+  
+  .nav-menu-items .el-menu-item {
+    padding: 0 2px;
+  }
+  
+  .nav-menu-items .el-menu-item span {
+    font-size: 8px;
+  }
+  
+  .login-btn {
+    padding: 2px 4px;
+    font-size: 8px;
+  }
+  
+  .register-btn {
+    padding: 2px 5px;
+    font-size: 8px;
   }
 }
 </style> 

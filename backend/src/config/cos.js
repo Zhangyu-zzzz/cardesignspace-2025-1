@@ -73,19 +73,63 @@ const deleteFromCOS = (key) => {
   });
 };
 
+// 导入模型
+const { Model, Brand } = require('../models/mysql');
+
 /**
  * 生成文件上传路径
  * @param {string} originalName 原始文件名
  * @param {number} modelId 车型ID
  * @param {string} category 图片分类
- * @returns {string} COS存储路径
+ * @param {string} path 文件路径（可选）
+ * @returns {Promise<string>} COS存储路径
  */
-const generateUploadPath = (originalName, modelId, category = 'general') => {
-  const ext = originalName.split('.').pop();
-  const timestamp = Date.now();
-  const random = Math.random().toString(36).substring(2, 8);
-  
-  return `images/models/${modelId}/${category}/${timestamp}_${random}.${ext}`;
+const generateUploadPath = async (originalName, modelId, category = 'general', path = null) => {
+  try {
+    console.log('生成上传路径 - 参数:', { originalName, modelId, category, path });
+    
+    const ext = originalName.split('.').pop().toLowerCase();
+    console.log('文件扩展名:', ext);
+    
+    // 获取车型信息
+    const model = await Model.findByPk(modelId, {
+      include: [{
+        model: Brand,
+        attributes: ['name']
+      }]
+    });
+
+    console.log('查询到的车型信息:', model ? {
+      modelId: model.id,
+      modelName: model.name,
+      brandId: model.Brand?.id,
+      brandName: model.Brand?.name
+    } : '未找到车型');
+
+    if (!model || !model.Brand) {
+      console.error('生成上传路径失败: 未找到车型或品牌信息');
+      throw new Error('未找到车型或品牌信息');
+    }
+
+    // 生成随机序号
+    const sequence = Math.floor(Math.random() * 999) + 1;
+    
+    // 如果有文件夹路径，保持原有结构
+    if (path) {
+      // 使用文件夹结构: CARS/品牌名/车型名/文件夹路径/序号.扩展名
+      const uploadPath = `CARS/${model.Brand.name}/${model.name}/${path.replace(/\\/g, '/')}`;
+      console.log('生成的上传路径(文件夹):', uploadPath);
+      return uploadPath;
+    } else {
+      // 标准路径: CARS/品牌名/车型名/序号.扩展名
+      const uploadPath = `CARS/${model.Brand.name}/${model.name}/${sequence}.${ext}`;
+      console.log('生成的上传路径(标准):', uploadPath);
+      return uploadPath;
+    }
+  } catch (error) {
+    console.error('生成上传路径失败:', error);
+    throw error;
+  }
 };
 
 module.exports = {

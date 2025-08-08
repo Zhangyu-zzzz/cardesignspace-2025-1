@@ -128,6 +128,9 @@
               <el-button type="success" @click="showUploadDialog('multiple')">
                 <i class="el-icon-upload2"></i> 批量上传
               </el-button>
+              <el-button type="warning" @click="showUploadDialog('folder')">
+                <i class="el-icon-folder-opened"></i> 文件夹上传
+              </el-button>
             </div>
           </div>
 
@@ -452,10 +455,29 @@
             <div v-for="(spec, index) in modelDialog.form.specs" :key="index" class="spec-item">
               <el-row :gutter="10">
                 <el-col :span="8">
-                  <el-input v-model="spec.key" placeholder="参数名" />
+                  <el-select v-model="spec.key" placeholder="选择参数类型" filterable allow-create>
+                    <el-option-group label="车身尺寸">
+                      <el-option label="长度" value="dimensions.length" />
+                      <el-option label="宽度" value="dimensions.width" />
+                      <el-option label="高度" value="dimensions.height" />
+                      <el-option label="轴距" value="dimensions.wheelbase" />
+                    </el-option-group>
+                    <el-option-group label="轮胎参数">
+                      <el-option label="前轮胎" value="front_tire" />
+                      <el-option label="后轮胎" value="rear_tire" />
+                    </el-option-group>
+                    <el-option-group label="其他参数">
+                      <el-option label="车门数" value="doors" />
+                      <el-option label="驱动方式" value="drive" />
+                      <el-option label="车身结构" value="body_structure" />
+                    </el-option-group>
+                  </el-select>
                 </el-col>
-                <el-col :span="12">
-                  <el-input v-model="spec.value" placeholder="参数值" />
+                <el-col :span="10">
+                  <el-input v-model="spec.value" :placeholder="getSpecPlaceholder(spec.key)" />
+                </el-col>
+                <el-col :span="2">
+                  <span class="spec-unit">{{ getSpecUnit(spec.key) }}</span>
                 </el-col>
                 <el-col :span="4">
                   <el-button 
@@ -466,6 +488,9 @@
                   />
                 </el-col>
               </el-row>
+              <div v-if="spec.displayKey" class="spec-display-name">
+                {{ spec.displayKey }}
+              </div>
             </div>
           </div>
         </el-form-item>
@@ -611,6 +636,82 @@
           <div v-if="uploadDialog.uploading && uploadDialog.type === 'multiple'" class="upload-progress">
             <div class="progress-header">
               <span>批量上传进度 ({{ uploadProgress.current }}/{{ uploadProgress.total }})</span>
+              <span>{{ Math.round(uploadProgress.percentage) }}%</span>
+            </div>
+            <el-progress 
+              :percentage="uploadProgress.percentage" 
+              :status="uploadProgress.status"
+              :stroke-width="8"
+            />
+            <div class="progress-details">
+              <p v-if="uploadProgress.currentFile">正在上传: {{ uploadProgress.currentFile }}</p>
+              <p class="success-count" v-if="uploadProgress.successCount > 0">
+                已成功: {{ uploadProgress.successCount }} 个文件
+              </p>
+              <p class="error-count" v-if="uploadProgress.errorCount > 0">
+                上传失败: {{ uploadProgress.errorCount }} 个文件
+              </p>
+            </div>
+          </div>
+        </el-form-item>
+
+        <!-- 文件夹上传 -->
+        <el-form-item v-if="uploadDialog.type === 'folder'" label="选择文件夹" required>
+          <!-- 使用原生文件夹选择 -->
+          <div class="custom-folder-uploader">
+            <input 
+              ref="folderInput"
+              type="file" 
+              webkitdirectory
+              directory
+              multiple 
+              accept="image/*" 
+              @change="handleFolderInputChange"
+              style="display: none;"
+            />
+            
+            <!-- 文件夹选择按钮 -->
+            <el-button type="warning" @click="$refs.folderInput.click()">
+              <i class="el-icon-folder-opened"></i> 选择图片文件夹
+            </el-button>
+            
+            <!-- 已选择的文件夹文件列表 -->
+            <div v-if="folderFileList.length > 0" class="custom-file-list">
+              <div class="file-list-header">
+                <span>已选择 {{ folderFileList.length }} 个文件:</span>
+                <el-button size="mini" type="text" @click="clearAllFolderFiles">清空</el-button>
+              </div>
+              
+              <div class="file-items">
+                <div 
+                  v-for="(file, index) in folderFileList" 
+                  :key="index" 
+                  class="file-item"
+                >
+                  <div class="file-preview">
+                    <img :src="file.preview" alt="预览图" />
+                  </div>
+                  <div class="file-info">
+                    <div class="file-name">{{ file.name }}</div>
+                    <div class="file-path">{{ file.path }}</div>
+                    <div class="file-size">{{ formatFileSize(file.size) }}</div>
+                  </div>
+                  <el-button 
+                    type="danger" 
+                    size="mini" 
+                    icon="el-icon-delete"
+                    @click="removeFolderFile(index)"
+                    circle
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- 文件夹上传进度条 -->
+          <div v-if="uploadDialog.uploading && uploadDialog.type === 'folder'" class="upload-progress">
+            <div class="progress-header">
+              <span>文件夹上传进度 ({{ uploadProgress.current }}/{{ uploadProgress.total }})</span>
               <span>{{ Math.round(uploadProgress.percentage) }}%</span>
             </div>
             <el-progress 
@@ -981,7 +1082,10 @@ export default {
       },
       
       // 自定义文件列表（绕过Element UI的文件管理）
-      customFileList: []
+      customFileList: [],
+      
+      // 文件夹上传相关
+      folderFileList: []
     }
   },
   
@@ -1003,6 +1107,8 @@ export default {
       console.log('Element UI文件列表:', this.uploadDialog.form.fileList);
       console.log('自定义文件列表:', this.customFileList);
       console.log('自定义文件列表长度:', this.customFileList.length);
+      console.log('文件夹文件列表:', this.folderFileList);
+      console.log('文件夹文件列表长度:', this.folderFileList.length);
       console.log('分类:', this.uploadDialog.form.category);
       console.log('单文件:', this.uploadDialog.form.imageFile);
       
@@ -1013,13 +1119,21 @@ export default {
         const result = hasFile && hasCategory;
         console.log('单文件上传结果:', result);
         return result;
-      } else {
+      } else if (this.uploadDialog.type === 'multiple') {
         // 使用自定义文件列表
         const hasFiles = this.customFileList.length > 0;
         const hasCategory = !!this.uploadDialog.form.category;
         console.log('批量上传 - 有文件:', hasFiles, '有分类:', hasCategory);
         const result = hasFiles && hasCategory;
         console.log('批量上传结果:', result);
+        return result;
+      } else if (this.uploadDialog.type === 'folder') {
+        // 使用文件夹文件列表
+        const hasFiles = this.folderFileList.length > 0;
+        const hasCategory = !!this.uploadDialog.form.category;
+        console.log('文件夹上传 - 有文件:', hasFiles, '有分类:', hasCategory);
+        const result = hasFiles && hasCategory;
+        console.log('文件夹上传结果:', result);
         return result;
       }
     }
@@ -1434,8 +1548,10 @@ export default {
         
         if (this.uploadDialog.type === 'single') {
           await this.uploadSingleFile()
-        } else {
+        } else if (this.uploadDialog.type === 'multiple') {
           await this.uploadMultipleFiles()
+        } else if (this.uploadDialog.type === 'folder') {
+          await this.uploadFolderFiles()
         }
         
       } catch (error) {
@@ -1567,6 +1683,91 @@ export default {
       }, 2000)
     },
     
+    // 文件夹上传（带进度）
+    async uploadFolderFiles() {
+      console.log('=== 文件夹上传 ===');
+      
+      const files = this.folderFileList; // 使用文件夹文件列表
+      console.log('有效文件数量:', files.length);
+      
+      // 初始化进度
+      this.uploadProgress = {
+        current: 0,
+        total: files.length,
+        percentage: 0,
+        status: 'active',
+        currentFile: '',
+        successCount: 0,
+        errorCount: 0
+      }
+      
+      const results = []
+      
+      // 逐个上传文件
+      for (let i = 0; i < files.length; i++) {
+        const fileItem = files[i]
+        this.uploadProgress.current = i + 1
+        this.uploadProgress.currentFile = fileItem.name
+        this.uploadProgress.percentage = ((i + 1) / files.length) * 100
+        
+        console.log(`上传文件 ${i + 1}/${files.length}: ${fileItem.name}`);
+        
+        try {
+          const formData = new FormData()
+          formData.append('image', fileItem.file) // 使用file属性
+          formData.append('title', `${fileItem.name}`)
+          formData.append('description', '')
+          formData.append('modelId', this.selectedModelId)
+          formData.append('category', this.uploadDialog.form.category)
+          formData.append('isFeatured', i === 0 && this.uploadDialog.form.isFeatured) // 第一张设为特色
+          formData.append('path', fileItem.path) // 添加文件路径
+          
+          const response = await apiClient.post('/upload/single', formData, {
+            headers: {
+              'Content-Type': 'multipart/form-data'
+            }
+          })
+          
+          if (response.data.status === 'success') {
+            this.uploadProgress.successCount++
+            results.push({ success: true, filename: fileItem.name })
+            console.log(`文件 ${fileItem.name} 上传成功`);
+          } else {
+            this.uploadProgress.errorCount++
+            results.push({ success: false, filename: fileItem.name, error: response.data.message })
+            console.log(`文件 ${fileItem.name} 上传失败:`, response.data.message);
+          }
+        } catch (error) {
+          this.uploadProgress.errorCount++
+          results.push({ success: false, filename: fileItem.name, error: error.message })
+          console.log(`文件 ${fileItem.name} 上传异常:`, error);
+        }
+      }
+      
+      // 上传完成
+      this.uploadProgress.status = this.uploadProgress.errorCount > 0 ? 'exception' : 'success'
+      this.uploadProgress.currentFile = ''
+      
+      // 显示结果
+      const successCount = this.uploadProgress.successCount
+      const errorCount = this.uploadProgress.errorCount
+      
+      if (errorCount === 0) {
+        this.$message.success(`文件夹上传完成！成功上传 ${successCount} 个文件`)
+      } else if (successCount === 0) {
+        this.$message.error(`文件夹上传失败！${errorCount} 个文件上传失败`)
+      } else {
+        this.$message.warning(`文件夹上传部分成功！成功 ${successCount} 个，失败 ${errorCount} 个`)
+      }
+      
+      // 延迟关闭对话框，让用户看到最终结果
+      setTimeout(() => {
+        this.uploadDialog.visible = false
+        this.resetUploadForm()
+        this.loadImages()
+      }, 2000)
+    },
+    
     async loadImages() {
       if (!this.selectedModelId) return
       
@@ -1665,9 +1866,20 @@ export default {
       });
       this.customFileList = [];
       
+      // 清理文件夹文件列表
+      this.folderFileList.forEach(item => {
+        URL.revokeObjectURL(item.preview);
+      });
+      this.folderFileList = [];
+      
       // 清理文件input
       if (this.$refs.fileInput) {
         this.$refs.fileInput.value = '';
+      }
+      
+      // 清理文件夹input
+      if (this.$refs.folderInput) {
+        this.$refs.folderInput.value = '';
       }
       
       // 重置进度信息
@@ -1832,17 +2044,80 @@ export default {
     
     convertSpecsToArray(specs) {
       if (!specs || typeof specs !== 'object') return []
-      return Object.entries(specs).map(([key, value]) => ({ key, value }))
+      
+      const result = []
+      
+      // 处理普通属性
+      Object.entries(specs).forEach(([key, value]) => {
+        if (key === 'dimensions' && typeof value === 'object' && value !== null) {
+          // 将 dimensions 对象的属性展开为单独的键值对
+          Object.entries(value).forEach(([dimKey, dimValue]) => {
+            result.push({ 
+              key: `dimensions.${dimKey}`, 
+              value: dimValue,
+              displayKey: `车身尺寸 - ${this.getDimensionLabel(dimKey)}`
+            })
+          })
+        } else {
+          result.push({ 
+            key, 
+            value,
+            displayKey: this.getSpecDisplayKey(key)
+          })
+        }
+      })
+      
+      return result
     },
     
     convertArrayToSpecs(specsArray) {
       if (!Array.isArray(specsArray)) return {}
-      return specsArray.reduce((acc, item) => {
-        if (item.key && item.value) {
-          acc[item.key] = item.value
+      
+      const result = {}
+      const dimensions = {}
+      
+      specsArray.forEach(item => {
+        if (item.key && item.value !== undefined && item.value !== '') {
+          if (item.key.startsWith('dimensions.')) {
+            // 处理 dimensions 嵌套属性
+            const dimKey = item.key.replace('dimensions.', '')
+            dimensions[dimKey] = item.value
+          } else {
+            // 处理普通属性
+            result[item.key] = item.value
+          }
         }
-        return acc
-      }, {})
+      })
+      
+      // 如果有 dimensions 属性，添加到结果中
+      if (Object.keys(dimensions).length > 0) {
+        result.dimensions = dimensions
+      }
+      
+      return result
+    },
+    
+    // 获取尺寸参数的中文标签
+    getDimensionLabel(key) {
+      const labels = {
+        'length': '长度',
+        'width': '宽度', 
+        'height': '高度',
+        'wheelbase': '轴距'
+      }
+      return labels[key] || key
+    },
+    
+    // 获取规格参数的显示键名
+    getSpecDisplayKey(key) {
+      const displayKeys = {
+        'doors': '车门数',
+        'drive': '驱动方式',
+        'front_tire': '前轮胎',
+        'rear_tire': '后轮胎',
+        'body_structure': '车身结构'
+      }
+      return displayKeys[key] || key
     },
     
     handleUploadClick() {
@@ -1919,6 +2194,105 @@ export default {
       if (this.customFileList.length === 0) {
         this.$refs.fileInput.value = '';
       }
+    },
+    
+    // 处理文件夹上传
+    handleFolderInputChange(event) {
+      console.log('=== 文件夹输入变化 ===');
+      const files = event.target.files;
+      console.log('选择的文件数量:', files.length);
+      
+      const validFiles = [];
+      
+      Array.from(files).forEach((file, index) => {
+        console.log(`文件 ${index + 1}:`, file.name, file.type, file.size);
+        
+        // 验证文件类型
+        if (!file.type.startsWith('image/')) {
+          this.$message.error(`文件 ${file.name} 不是图片格式`);
+          return;
+        }
+        
+        // 验证文件大小
+        if (file.size > 10 * 1024 * 1024) {
+          this.$message.error(`文件 ${file.name} 大小超过 10MB`);
+          return;
+        }
+        
+        // 创建预览URL
+        const preview = URL.createObjectURL(file);
+        validFiles.push({
+          file: file,
+          name: file.name,
+          size: file.size,
+          type: file.type,
+          path: file.webkitRelativePath || file.name,
+          preview: preview
+        });
+      });
+      
+      this.folderFileList = validFiles;
+      console.log('处理后的有效文件数量:', this.folderFileList.length);
+      console.log('canUpload状态:', this.canUpload);
+    },
+    
+    // 清空所有文件夹文件
+    clearAllFolderFiles() {
+      console.log('清空所有文件夹文件');
+      // 释放预览URL避免内存泄漏
+      this.folderFileList.forEach(item => {
+        URL.revokeObjectURL(item.preview);
+      });
+      this.folderFileList = [];
+      this.$refs.folderInput.value = '';
+      console.log('清空后canUpload状态:', this.canUpload);
+    },
+    
+    // 移除单个文件夹文件
+    removeFolderFile(index) {
+      console.log('移除文件夹文件索引:', index);
+      const fileItem = this.folderFileList[index];
+      if (fileItem) {
+        URL.revokeObjectURL(fileItem.preview);
+        this.folderFileList.splice(index, 1);
+        console.log('移除后文件夹文件数量:', this.folderFileList.length);
+        console.log('移除后canUpload状态:', this.canUpload);
+      }
+      
+      // 如果没有文件夹文件了，清空input
+      if (this.folderFileList.length === 0) {
+        this.$refs.folderInput.value = '';
+      }
+    },
+    
+    getSpecPlaceholder(key) {
+      const placeholders = {
+        'dimensions.length': '请输入长度',
+        'dimensions.width': '请输入宽度',
+        'dimensions.height': '请输入高度',
+        'dimensions.wheelbase': '请输入轴距',
+        'front_tire': '请输入前轮胎规格',
+        'rear_tire': '请输入后轮胎规格',
+        'doors': '请输入车门数',
+        'drive': '请输入驱动方式',
+        'body_structure': '请输入车身结构'
+      }
+      return placeholders[key] || '请输入'
+    },
+    
+    getSpecUnit(key) {
+      const units = {
+        'dimensions.length': 'cm',
+        'dimensions.width': 'cm',
+        'dimensions.height': 'cm',
+        'dimensions.wheelbase': 'cm',
+        'front_tire': 'mm',
+        'rear_tire': 'mm',
+        'doors': '',
+        'drive': '',
+        'body_structure': ''
+      }
+      return units[key] || ''
     }
   },
   created() {
@@ -2820,5 +3194,60 @@ export default {
   .image-preview-large img {
     max-height: 250px;
   }
+}
+
+/* 规格参数编辑器样式 */
+.specs-editor {
+  border: 1px solid #e4e7ed;
+  border-radius: 8px;
+  padding: 15px;
+  background: #fafafa;
+}
+
+.spec-item {
+  margin-bottom: 15px;
+  padding: 12px;
+  background: white;
+  border-radius: 6px;
+  border: 1px solid #e4e7ed;
+  transition: all 0.3s ease;
+}
+
+.spec-item:hover {
+  border-color: #409eff;
+  box-shadow: 0 2px 8px rgba(64, 158, 255, 0.1);
+}
+
+.spec-unit {
+  font-size: 14px;
+  color: #909399;
+  line-height: 32px;
+  text-align: center;
+  font-weight: 500;
+}
+
+.spec-display-name {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #666;
+  padding: 4px 8px;
+  background: #f0f9ff;
+  border-radius: 4px;
+  border-left: 3px solid #409eff;
+}
+
+.specs-editor .el-button--text {
+  color: #409eff;
+  font-weight: 500;
+  padding: 8px 16px;
+  border-radius: 4px;
+  background: #ecf5ff;
+  border: 1px solid #b3d8ff;
+}
+
+.specs-editor .el-button--text:hover {
+  background: #409eff;
+  color: white;
+  border-color: #409eff;
 }
 </style> 

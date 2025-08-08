@@ -306,4 +306,55 @@ exports.getPopularImages = async (req, res, next) => {
   } catch (error) {
     next(error);
   }
+};
+
+// 获取车型的图片 - 新方法以匹配前端API调用
+exports.getImagesByModelId = async (req, res, next) => {
+  try {
+    const { modelId } = req.params;
+    const { page = 1, limit = 20, category } = req.query;
+    
+    console.log(`获取车型 ${modelId} 的图片`);
+    
+    const offset = (page - 1) * limit;
+    
+    // 构建查询条件 - 使用正确的字段名
+    const whereCondition = {
+      modelId: modelId,  // 使用modelId而不是model_id
+      // 如果有状态字段的话
+      // status: 'active'
+    };
+    
+    if (category) {
+      whereCondition.category = category;
+    }
+    
+    // 查询图片
+    const { count, rows: images } = await Image.findAndCountAll({
+      where: whereCondition,
+      order: [['createdAt', 'DESC'], ['id', 'ASC']], // 使用正确的字段名
+      limit: parseInt(limit),
+      offset: offset
+    });
+    
+    console.log(`找到 ${images.length} 张图片`);
+    
+    res.json({
+      success: true,
+      data: images,
+      pagination: {
+        total: count,
+        page: parseInt(page),
+        limit: parseInt(limit),
+        pages: Math.ceil(count / limit)
+      }
+    });
+  } catch (error) {
+    console.error(`获取车型图片失败:`, error);
+    res.status(500).json({
+      success: false,
+      message: '获取图片失败',
+      error: error.message
+    });
+  }
 }; 

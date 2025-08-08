@@ -133,8 +133,11 @@ export default {
         }
         this.brand = brandResponse.data;
         
-        // 获取车型列表
-        const modelsResponse = await modelAPI.getAll({ brandId });
+        // 获取车型列表 - 设置足够大的limit确保获取该品牌的所有车型
+        const modelsResponse = await modelAPI.getAll({ 
+          brandId, 
+          limit: 1000  // 设置足够大的数量限制，确保获取所有车型
+        });
         if (modelsResponse && modelsResponse.success) {
           this.models = modelsResponse.data || [];
           
@@ -151,6 +154,28 @@ export default {
               }
             }
           }
+          
+          // 按年份排序，最新年份排在前面
+          this.models.sort((a, b) => {
+            // 从车型名称中提取年份
+            const extractYear = (name) => {
+              const match = name.match(/^(20\d{2})/);
+              return match ? parseInt(match[1]) : 0;
+            };
+            
+            const yearA = extractYear(a.name);
+            const yearB = extractYear(b.name);
+            
+            // 按年份降序排序（新年份在前）
+            if (yearA !== yearB) {
+              return yearB - yearA;
+            }
+            
+            // 如果年份相同，按名称排序
+            return a.name.localeCompare(b.name, 'zh-CN');
+          });
+          
+          console.log(`品牌 ${this.brand.name} 车型按年份排序完成，共 ${this.models.length} 个车型`);
         } else {
           this.models = [];
         }

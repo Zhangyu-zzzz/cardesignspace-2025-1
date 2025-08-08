@@ -73,7 +73,8 @@ apiClient.interceptors.response.use(
 export const authAPI = {
   login: (credentials) => apiClient.post('/auth/login', credentials),
   register: (userData) => apiClient.post('/auth/register', userData),
-  me: () => apiClient.get('/auth/me')
+  me: () => apiClient.get('/auth/me'),
+  logout: () => apiClient.post('/auth/logout')
 };
 
 // 品牌相关API

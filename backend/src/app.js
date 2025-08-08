@@ -71,14 +71,16 @@ app.get('/api/health', (req, res) => {
 
 // API路由
 app.use('/api/brands', require('./routes/brandRoutes'));
-app.use('/api/series', require('./routes/seriesRoutes'));
 app.use('/api/models', require('./routes/modelRoutes'));
-app.use('/api/images', require('./routes/imageRoutes'));
-app.use('/api/auth', require('./routes/auth'));
-app.use('/api/users', require('./routes/userRoutes'));
+app.use('/api/series', require('./routes/seriesRoutes'));
 app.use('/api/upload', require('./routes/upload'));
+app.use('/api/auth', require('./routes/auth'));
 app.use('/api/forum', require('./routes/forumRoutes'));
+app.use('/api/search', require('./routes/searchRoutes'));
+app.use('/api/image', require('./routes/mattingRoutes'));
 app.use('/api/notifications', require('./routes/notificationRoutes'));
+
+console.log('所有API路由已加载完成');
 
 // 在路由之后添加全局错误处理中间件
 app.use((err, req, res, next) => {

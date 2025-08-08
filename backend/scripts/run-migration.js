@@ -18,11 +18,9 @@ const sequelize = new Sequelize(
 );
 
 async function runMigration() {
-  let connection;
-  
   try {
-    // 创建数据库连接
-    connection = await sequelize.authenticate();
+    // 测试数据库连接
+    await sequelize.authenticate();
     console.log('✅ 数据库连接成功');
 
     // 读取迁移文件
@@ -33,12 +31,12 @@ async function runMigration() {
     console.log('迁移内容:', migrationSQL.substring(0, 200) + '...');
 
     // 执行迁移
-    await connection.query(migrationSQL);
+    await sequelize.query(migrationSQL);
     
     console.log('✅ 通知表创建成功！');
     
     // 检查表是否存在
-    const [tables] = await connection.query(
+    const [tables] = await sequelize.query(
       "SHOW TABLES LIKE 'notifications'"
     );
     
@@ -46,7 +44,7 @@ async function runMigration() {
       console.log('✅ 通知表确认存在');
       
       // 查看表结构
-      const [columns] = await connection.query(
+      const [columns] = await sequelize.query(
         "DESCRIBE notifications"
       );
       
@@ -65,10 +63,8 @@ async function runMigration() {
     }
     process.exit(1);
   } finally {
-    if (connection) {
-      await connection.close();
-      console.log('🔌 数据库连接已关闭');
-    }
+    await sequelize.close();
+    console.log('�� 数据库连接已关闭');
   }
 }
 

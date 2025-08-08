@@ -3,51 +3,102 @@
 
     
     <!-- 品牌导航区域 -->
-    <div class="brand-filter-container">
-      <div class="letter-filter">
+    <div class="brand-section">
+      <!-- 品牌分类选择器 -->
+      <div class="brand-category-tabs">
         <button 
-          :class="['letter-btn', currentLetter === '不限' ? 'active' : '']"
-          @click="currentLetter = '不限'"
+          :class="['category-tab', brandCategory === 'all' ? 'active' : '']"
+          @click="setBrandCategory('all')"
+        >
+          全部品牌
+        </button>
+        <button 
+          :class="['category-tab', brandCategory === 'chinese' ? 'active' : '']"
+          @click="setBrandCategory('chinese')"
         >
           自主品牌
         </button>
         <button 
+          :class="['category-tab', brandCategory === 'joint' ? 'active' : '']"
+          @click="setBrandCategory('joint')"
+        >
+          合资品牌
+        </button>
+        <button 
+          :class="['category-tab', brandCategory === 'overseas' ? 'active' : '']"
+          @click="setBrandCategory('overseas')"
+        >
+          海外品牌
+        </button>
+      </div>
+      
+      <!-- 字母筛选器 -->
+      <div class="alphabet-filter">
+        <button 
+          :class="['alphabet-btn', currentLetter === '不限' ? 'active' : '']"
+          @click="currentLetter = '不限'"
+        >
+          不限
+        </button>
+        <button 
           v-for="letter in 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')" 
           :key="letter"
-          :class="['letter-btn', currentLetter === letter ? 'active' : '']"
+          :class="['alphabet-btn', currentLetter === letter ? 'active' : '']"
           @click="currentLetter = letter"
         >
           {{ letter }}
         </button>
       </div>
       
-      <div v-if="loading" class="loading-container">
-        <el-skeleton :rows="1" animated />
-      </div>
-      <div v-else-if="error" class="error-message">
-        <p>{{ error }}</p>
-      </div>
-      <div v-else>
-        <div v-if="filteredBrands.length === 0" class="no-brands-message">
-          没有找到符合条件的品牌
+      <!-- 品牌展示区域 -->
+      <div class="brands-display">
+        <div v-if="loading" class="loading-container">
+          <el-skeleton :rows="3" animated />
         </div>
-        <div v-else class="brands-container">
-          <div 
-            class="brand-item" 
-            v-for="brand in filteredBrands" 
-            :key="brand.id" 
-            @click="goToBrand(brand.id)"
-          >
-            <div class="brand-logo">
-              <img v-if="brand.logo" :src="brand.logo" alt="品牌Logo">
-              <div v-else class="no-logo">{{ brand.name.charAt(0) }}</div>
-            </div>
-            <div class="brand-name">{{ brand.name }}</div>
+        <div v-else-if="error" class="error-message">
+          <p>{{ error }}</p>
+        </div>
+        <div v-else>
+          <div v-if="filteredBrands.length === 0" class="no-brands-message">
+            没有找到符合条件的品牌
           </div>
+          <div v-else class="brands-grid">
+            <div 
+              class="brand-card" 
+              v-for="brand in filteredBrands" 
+              :key="brand.id" 
+              @click="goToBrand(brand.id)"
+              :data-brand-id="brand.id"
+            >
+              <div class="brand-logo">
+                <img 
+                  v-if="brand.logo" 
+                  :src="brand.logo"
+                  :alt="brand.name"
+                  @load="handleLogoLoad"
+                  @error="handleLogoError"
+                  class="brand-logo-img"
+                >
+                <div class="no-logo" :class="{ show: !brand.logo || logoLoadError[brand.id] }">
+                  {{ brand.name.charAt(0) }}
+                </div>
+              </div>
+              <div class="brand-name">{{ brand.name }}</div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 品牌统计信息 -->
+        <div class="brand-stats" v-if="!loading && filteredBrands.length > 0">
+          <span class="stats-text">共 {{ filteredBrands.length }} 个品牌</span>
+          <span v-if="brandCategory !== 'all'" class="category-text">
+            （{{ getCategoryName() }}）
+          </span>
         </div>
       </div>
     </div>
 
+    <!-- 最新车型展示区域 -->
     <div class="latest-models-section">
       <div class="section-header">
         <h2>最新车型</h2>
@@ -65,15 +116,16 @@
           @click="goToModel(model.id)"
         >
           <div class="model-image">
-            <img :src="getModelImageUrl(model)" :alt="model.name" @click.stop="goToModel(model.id)">
+            <img 
+              :data-src="getModelImageUrl(model)" 
+              :alt="model.name" 
+              @click.stop="goToModel(model.id)"
+              class="lazy-load"
+              src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjBmMGYwIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPuWKoOi9veS4rS4uLjwvdGV4dD48L3N2Zz4="
+            >
           </div>
           <div class="model-info">
             <h3 class="model-name">{{ model.name }}</h3>
-            <!-- <p v-if="model.Brand" class="brand-name">{{ model.Brand.name }}</p>
-            <div class="model-tags">
-              <span v-if="model.year" class="year-tag">{{ model.year }}年</span>
-              <span v-if="model.type" class="type-tag">{{ model.type }}</span>
-            </div> -->
           </div>
         </div>
       </div>
@@ -137,6 +189,7 @@ export default {
       onlyShowingSelling: false,
       originFilter: 'china', // 默认显示中国品牌
       specialBrandMapping: {
+        // 中国品牌
         '蔚来': 'W', // 确保"蔚来"归到W类
         '哪吒': 'N', // 确保"哪吒"归到N类
         '威马': 'W', // 确保"威马"归到W类
@@ -155,8 +208,34 @@ export default {
         '埃安': 'A',
         '欧拉': 'O',
         '阿维塔': 'A',
-        '五菱': 'W'  // 确保"五菱"归到W类
-      }
+        '五菱': 'W',  // 确保"五菱"归到W类
+        
+        // 合资品牌
+        '一汽-大众': 'Y',
+        '上汽大众': 'S',
+        '一汽丰田': 'Y',
+        '广汽丰田': 'G',
+        '东风日产': 'D',
+        '广汽本田': 'G',
+        '东风本田': 'D',
+        '北京现代': 'B',
+        '东风悦达起亚': 'D',
+        '长安福特': 'C',
+        '上汽通用': 'S',
+        '华晨宝马': 'H',
+        '北京奔驰': 'B',
+        '一汽奥迪': 'Y',
+        
+        // 海外品牌首字母映射
+        // 英文品牌直接使用首字母
+        'BMW': 'B',
+        'MINI': 'M',
+        'Jeep': 'J',
+        
+        // 其他可能需要特殊处理的品牌可以在这里添加
+      },
+      brandCategory: 'all', // 新增：品牌分类
+      logoLoadError: {},
     }
   },
   computed: {
@@ -200,12 +279,29 @@ export default {
     filteredBrands() {
       let brands = [];
       
-      if (this.currentLetter === '不限') {
-        // 获取所有中国品牌并按照首字母排序
-        brands = this.chineseOnlyBrands.slice();
-      } else {
-        // 获取指定字母的品牌
-        brands = this.brandsByLetter[this.currentLetter] || [];
+      // 首先根据品牌分类筛选
+      if (this.brandCategory === 'all') {
+        brands = this.allBrands.slice();
+      } else if (this.brandCategory === 'chinese') {
+        brands = this.allBrands.filter(brand => brand.country === '中国');
+      } else if (this.brandCategory === 'joint') {
+        // 合资品牌筛选 - 可以根据实际数据调整判断条件
+        brands = this.allBrands.filter(brand => 
+          brand.country === '合资' || 
+          (brand.country && brand.country.includes('合资'))
+        );
+      } else if (this.brandCategory === 'overseas') {
+        brands = this.allBrands.filter(brand => 
+          brand.country && brand.country !== '中国' && !brand.country.includes('合资')
+        );
+      }
+      
+      // 然后根据字母筛选
+      if (this.currentLetter !== '不限') {
+        brands = brands.filter(brand => {
+          const firstLetter = this.getFirstLetter(brand.name);
+          return firstLetter === this.currentLetter;
+        });
       }
       
       // 根据拼音首字母和品牌名排序
@@ -226,64 +322,27 @@ export default {
   methods: {
     // 获取车型图片URL的辅助方法
     getModelImageUrl(model) {
-      // 优先级顺序：1.thumbnail > 2.Images[0].thumbnailUrl > 3.Images[0].mediumUrl > 4.Images[0].url > 5.默认图片
-      
-      // 打印调试信息，看看model对象的实际内容
-      console.log(`获取图片URL - 车型ID: ${model && model.id || 'undefined'}, 名称: ${model && model.name || 'undefined'}`);
-      console.log(`车型数据类型:`, typeof model, Array.isArray(model));
-      
       // 防御性检查，确保model是对象
       if (!model || typeof model !== 'object') {
         console.error('无效的模型数据:', model);
         return '/images/default-car.jpg';
       }
       
-      console.log(`详细车型数据:`, JSON.stringify(model, null, 2));
-      
-      // 尝试直接访问thumbnail属性，不通过任何额外处理
-      console.log('直接访问model.thumbnail:', model.thumbnail);
-      
       // 1. 首先尝试使用模型自身的thumbnail属性
       if (model.thumbnail && typeof model.thumbnail === 'string' && model.thumbnail.trim() !== '') {
-        console.log(`使用thumbnail: ${model.thumbnail}`);
-        // 检查URL格式是否正确
-        if (!model.thumbnail.startsWith('http')) {
-          console.warn(`车型 ${model.id} 的thumbnail URL格式可能不正确: ${model.thumbnail}`);
-        }
         return model.thumbnail;
       }
       
       // 2. 检查是否有Images集合并且不为空
       if (model.Images && Array.isArray(model.Images) && model.Images.length > 0) {
-        // 获取第一张图片（固定使用索引0）
+        // 获取第一张图片的URL
         const image = model.Images[0];
-        console.log(`使用第一张图片:`, image);
-        
-        // 3. 按照固定优先级顺序尝试获取URL
-        if (image.thumbnailUrl) {
-          console.log(`使用thumbnailUrl: ${image.thumbnailUrl}`);
-          return image.thumbnailUrl;
-        }
-        if (image.mediumUrl) {
-          console.log(`使用mediumUrl: ${image.mediumUrl}`);
-          return image.mediumUrl;
-        }
-        if (image.url) {
-          console.log(`使用url: ${image.url}`);
+        if (image && image.url) {
           return image.url;
-        }
-        if (image.originalUrl) {
-          console.log(`使用originalUrl: ${image.originalUrl}`);
-          return image.originalUrl;
-        }
-        if (image.largeUrl) {
-          console.log(`使用largeUrl: ${image.largeUrl}`);
-          return image.largeUrl;
         }
       }
       
-      // 4. 如果找不到任何图片，返回默认图片
-      console.warn(`车型 ${model.id} 没有找到任何有效的图片URL，使用默认图片`);
+      // 3. 如果找不到任何图片，返回默认图片
       return '/images/default-car.jpg';
     },
     // 获取品牌名称拼音首字母
@@ -378,10 +437,25 @@ export default {
     async fetchChineseBrands() {
       this.loading = true;
       this.error = null;
+      this.resetLogoLoadState();
       
       try {
-        // 从cardesignspace数据库获取品牌列表，添加时间戳防止缓存
-        const timestamp = Date.now();
+        // 检查本地缓存（10分钟有效期）
+        const cacheKey = 'brands_cache';
+        const cacheTimeKey = 'brands_cache_time';
+        const cachedData = localStorage.getItem(cacheKey);
+        const cacheTime = localStorage.getItem(cacheTimeKey);
+        const now = Date.now();
+        const cacheValidTime = 10 * 60 * 1000; // 10分钟
+        
+        if (cachedData && cacheTime && (now - parseInt(cacheTime)) < cacheValidTime) {
+          console.log('使用缓存的品牌数据');
+          this.allBrands = JSON.parse(cachedData);
+          this.loading = false;
+          return;
+        }
+        
+        // 从API获取品牌列表
         const response = await brandAPI.getAll();
         console.log('API返回的原始品牌数据:', response);
         
@@ -396,8 +470,11 @@ export default {
           this.allBrands = Array.isArray(response) ? response : [];
         }
         
-        console.log('处理后的品牌数据:', this.allBrands);
-        console.log('中国品牌数量:', this.allBrands.filter(brand => brand.country === '中国').length);
+        // 缓存数据
+        if (this.allBrands && this.allBrands.length > 0) {
+          localStorage.setItem(cacheKey, JSON.stringify(this.allBrands));
+          localStorage.setItem(cacheTimeKey, now.toString());
+        }
         
         // 如果没有数据，显示提示信息
         if (!this.allBrands || this.allBrands.length === 0) {
@@ -406,6 +483,7 @@ export default {
         
         // 强制刷新筛选状态
         this.currentLetter = '不限';
+        this.brandCategory = 'all'; // 重置分类
         
       } catch (error) {
         console.error('获取品牌列表失败:', error);
@@ -430,134 +508,35 @@ export default {
         this.modelLoading = true;
         console.log('开始加载最新车型...');
         
-        const response = await modelAPI.getAll();
-        console.log('获取到的原始车型数据:', JSON.stringify(response, null, 2).substring(0, 500) + '...');
+        // 调用优化后的API，使用分页和latest参数
+        const response = await modelAPI.getAll({
+          latest: true,
+          page: 1,
+          limit: this.pageSize
+        });
         
-        // 确保数据结构正确
-        let modelsData = [];
+        console.log('获取到的车型数据:', response);
         
         if (response.success && Array.isArray(response.data)) {
-          // 标准结构: { success: true, data: [...] }
-          modelsData = response.data;
-          console.log('使用标准结构 { success: true, data: [...] }');
-        } else if (Array.isArray(response)) {
-          // 数组直接返回
-          modelsData = response;
-          console.log('使用数组直接返回');
-        } else if (response.data && Array.isArray(response.data.data)) {
-          // 双层嵌套: { data: { data: [...] } }
-          modelsData = response.data.data;
-          console.log('使用双层嵌套 { data: { data: [...] } }');
-        } else if (response.data && Array.isArray(response.data)) {
-          // 单层嵌套: { data: [...] }
-          modelsData = response.data;
-          console.log('使用单层嵌套 { data: [...] }');
+          // 后端已经返回了包含图片的完整数据
+          this.latestModels = response.data;
+          this.allModelsData = response.data; // 暂时存储当前页数据
+          
+          // 设置分页信息
+          this.hasMoreModels = response.page < response.totalPages;
+          this.currentPage = response.page;
+          
+          console.log(`成功加载 ${this.latestModels.length} 个车型，总共 ${response.total} 个`);
+          
+          // 为没有缩略图的车型设置默认图片
+          this.latestModels.forEach(model => {
+            if (!model.thumbnail && model.Images && model.Images.length > 0) {
+              const firstImage = model.Images[0];
+              model.thumbnail = firstImage.url;
+            }
+          });
         } else {
-          console.error('无法识别的数据结构:', response);
-          modelsData = [];
-        }
-        
-        console.log('处理后的车型数据数组大小:', modelsData.length);
-        if (modelsData.length > 0) {
-          console.log('第一个车型数据示例:', JSON.stringify(modelsData[0], null, 2));
-        }
-        
-        if (modelsData.length > 0) {
-          // 检查车型数据是否包含缩略图字段
-          const hasThumbnail = modelsData.some(model => model.thumbnail);
-          console.log('是否有车型包含thumbnail字段:', hasThumbnail);
-          
-          // 使用新的排序逻辑：优先按车型名称中的年份排序，再按数据库年份排序
-          this.allModelsData = modelsData.sort((a, b) => {
-            const yearA = this.getModelYear(a);
-            const yearB = this.getModelYear(b);
-            
-            // 按年份降序排序（新年份在前）
-            if (yearA !== yearB) {
-              return yearB - yearA;
-            }
-            
-            // 如果年份相同，按车型名称排序
-            return a.name.localeCompare(b.name, 'zh-CN');
-          });
-          
-          console.log('排序后的前10个车型:', this.allModelsData.slice(0, 10).map(m => `${m.id}: ${m.name} (年份: ${this.getModelYear(m)})`));
-          
-          // 初始显示前12个车型
-          const initialModels = this.allModelsData.slice(0, this.pageSize);
-          
-          console.log('初始显示的车型:', initialModels.map(m => `${m.id}: ${m.name}`));
-          
-          // 检查每个车型的thumbnail字段
-          initialModels.forEach(model => {
-            console.log(`车型 ${model.id}:${model.name} 的thumbnail:`, model.thumbnail);
-          });
-          
-          // 确保所有车型都有Images数组
-          initialModels.forEach(model => {
-            if (!model.Images) {
-              model.Images = [];
-            }
-          });
-          
-          // 使用Promise.all确保所有图片加载完成后再更新模型数据
-          await Promise.all(initialModels.map(async (model) => {
-            // 如果没有图片数据，尝试获取
-            if ((!model.thumbnail || model.thumbnail.trim() === '') && (!model.Images || model.Images.length === 0)) {
-              console.log(`车型 ${model.id}:${model.name} 没有图片数据，尝试获取图片`);
-              
-              try {
-                // 使用imageAPI替代axios，保持一致的请求方式
-                console.log(`请求图片API: /api/images/model/${model.id}`);
-                const imagesResponse = await imageAPI.getByModelId(model.id);
-                console.log(`图片API响应:`, imagesResponse);
-                
-                if (imagesResponse.success && imagesResponse.data) {
-                  const imagesData = imagesResponse.data;
-                  if (imagesData && imagesData.length > 0) {
-                    // 确保图片按照ID排序，保持固定顺序
-                    model.Images = imagesData.sort((a, b) => a.id - b.id);
-                    console.log(`成功为车型 ${model.id} 获取到 ${model.Images.length} 张图片:`, model.Images[0]);
-                    
-                    // 设置缩略图（固定使用第一张图片）
-                    if ((!model.thumbnail || model.thumbnail.trim() === '') && model.Images.length > 0) {
-                      const firstImage = model.Images[0];
-                      // 按优先级设置缩略图
-                      model.thumbnail = firstImage.thumbnailUrl || 
-                                        firstImage.mediumUrl || 
-                                        firstImage.url || 
-                                        firstImage.originalUrl;
-                      console.log(`为车型 ${model.id} 设置缩略图: ${model.thumbnail}`);
-                    } else {
-                      console.log(`车型 ${model.id} 已有缩略图: ${model.thumbnail}`);
-                    }
-                  } else {
-                    console.warn(`车型 ${model.id} 的图片API返回成功，但没有获取到图片数据`);
-                  }
-                } else {
-                  console.warn(`车型 ${model.id} 的图片API请求失败`);
-                }
-              } catch (imageError) {
-                console.error(`获取车型 ${model.id} 的图片失败:`, imageError);
-              }
-            } else {
-              console.log(`车型 ${model.id} 已有图片数据，thumbnail:`, model.thumbnail);
-              if (model.Images && model.Images.length > 0) {
-                console.log(`车型 ${model.id} 的Images集合大小:`, model.Images.length);
-              }
-            }
-            
-            return model;
-          }));
-          
-          // 所有图片加载完成后，更新模型数据
-          console.log('所有车型图片加载完成，更新latestModels，数据:', initialModels.map(m => ({id: m.id, name: m.name, thumbnail: m.thumbnail})));
-          this.latestModels = initialModels;
-          
-          // 检查是否还有更多数据
-          this.hasMoreModels = this.allModelsData.length > this.pageSize;
-        } else {
-          console.log('未从数据库获取到车型数据');
+          console.error('无效的响应数据结构:', response);
           this.latestModels = [];
           this.allModelsData = [];
           this.hasMoreModels = false;
@@ -571,76 +550,44 @@ export default {
         // 无论成功失败，都关闭加载状态
         this.modelLoading = false;
         console.log('最新车型加载完成');
+        
+        // 重新初始化懒加载
+        this.$nextTick(() => {
+          this.initLazyLoading();
+        });
       }
     },
     // 加载更多车型
     async loadMoreModels() {
       this.loadingMore = true;
       try {
-        // 计算下一批数据的起始和结束索引
-        const startIndex = this.currentPage * this.pageSize;
-        const endIndex = startIndex + this.pageSize;
+        const nextPage = this.currentPage + 1;
+        console.log(`加载第 ${nextPage} 页车型`);
         
-        console.log(`加载更多车型: 第${this.currentPage + 1}页, 索引${startIndex}-${endIndex}`);
+        // 调用API获取下一页数据
+        const response = await modelAPI.getAll({
+          latest: true,
+          page: nextPage,
+          limit: this.pageSize
+        });
         
-        // 从所有数据中获取下一批车型
-        const nextBatchModels = this.allModelsData.slice(startIndex, endIndex);
-        
-        if (nextBatchModels.length > 0) {
-          console.log('获取到下一批车型:', nextBatchModels.map(m => `${m.id}: ${m.name}`));
-          
-          // 为新加载的车型获取图片数据
-          await Promise.all(nextBatchModels.map(async (model) => {
-            // 确保有Images数组
-            if (!model.Images) {
-              model.Images = [];
+        if (response.success && Array.isArray(response.data)) {
+          // 为新加载的车型设置缩略图
+          response.data.forEach(model => {
+            if (!model.thumbnail && model.Images && model.Images.length > 0) {
+              const firstImage = model.Images[0];
+              model.thumbnail = firstImage.url;
             }
-            
-            // 如果没有图片数据，尝试获取
-            if ((!model.thumbnail || model.thumbnail.trim() === '') && (!model.Images || model.Images.length === 0)) {
-              console.log(`车型 ${model.id}:${model.name} 没有图片数据，尝试获取图片`);
-              
-              try {
-                console.log(`请求图片API: /api/images/model/${model.id}`);
-                const imagesResponse = await imageAPI.getByModelId(model.id);
-                
-                if (imagesResponse.success && imagesResponse.data) {
-                  const imagesData = imagesResponse.data;
-                  if (imagesData && imagesData.length > 0) {
-                    // 确保图片按照ID排序，保持固定顺序
-                    model.Images = imagesData.sort((a, b) => a.id - b.id);
-                    console.log(`成功为车型 ${model.id} 获取到 ${model.Images.length} 张图片`);
-                    
-                    // 设置缩略图（固定使用第一张图片）
-                    if ((!model.thumbnail || model.thumbnail.trim() === '') && model.Images.length > 0) {
-                      const firstImage = model.Images[0];
-                      // 按优先级设置缩略图
-                      model.thumbnail = firstImage.thumbnailUrl || 
-                                        firstImage.mediumUrl || 
-                                        firstImage.url || 
-                                        firstImage.originalUrl;
-                      console.log(`为车型 ${model.id} 设置缩略图: ${model.thumbnail}`);
-                    }
-                  }
-                }
-              } catch (imageError) {
-                console.error(`获取车型 ${model.id} 的图片失败:`, imageError);
-              }
-            }
-            
-            return model;
-          }));
+          });
           
-          // 将新车型添加到现有列表中
-          this.latestModels = [...this.latestModels, ...nextBatchModels];
-          this.currentPage++;
+          // 将新数据添加到现有列表
+          this.latestModels = [...this.latestModels, ...response.data];
+          this.currentPage = response.page;
+          this.hasMoreModels = response.page < response.totalPages;
           
-          // 检查是否还有更多数据
-          this.hasMoreModels = endIndex < this.allModelsData.length;
-          
-          console.log(`成功加载更多车型，当前显示${this.latestModels.length}个，总共${this.allModelsData.length}个`);
+          console.log(`成功加载第 ${nextPage} 页，新增 ${response.data.length} 个车型`);
         } else {
-          console.log('没有更多车型数据');
+          console.error('加载更多车型失败：无效的响应数据');
           this.hasMoreModels = false;
         }
       } catch (error) {
@@ -648,12 +595,204 @@ export default {
         this.$message.error('加载更多车型失败，请稍后重试');
       } finally {
         this.loadingMore = false;
+        
+        // 重新初始化懒加载
+        this.$nextTick(() => {
+          this.initLazyLoading();
+        });
       }
+    },
+    // 初始化图片懒加载
+    initLazyLoading() {
+      // 检查浏览器是否支持Intersection Observer
+      if ('IntersectionObserver' in window) {
+        this.lazyLoadObserver = new IntersectionObserver((entries) => {
+          entries.forEach(entry => {
+            if (entry.isIntersecting) {
+              const img = entry.target;
+              const dataSrc = img.getAttribute('data-src');
+              
+              if (dataSrc) {
+                // 创建一个新的图片对象来预加载
+                const newImg = new Image();
+                newImg.onload = () => {
+                  // 图片加载完成后替换src
+                  img.src = dataSrc;
+                  img.classList.remove('lazy-load');
+                  img.classList.add('loaded');
+                };
+                newImg.onerror = () => {
+                  // 根据图片类型设置不同的默认图片
+                  if (img.classList.contains('brand-logo-img')) {
+                    // 品牌logo加载失败，显示文字logo
+                    img.style.display = 'none';
+                    const noLogoElement = img.nextElementSibling;
+                    if (noLogoElement && noLogoElement.classList.contains('no-logo')) {
+                      noLogoElement.style.display = 'flex';
+                    }
+                  } else {
+                    // 车型图片加载失败，显示默认图片
+                    img.src = '/images/default-car.jpg';
+                  }
+                  img.classList.remove('lazy-load');
+                  img.classList.add('error');
+                };
+                newImg.src = dataSrc;
+                
+                // 停止观察这个元素
+                this.lazyLoadObserver.unobserve(img);
+              }
+            }
+          });
+        }, {
+          rootMargin: '50px' // 提前50px开始加载，减少初始加载压力
+        });
+        
+        // 观察所有懒加载图片
+        this.$nextTick(() => {
+          const lazyImages = document.querySelectorAll('.lazy-load');
+          lazyImages.forEach(img => {
+            this.lazyLoadObserver.observe(img);
+          });
+        });
+      } else {
+        // 浏览器不支持Intersection Observer，直接加载所有图片
+        this.$nextTick(() => {
+          const lazyImages = document.querySelectorAll('.lazy-load');
+          lazyImages.forEach(img => {
+            const dataSrc = img.getAttribute('data-src');
+            if (dataSrc) {
+              img.src = dataSrc;
+              img.classList.remove('lazy-load');
+            }
+          });
+        });
+      }
+    },
+    // 预加载品牌logo
+    preloadBrandLogos() {
+      if (!this.allBrands) return;
+      
+      // 创建一个Map来存储已加载的图片
+      const loadedImages = new Map();
+      
+      this.allBrands.forEach(brand => {
+        if (brand.logo && !loadedImages.has(brand.logo)) {
+          const img = new Image();
+          img.onload = () => {
+            loadedImages.set(brand.logo, true);
+          };
+          img.onerror = () => {
+            this.$set(this.logoLoadError, brand.id, true);
+          };
+          img.src = brand.logo;
+        }
+      });
+    },
+
+    // 初始化品牌数据
+    async initializeBrands() {
+      try {
+        await this.fetchChineseBrands();
+        // 数据加载完成后预加载logo
+        this.$nextTick(() => {
+          this.preloadBrandLogos();
+        });
+      } catch (error) {
+        console.error('初始化品牌数据失败:', error);
+      }
+    },
+    // 设置品牌分类
+    setBrandCategory(category) {
+      this.brandCategory = category;
+      this.currentLetter = '不限'; // 重置字母筛选
+    },
+    // 获取当前品牌分类的名称
+    getCategoryName() {
+      if (this.brandCategory === 'all') {
+        return '全部';
+      } else if (this.brandCategory === 'chinese') {
+        return '自主品牌';
+      } else if (this.brandCategory === 'joint') {
+        return '合资品牌';
+      } else if (this.brandCategory === 'overseas') {
+        return '海外品牌';
+      }
+      return '';
+    },
+    // 处理品牌logo加载失败
+    handleBrandLogoError(event) {
+      const img = event.target;
+      img.style.display = 'none';
+      img.nextElementSibling.style.display = 'flex'; // 显示no-logo
+    },
+         // 获取占位符图片URL
+     getPlaceholderImage() {
+       // 使用轻量级的SVG占位符，避免额外的HTTP请求
+       return 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHZpZXdCb3g9IjAgMCAzMiAzMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIiByeD0iNCIgZmlsbD0iI0Y1RjVGNSIvPgo8L3N2Zz4K';
+     },
+
+    handleLogoLoad(event) {
+      const img = event.target;
+      img.classList.add('loaded');
+      // 获取品牌ID
+      const brandId = this.getBrandIdFromImg(img);
+      if (brandId) {
+        this.$set(this.logoLoadError, brandId, false);
+      }
+    },
+
+    handleLogoError(event) {
+      const img = event.target;
+      img.style.display = 'none';
+      // 获取品牌ID
+      const brandId = this.getBrandIdFromImg(img);
+      if (brandId) {
+        this.$set(this.logoLoadError, brandId, true);
+      }
+    },
+
+    getBrandIdFromImg(img) {
+      // 通过DOM遍历找到对应的brand-card元素
+      let current = img;
+      while (current && !current.classList.contains('brand-card')) {
+        current = current.parentElement;
+      }
+      if (current) {
+        return current.dataset.brandId;
+      }
+      return null;
+    },
+
+    // 重置logo加载状态
+    resetLogoLoadState() {
+      this.logoLoadError = {};
+      // 移除所有loaded类
+      const logos = document.querySelectorAll('.brand-logo-img');
+      logos.forEach(logo => {
+        logo.classList.remove('loaded');
+        logo.style.display = '';
+      });
     }
   },
   mounted() {
-    this.fetchChineseBrands();
+    this.initializeBrands();
     this.fetchLatestModels();
+    
+    // 初始化图片懒加载
+    this.initLazyLoading();
+  },
+  beforeDestroy() {
+    // 清理懒加载观察器
+    if (this.lazyLoadObserver) {
+      this.lazyLoadObserver.disconnect();
+    }
+  },
+  watch: {
+    // 监听路由变化，重置logo加载状态
+    '$route'() {
+      this.resetLogoLoadState();
+    }
   }
 }
 </script>
@@ -662,6 +801,8 @@ export default {
 .home {
   padding: 0;
   font-family: Arial, "Microsoft YaHei", sans-serif;
+  overflow-x: hidden;
+  width: 100%;
 }
 
 /* 顶部导航栏样式 */
@@ -701,145 +842,301 @@ export default {
   font-weight: bold;
 }
 
-/* 品牌筛选区域样式 */
-.brand-filter-container {
-  background-color: #f8f9fa;
-  padding: 20px;
-  margin: 20px;
-  border-radius: 16px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-}
-
-.letter-filter {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  padding: 16px;
-  background-color: #fff;
+/* 品牌展示区域样式优化 */
+.brand-section {
+  background: #fff;
+  margin: 0 16px 20px 16px;
   border-radius: 12px;
-  margin-bottom: 20px;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+  overflow: hidden;
 }
 
-.letter-btn {
-  padding: 8px 16px;
-  background: #f5f7fa;
-  border: 1px solid #e4e7ed;
-  cursor: pointer;
-  font-size: 14px;
-  color: #606266;
-  border-radius: 8px;
-  transition: all 0.3s ease;
-  font-weight: 500;
-}
-
-.letter-btn:hover {
-  background-color: #ecf5ff;
-  border-color: #b3d8ff;
-  color: #409EFF;
-  transform: translateY(-1px);
-}
-
-.letter-btn.active {
-  background-color: #409EFF;
-  border-color: #409EFF;
-  color: white;
-  box-shadow: 0 2px 8px rgba(64, 158, 255, 0.3);
-}
-
-.brand-title {
-  text-align: right;
-  padding: 10px 20px;
-  font-size: 16px;
-  font-weight: bold;
-}
-
-/* 品牌展示区域样式 */
-.brands-container {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
-  gap: 12px;
+/* 品牌分类标签页 */
+.brand-category-tabs {
+  display: flex;
+  background: #f8f9fa;
   padding: 0;
-  background-color: #fff;
-  border-radius: 12px;
-  padding: 16px;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+  border-bottom: 1px solid #e9ecef;
 }
 
-.brand-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 12px 8px;
+.category-tab {
+  flex: 1;
+  padding: 16px 20px;
+  background: transparent;
+  border: none;
   cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  border-radius: 12px;
-  /* background-color: #fafbfc; */
-  border: 1px solid #f0f2f5;
-}
-
-.brand-item:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-  background-color: #fff;
-  border-color: #d9ecff;
-}
-
-.brand-logo {
-  width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 8px;
-  border-radius: 8px;
-  /* background-color: #fff; */
-  /* box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); */
-}
-
-.brand-logo img {
-  max-width: 28px;
-  max-height: 28px;
-  object-fit: contain;
-}
-
-.no-logo {
-  width: 28px;
-  height: 28px;
-  border-radius: 8px;
-  background: linear-gradient(135deg, #409EFF, #67C23A);
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   font-size: 14px;
+  font-weight: 500;
+  color: #666;
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.category-tab:hover {
+  background: rgba(64, 158, 255, 0.08);
+  color: #409EFF;
+}
+
+.category-tab.active {
+  background: #fff;
+  color: #409EFF;
   font-weight: 600;
 }
 
-.brand-name {
-  font-size: 12px;
+.category-tab.active::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: #409EFF;
+}
+
+/* 字母筛选器优化 */
+.alphabet-filter {
+  display: flex;
+  flex-wrap: wrap;
+  padding: 16px 20px;
+  gap: 8px;
+  background: #fff;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.alphabet-btn {
+  min-width: 36px;
+  height: 36px;
+  padding: 0 8px;
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  color: #666;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.alphabet-btn:hover {
+  background: #e3f2fd;
+  border-color: #90caf9;
+  color: #1976d2;
+  transform: translateY(-1px);
+}
+
+.alphabet-btn.active {
+  background: #409EFF;
+  border-color: #409EFF;
+  color: white;
+  box-shadow: 0 2px 6px rgba(64, 158, 255, 0.3);
+}
+
+.alphabet-btn:active {
+  transform: scale(0.95);
+  background: #e3f2fd;
+}
+
+/* 品牌展示网格 */
+.brands-display {
+  padding: 20px 16px;
+  background: #fff;
+}
+
+.brands-grid {
+  display: grid;
+  grid-template-columns: repeat(13, 1fr);
+  gap: min(1.2vw, 12px);
+  margin-bottom: 20px;
+  justify-items: center;
+  align-items: start;
+}
+
+.brand-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: min(1.5vw, 12px) min(1vw, 8px);
+  background: #ffffff;
+  border: 1px solid #f0f2f5;
+  border-radius: min(1vw, 8px);
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  aspect-ratio: 1 / 1;
+  justify-content: flex-start;
+  position: relative;
+  width: 100%;
+  max-width: 100px;
+  height: auto;
+  min-height: 0;
+  padding-top: min(2.5vw, 20px);
+}
+
+.brand-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+  background: #fff;
+  border-color: #409EFF;
+}
+
+.brand-card:active {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+}
+
+.brand-card .brand-logo {
+  position: relative;
+  width: clamp(20px, 3.2vw, 32px);
+  height: clamp(20px, 3.2vw, 32px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: clamp(2px, 0.5vw, 6px);
+  border-radius: clamp(2px, 0.5vw, 4px);
+  flex-shrink: 0;
+  background: #fff;
+  overflow: hidden;
+}
+
+.brand-logo::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.2),
+    transparent
+  );
+  animation: loading-shimmer 1.5s infinite;
+}
+
+@keyframes loading-shimmer {
+  0% {
+    left: -100%;
+  }
+  100% {
+    left: 100%;
+  }
+}
+
+.brand-logo img.loaded + .no-logo {
+  display: none;
+}
+
+.brand-logo img.loaded {
+  opacity: 1;
+}
+
+.brand-logo img.loaded ~ .loading-shimmer {
+  display: none;
+}
+
+.brand-logo-img {
+  max-width: clamp(16px, 2.8vw, 28px);
+  max-height: clamp(16px, 2.8vw, 28px);
+  object-fit: contain;
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.brand-logo-img.loaded {
+  opacity: 1;
+}
+
+.brand-logo .no-logo {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #409EFF, #67C23A);
+  color: white;
+  font-size: clamp(6px, 1.2vw, 12px);
+  font-weight: 600;
+  font-family: "Microsoft YaHei", "PingFang SC", "Helvetica Neue", Arial, sans-serif;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.brand-logo .no-logo.show {
+  opacity: 1;
+}
+
+.brand-card .brand-name {
+  font-size: clamp(9px, 1.4vw, 13px);
   text-align: center;
-  color: #606266;
+  color: #333333;
   font-weight: 500;
   line-height: 1.2;
   max-width: 100%;
-  word-break: break-all;
+  word-break: break-word;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  margin-top: auto;
+  padding: 0 clamp(1px, 0.3vw, 3px);
+  min-height: clamp(16px, 2.8vw, 24px);
+  font-family: "Microsoft YaHei", "PingFang SC", "Helvetica Neue", Arial, sans-serif;
+  margin-bottom: clamp(1px, 0.5vw, 4px);
 }
 
+/* 品牌统计信息 */
+.brand-stats {
+  text-align: center;
+  padding: 16px 0;
+  font-size: 14px;
+  color: #909399;
+  border-top: 1px solid #f0f0f0;
+  background: #fafbfc;
+  margin: 0 -20px -20px -20px;
+}
+
+.stats-text {
+  margin-right: 8px;
+}
+
+.category-text {
+  font-weight: 600;
+  color: #409EFF;
+}
+
+/* 移除旧的样式 */
+.brand-filter-container,
+.brand-category-filter,
+.letter-filter,
+.brands-container,
+.brand-item {
+  /* 这些类将被新样式替代 */
+}
+
+/* 旧的品牌展示样式已移除，使用新的样式 */
+
 .loading-container {
-  padding: 20px;
-  margin-bottom: 20px;
+  padding: 12px;
+  margin-bottom: 12px;
 }
 
 .error-message {
   color: #F56C6C;
   text-align: center;
-  padding: 20px;
+  padding: 12px;
 }
 
 .no-brands-message {
   text-align: center;
-  padding: 20px;
+  padding: 12px;
   color: #909399;
   font-size: 14px;
 }
@@ -881,24 +1178,24 @@ export default {
 }
 
 .el-divider {
-  margin: 30px 0 20px 0;
+  margin: 16px 0 12px 0;
 }
 
 .el-row {
-  margin-bottom: 20px;
+  margin-bottom: 12px;
 }
 
 .latest-models-section {
-  padding: 20px;
+  padding: 12px;
   background-color: #f8f9fa;
   border-radius: 16px;
-  margin: 20px;
+  margin: 8px 20px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
 
 .section-header {
   text-align: center;
-  margin-bottom: 20px;
+  margin-bottom: 12px;
 }
 
 .section-header h2 {
@@ -987,8 +1284,8 @@ export default {
 
 .load-more-section {
   text-align: center;
-  margin-top: 30px;
-  padding: 20px;
+  margin-top: 16px;
+  padding: 12px;
 }
 
 .load-more-btn {
@@ -1022,17 +1319,41 @@ export default {
   display: inline-block;
 }
 
+/* 移动端优化 */
+* {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+}
+
+/* 防止水平滚动 */
+body, html {
+  overflow-x: hidden;
+}
+
+.home * {
+  box-sizing: border-box;
+}
+
+.brand-card, .alphabet-btn, .category-tab {
+  -webkit-tap-highlight-color: rgba(64, 158, 255, 0.2);
+  user-select: none;
+}
+
 /* 响应式设计 */
+@media (max-width: 1400px) {
+  .brands-grid {
+    grid-template-columns: repeat(12, 1fr);
+  }
+}
+
 @media (max-width: 1200px) {
-  .brand-filter-container,
-  .latest-models-section {
-    margin: 15px;
-    padding: 15px;
+  .brands-grid {
+    grid-template-columns: repeat(10, 1fr);
   }
   
-  .brands-container {
-    grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
-    gap: 10px;
+  .latest-models-section {
+    margin: 6px 15px;
+    padding: 10px;
   }
   
   .models-grid {
@@ -1048,11 +1369,21 @@ export default {
   
   .brand-filter-container,
   .latest-models-section {
-    margin: 10px;
-    padding: 12px;
+    margin: 4px 10px;
+    padding: 8px;
     border-radius: 12px;
   }
   
+  .brand-category-filter {
+    padding: 12px;
+    gap: 6px;
+  }
+
+  .category-btn {
+    padding: 6px 12px;
+    font-size: 13px;
+  }
+
   .letter-filter {
     padding: 12px;
     gap: 6px;
@@ -1093,6 +1424,19 @@ export default {
     font-size: 11px;
   }
   
+  .brand-stats {
+    padding: 10px 12px;
+    font-size: 13px;
+  }
+
+  .stats-text {
+    margin-right: 3px;
+  }
+
+  .category-text {
+    font-size: 13px;
+  }
+  
   .section-header h2 {
     font-size: 20px;
   }
@@ -1115,8 +1459,8 @@ export default {
   }
   
   .load-more-section {
-    margin-top: 20px;
-    padding: 16px;
+    margin-top: 12px;
+    padding: 10px;
   }
   
   .load-more-btn {
@@ -1125,15 +1469,230 @@ export default {
   }
 }
 
-@media (max-width: 480px) {
-  .brand-filter-container,
-  .latest-models-section {
-    margin: 8px;
-    padding: 10px;
+@media (max-width: 768px) {
+  .home {
+    padding: 0;
   }
   
-  .brands-container {
-    grid-template-columns: repeat(auto-fill, minmax(50px, 1fr));
+  .brand-section {
+    margin: 0 8px 20px 8px;
+    border-radius: 8px;
+  }
+  
+  .brand-category-tabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding: 0;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  
+  .brand-category-tabs::-webkit-scrollbar {
+    display: none;
+  }
+  
+  .category-tab {
+    padding: 8px 12px;
+    font-size: 12px;
+    white-space: nowrap;
+    flex-shrink: 0;
+    min-width: auto;
+  }
+  
+  .alphabet-filter {
+    padding: 12px 16px;
+    gap: 4px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  
+  .alphabet-filter::-webkit-scrollbar {
+    display: none;
+  }
+  
+  .alphabet-btn {
+    min-width: 28px;
+    height: 28px;
+    font-size: 11px;
+    flex-shrink: 0;
+    padding: 0 6px;
+  }
+  
+  .brands-display {
+    padding: 16px 12px;
+  }
+  
+  .brands-grid {
+    grid-template-columns: repeat(8, 1fr);
+    gap: 8px;
+  }
+  
+  .brand-card {
+    padding: 8px 4px;
+    aspect-ratio: 1 / 1;
+    max-width: none;
+    height: auto;
+    min-height: 0;
+    padding-top: 16px;
+  }
+  
+  .brand-card .brand-logo {
+    width: 26px;
+    height: 26px;
+  }
+  
+  .brand-card .brand-logo img {
+    max-width: 22px;
+    max-height: 22px;
+  }
+  
+  .brand-card .no-logo {
+    width: 22px;
+    height: 22px;
+    font-size: 11px;
+  }
+  
+  .brand-card .brand-name {
+    font-size: 10px;
+    color: #333333;
+    font-family: "Microsoft YaHei", "PingFang SC", "Helvetica Neue", Arial, sans-serif;
+    margin-bottom: 3px;
+  }
+}
+
+@media (max-width: 600px) {
+  .brand-section {
+    margin: 0 6px 16px 6px;
+  }
+  
+  .brands-grid {
+    grid-template-columns: repeat(6, 1fr);
+    gap: 5px;
+  }
+  
+  .brand-card {
+    padding: 6px 2px;
+    min-height: 70px;
+    max-width: none;
+    aspect-ratio: 1 / 1;
+    height: auto;
+    padding-top: 12px;
+  }
+  
+  .brands-display {
+    padding: 12px 8px;
+  }
+  
+  .brand-card .brand-logo {
+    width: 24px;
+    height: 24px;
+    margin-bottom: 4px;
+  }
+  
+  .brand-card .brand-logo img {
+    max-width: 20px;
+    max-height: 20px;
+  }
+  
+  .brand-card .no-logo {
+    width: 20px;
+    height: 20px;
+    font-size: 10px;
+  }
+  
+  .brand-card .brand-name {
+    font-size: 10px;
+    line-height: 1.1;
+    min-height: 20px;
+    -webkit-line-clamp: 2;
+    color: #333333;
+    font-family: "Microsoft YaHei", "PingFang SC", "Helvetica Neue", Arial, sans-serif;
+    margin-bottom: 2px;
+  }
+}
+
+@media (max-width: 480px) {
+  .brand-section,
+  .latest-models-section {
+    margin: 4px 4px;
+    border-radius: 6px;
+  }
+  
+  .brand-section {
+    padding: 0;
+  }
+  
+  .brand-category-tabs {
+    padding: 0;
+    gap: 0;
+  }
+  
+  .category-tab {
+    padding: 6px 10px;
+    font-size: 11px;
+    border-radius: 0;
+    min-width: 60px;
+  }
+  
+  .alphabet-filter {
+    padding: 6px 8px;
+    gap: 2px;
+  }
+  
+  .alphabet-btn {
+    min-width: 20px;
+    height: 20px;
+    font-size: 8px;
+    padding: 0 2px;
+  }
+  
+  .brands-display {
+    padding: 8px 6px;
+  }
+  
+  .brands-grid {
+    grid-template-columns: repeat(5, 1fr);
+    gap: 3px;
+  }
+  
+  .brand-card {
+    padding: 6px 2px;
+    aspect-ratio: 1 / 1;
+    min-height: 60px;
+    max-width: none;
+    height: auto;
+    padding-top: 10px;
+  }
+  
+  .brand-card .brand-logo {
+    width: 20px;
+    height: 20px;
+    margin-bottom: 4px;
+  }
+  
+  .brand-card .brand-logo img {
+    max-width: 16px;
+    max-height: 16px;
+  }
+  
+  .brand-card .no-logo {
+    width: 16px;
+    height: 16px;
+    font-size: 8px;
+  }
+  
+  .brand-card .brand-name {
+    font-size: 9px;
+    margin-top: auto;
+    padding: 0 1px;
+    line-height: 1.1;
+    min-height: 18px;
+    -webkit-line-clamp: 2;
+    word-break: break-word;
+    color: #333333;
+    font-family: "Microsoft YaHei", "PingFang SC", "Helvetica Neue", Arial, sans-serif;
+    margin-bottom: 1px;
   }
   
   .models-grid {
@@ -1154,8 +1713,8 @@ export default {
   }
   
   .load-more-section {
-    margin-top: 16px;
-    padding: 12px;
+    margin-top: 10px;
+    padding: 8px;
   }
   
   .load-more-btn {
@@ -1169,5 +1728,55 @@ export default {
     font-size: 13px;
     padding: 10px;
   }
+}
+
+/* 懒加载图片样式 */
+.lazy-load {
+  opacity: 0.6;
+  transition: opacity 0.4s ease;
+  background: #f8f9fa;
+}
+
+.lazy-load.loaded {
+  opacity: 1;
+}
+
+.lazy-load.error {
+  opacity: 0.8;
+  background: #f8f9fa;
+}
+
+/* 品牌logo专用样式 */
+.brand-logo-img {
+  background: #fff;
+}
+
+.brand-logo-img.loaded {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.brand-logo-img.lazy-load {
+  opacity: 0.3;
+  transform: scale(0.95);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* 图片加载动画 */
+.model-image {
+  position: relative;
+  height: 200px;
+  overflow: hidden;
+}
+
+.model-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.model-card:hover .model-image img {
+  transform: scale(1.02);
 }
 </style> 

@@ -34,6 +34,8 @@ server.log
 uploads/
 temp/
 tmp/
+backend/backups/
+backend/scripts/bm-temp/
 
 # 🖥️ 系统文件
 .DS_Store

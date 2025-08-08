@@ -14,10 +14,8 @@ async function runSqlFile(sqlFilePath) {
   const sqlContent = fs.readFileSync(absPath, 'utf8');
 
   // 粗粒度切分语句：按分号拆分，忽略注释与空行
-  const statements = sqlContent
-    .split(/;\s*(?:\r?\n|$)/)
-    .map(s => s.trim())
-    .filter(s => s.length > 0 && !/^--/.test(s));
+  // 直接整体执行，开启 multipleStatements，避免复杂拆分带来的语法问题
+  const statements = [sqlContent];
 
   const connection = await mysql.createConnection({
     host: process.env.DB_HOST,
@@ -25,7 +23,7 @@ async function runSqlFile(sqlFilePath) {
     user: process.env.DB_USER,
     password: process.env.DB_PASSWORD,
     database: process.env.DB_NAME,
-    multipleStatements: false
+    multipleStatements: true
   });
 
   try {

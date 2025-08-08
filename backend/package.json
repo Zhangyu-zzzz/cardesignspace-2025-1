@@ -8,7 +8,9 @@
     "dev": "nodemon src/app.js",
     "test": "echo \"Error: no test specified\" && exit 1",
     "db:tk01:migrate": "node scripts/run-tk01-migration.js",
-    "db:tk01:rollback": "node scripts/run-tk01-rollback.js"
+    "db:tk01:rollback": "node scripts/run-tk01-rollback.js",
+    "db:tk04:init-tags": "node scripts/tk04-init-basic-tags.js",
+    "db:tk06:backfill-curation": "node scripts/tk06-backfill-curation.js"
   },
   "dependencies": {
     "axios": "^1.10.0",

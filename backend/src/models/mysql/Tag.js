@@ -27,6 +27,7 @@ const Tag = sequelize.define(
     parentId: {
       type: DataTypes.INTEGER,
       allowNull: true,
+      field: 'parent_id',
     },
     synonyms: {
       type: DataTypes.JSON,

@@ -1,25 +1,23 @@
 const { DataTypes } = require('sequelize');
 const { sequelize } = require('../../config/mysql');
 
-// 精选信息表（单条记录对应一张图片）
+// 精选信息表（单条记录对应一张图片，主键为 image_id）
 const ImageCuration = sequelize.define('ImageCuration', {
-  id: {
-    type: DataTypes.INTEGER,
-    autoIncrement: true,
-    primaryKey: true
-  },
   imageId: {
     type: DataTypes.INTEGER,
     allowNull: false,
-    unique: true
+    primaryKey: true,
+    field: 'image_id'
   },
   isCurated: {
     type: DataTypes.BOOLEAN,
-    defaultValue: false
+    defaultValue: false,
+    field: 'is_curated'
   },
   curationScore: {
     type: DataTypes.FLOAT,
-    defaultValue: 0
+    defaultValue: 0,
+    field: 'curation_score'
   },
   curator: {
     type: DataTypes.STRING(255),
@@ -31,18 +29,27 @@ const ImageCuration = sequelize.define('ImageCuration', {
   },
   validUntil: {
     type: DataTypes.DATE,
-    allowNull: true
+    allowNull: true,
+    field: 'valid_until'
+  },
+  createdAt: {
+    type: DataTypes.DATE,
+    allowNull: false,
+    field: 'created_at'
+  },
+  updatedAt: {
+    type: DataTypes.DATE,
+    allowNull: false,
+    field: 'updated_at'
   }
 }, {
   tableName: 'image_curation',
-  timestamps: true,
-  createdAt: 'createdAt',
-  updatedAt: 'updatedAt',
+  timestamps: false,
   indexes: [
-    { name: 'idx_image_curation_imageId', fields: ['imageId'] },
-    { name: 'idx_image_curation_isCurated', fields: ['isCurated'] },
-    { name: 'idx_image_curation_score', fields: ['curationScore'] },
-    { name: 'idx_image_curation_validUntil', fields: ['validUntil'] }
+    { name: 'idx_image_curation_imageId', fields: ['image_id'] },
+    { name: 'idx_image_curation_isCurated', fields: ['is_curated'] },
+    { name: 'idx_image_curation_score', fields: ['curation_score'] },
+    { name: 'idx_image_curation_validUntil', fields: ['valid_until'] }
   ]
 });
 

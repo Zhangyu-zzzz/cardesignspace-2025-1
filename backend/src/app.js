@@ -77,7 +77,6 @@ app.use('/api/upload', require('./routes/upload'));
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/forum', require('./routes/forumRoutes'));
 app.use('/api/search', require('./routes/searchRoutes'));
-app.use('/api/image', require('./routes/mattingRoutes'));
 app.use('/api/notifications', require('./routes/notificationRoutes'));
 
 console.log('所有API路由已加载完成');

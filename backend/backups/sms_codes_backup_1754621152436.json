@@ -1,0 +1,92 @@
+{
+  "tableName": "sms_codes",
+  "columns": [
+    {
+      "field": "id",
+      "type": "int",
+      "null": "NO",
+      "key": "PRI",
+      "default": null,
+      "extra": "auto_increment"
+    },
+    {
+      "field": "phone",
+      "type": "varchar(20)",
+      "null": "NO",
+      "key": "MUL",
+      "default": null,
+      "extra": ""
+    },
+    {
+      "field": "code",
+      "type": "varchar(10)",
+      "null": "NO",
+      "key": "",
+      "default": null,
+      "extra": ""
+    },
+    {
+      "field": "type",
+      "type": "enum('login','register','bind','reset')",
+      "null": "NO",
+      "key": "",
+      "default": null,
+      "extra": ""
+    },
+    {
+      "field": "used",
+      "type": "tinyint(1)",
+      "null": "YES",
+      "key": "",
+      "default": "0",
+      "extra": ""
+    },
+    {
+      "field": "expires_at",
+      "type": "datetime",
+      "null": "NO",
+      "key": "MUL",
+      "default": null,
+      "extra": ""
+    },
+    {
+      "field": "created_at",
+      "type": "datetime",
+      "null": "YES",
+      "key": "",
+      "default": "CURRENT_TIMESTAMP",
+      "extra": "DEFAULT_GENERATED"
+    },
+    {
+      "field": "updated_at",
+      "type": "datetime",
+      "null": "YES",
+      "key": "",
+      "default": "CURRENT_TIMESTAMP",
+      "extra": "DEFAULT_GENERATED on update CURRENT_TIMESTAMP"
+    }
+  ],
+  "data": [
+    {
+      "id": 1,
+      "phone": "13800138000",
+      "code": "123243",
+      "type": "register",
+      "used": 0,
+      "expires_at": "2025-06-05T17:33:36.000Z",
+      "created_at": "2025-06-05T09:28:36.000Z",
+      "updated_at": "2025-06-05T09:28:36.000Z"
+    },
+    {
+      "id": 2,
+      "phone": "13888888888",
+      "code": "754084",
+      "type": "register",
+      "used": 0,
+      "expires_at": "2025-06-05T17:35:35.000Z",
+      "created_at": "2025-06-05T09:30:35.000Z",
+      "updated_at": "2025-06-05T09:30:35.000Z"
+    }
+  ],
+  "backupTime": "2025-08-08T02:45:52.436Z"
+}

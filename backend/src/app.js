@@ -78,6 +78,10 @@ app.use('/api/auth', require('./routes/auth'));
 app.use('/api/forum', require('./routes/forumRoutes'));
 app.use('/api/search', require('./routes/searchRoutes'));
 app.use('/api/notifications', require('./routes/notificationRoutes'));
+// 统一与去重后的路由挂载
+app.use('/api/images', require('./routes/imageRoutes'));
+app.use('/api/tags', require('./routes/tagRoutes'));
+app.use('/api/curation', require('./routes/curationRoutes'));
 
 console.log('所有API路由已加载完成');
 

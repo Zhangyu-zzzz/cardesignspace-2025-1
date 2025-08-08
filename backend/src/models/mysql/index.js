@@ -8,6 +8,12 @@ const Comment = require('./Comment');
 const PostLike = require('./PostLike');
 const Notification = require('./Notification');
 const PostFavorite = require('./PostFavorite');
+const ImageAsset = require('./ImageAsset');
+const ImageCuration = require('./ImageCuration');
+const ImageAnalysis = require('./ImageAnalysis');
+const ImageStat = require('./ImageStat');
+const Tag = require('./Tag');
+const ImageTag = require('./ImageTag');
 
 // 设置模型之间的关联关系，避免循环引用问题
 
@@ -22,6 +28,36 @@ Image.belongsTo(Model, { foreignKey: 'modelId' });
 // 用户和图片的关联
 User.hasMany(Image, { foreignKey: 'userId', as: 'Images' });
 Image.belongsTo(User, { foreignKey: 'userId' });
+
+// 图片与图片资产的关联（1:N）
+Image.hasMany(ImageAsset, { foreignKey: 'imageId', as: 'Assets' });
+ImageAsset.belongsTo(Image, { foreignKey: 'imageId', as: 'Image' });
+
+// 图片与精选信息（1:1）
+Image.hasOne(ImageCuration, { foreignKey: 'imageId', as: 'Curation' });
+ImageCuration.belongsTo(Image, { foreignKey: 'imageId', as: 'Image' });
+
+// 图片与分析信息（1:1）
+Image.hasOne(ImageAnalysis, { foreignKey: 'imageId', as: 'Analysis' });
+ImageAnalysis.belongsTo(Image, { foreignKey: 'imageId', as: 'Image' });
+
+// 图片与统计（1:N）
+Image.hasMany(ImageStat, { foreignKey: 'imageId', as: 'Stats' });
+ImageStat.belongsTo(Image, { foreignKey: 'imageId', as: 'Image' });
+
+// 图片与标签的关联（N:N）
+Image.belongsToMany(Tag, {
+  through: ImageTag,
+  foreignKey: 'imageId',
+  otherKey: 'tagId',
+  as: 'Tags'
+});
+Tag.belongsToMany(Image, {
+  through: ImageTag,
+  foreignKey: 'tagId',
+  otherKey: 'imageId',
+  as: 'Images'
+});
 
 // 品牌和车系的关联（如果需要）
 Brand.hasMany(Series, { foreignKey: 'brandId', as: 'Series' });
@@ -84,6 +120,9 @@ module.exports = {
   Brand,
   Model,
   Image,
+  ImageAsset,
+  ImageAnalysis,
+  ImageStat,
   Series,
   User,
   Post,
@@ -91,4 +130,7 @@ module.exports = {
   PostLike,
   Notification,
   PostFavorite
+  , ImageCuration
+  , Tag
+  , ImageTag
 }; 

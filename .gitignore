@@ -15,6 +15,15 @@ env-backup/
 
 docs/temp/
 
+# 🔒 私密文档目录
+docs/private/
+docs/secrets/
+docs/credentials/
+docs/**/private/
+docs/**/*secret*
+docs/**/*credential*
+docs/**/*password*
+
 # 📁 依赖包和构建文件
 node_modules/
 dist/

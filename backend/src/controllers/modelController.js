@@ -6,12 +6,42 @@ const logger = require('../config/logger');
 // 获取所有车型
 exports.getAllModels = async (req, res) => {
   try {
-    const { brandId, search, page = 1, limit = 20, latest = false } = req.query;
+    const { brandId, search, page = 1, limit = 20, latest = false, sortOrder = 'desc', decade } = req.query;
+    
+    console.log(`排序参数: sortOrder=${sortOrder}, 类型: ${typeof sortOrder}`);
+    console.log(`年代筛选: decade=${decade}`);
     
     // 构建查询条件 - 只显示启用的车型
     const whereCondition = {
       isActive: true  // 只显示启用的车型
     };
+    
+    // 添加年代筛选条件
+    if (decade) {
+      const decadeMap = {
+        '1900s': [1900, 1909],
+        '1910s': [1910, 1919],
+        '1920s': [1920, 1929],
+        '1930s': [1930, 1939],
+        '1940s': [1940, 1949],
+        '1950s': [1950, 1959],
+        '1960s': [1960, 1969],
+        '1970s': [1970, 1979],
+        '1980s': [1980, 1989],
+        '1990s': [1990, 1999],
+        '2000s': [2000, 2009],
+        '2010s': [2010, 2019],
+        '2020s': [2020, 2029]
+      };
+      
+      if (decadeMap[decade]) {
+        const [startYear, endYear] = decadeMap[decade];
+        whereCondition.year = {
+          [Op.between]: [startYear, endYear]
+        };
+        console.log(`年代筛选: ${decade} (${startYear}-${endYear})`);
+      }
+    }
     
     // 如果是首页请求最新车型，优化查询
     if (latest === 'true') {
@@ -85,27 +115,7 @@ exports.getAllModels = async (req, res) => {
             attributes: ['id', 'name', 'logo', 'country']
           }
         ],
-        order: [['createdAt', 'DESC'], ['name', 'ASC']]
-      });
-      
-      // 在JavaScript中进行年份排序
-      allModels.sort((a, b) => {
-        // 从车型名称中提取年份
-        const extractYear = (name) => {
-          const match = name.match(/^(20\d{2})/);
-          return match ? parseInt(match[1]) : 0;
-        };
-        
-        const yearA = extractYear(a.name);
-        const yearB = extractYear(b.name);
-        
-        // 按年份降序排序（新年份在前）
-        if (yearA !== yearB) {
-          return yearB - yearA;
-        }
-        
-        // 如果年份相同，按名称排序
-        return a.name.localeCompare(b.name, 'zh-CN');
+        order: [['year', 'DESC'], ['name', 'ASC']] // 按年份降序排序
       });
       
       // 手动分页
@@ -130,6 +140,8 @@ exports.getAllModels = async (req, res) => {
       console.log(`最新车型排序完成: 总计 ${finalCount} 个，当前页 ${finalModels.length} 个`);
     } else {
       // 常规查询（包括按品牌筛选）
+      console.log(`执行常规查询，排序方式: ${sortOrder.toUpperCase()}`);
+      
       const { count, rows: models } = await Model.findAndCountAll({
         where: whereCondition,
         include: [
@@ -140,13 +152,15 @@ exports.getAllModels = async (req, res) => {
           }
         ],
         order: [
-          ['createdAt', 'DESC'], // 创建时间降序
+          ['year', sortOrder.toUpperCase()], // 根据sortOrder参数按年份排序
           ['name', 'ASC'] // 名称升序
         ],
         limit: parseInt(limit),
         offset: offset,
         distinct: true // 确保计数正确
       });
+      
+      console.log(`数据库查询结果: 找到 ${models.length} 个车型`);
       
       // 为每个车型添加第一张图片
       const modelsWithImages = await Promise.all(models.map(async (model) => {
@@ -162,26 +176,6 @@ exports.getAllModels = async (req, res) => {
         
         return modelData;
       }));
-      
-      // 按年份排序，确保一致性
-      modelsWithImages.sort((a, b) => {
-        // 从车型名称中提取年份
-        const extractYear = (name) => {
-          const match = name.match(/^(20\d{2})/);
-          return match ? parseInt(match[1]) : 0;
-        };
-        
-        const yearA = extractYear(a.name);
-        const yearB = extractYear(b.name);
-        
-        // 按年份降序排序（新年份在前）
-        if (yearA !== yearB) {
-          return yearB - yearA;
-        }
-        
-        // 如果年份相同，按名称排序
-        return a.name.localeCompare(b.name, 'zh-CN');
-      });
       
       finalModels = modelsWithImages;
       finalCount = count;

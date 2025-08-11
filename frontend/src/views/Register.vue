@@ -193,7 +193,7 @@ h2 {
 }
 
 .form-footer a {
-  color: #409EFF;
+  color: #e03426;
   text-decoration: none;
   margin-left: 5px;
 }
@@ -221,7 +221,7 @@ h2 {
 }
 
 .form-item input:focus {
-  border-color: #409EFF;
+  border-color: #e03426;
   box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.2);
   outline: none;
 }
@@ -229,7 +229,7 @@ h2 {
 .register-btn {
   width: 100%;
   padding: 12px;
-  background: linear-gradient(135deg, #409EFF, #67C23A);
+  background: linear-gradient(135deg, #e03426, #67C23A);
   color: white;
   border: none;
   border-radius: 8px;
@@ -259,7 +259,7 @@ h2 {
 }
 
 .login-link a {
-  color: #409EFF;
+  color: #e03426;
   text-decoration: none;
   font-weight: 500;
 }

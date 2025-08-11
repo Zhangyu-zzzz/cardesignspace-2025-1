@@ -8,8 +8,11 @@
           <div class="navbar-left">
             <!-- 网站Logo -->
             <div class="navbar-logo" @click="$router.push('/')">
-              <i class="el-icon-car logo-icon"></i>
-              <span class="logo-text">CARDESIGNSPACE</span>
+              <img 
+                src="https://cardesignspace-cos-1-1259492452.cos.ap-shanghai.myqcloud.com/CDS-LOGO.png" 
+                alt="CARDESIGNSPACE" 
+                class="logo-image"
+              />
             </div>
           </div>
 
@@ -286,11 +289,200 @@ export default {
 </script>
 
 <style>
+/* 全局防止水平滚动 */
+html, body {
+  overflow-x: hidden;
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
+}
+
 #app {
   font-family: 'Avenir', Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   color: #2c3e50;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+  margin: 0;
+  padding: 0;
+}
+
+/* Element UI 容器重置 */
+.el-container {
+  width: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.el-header {
+  padding: 0 !important;
+  margin: 0 !important;
+  width: 100% !important;
+}
+
+.el-main {
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+/* ===== Element UI 主题色覆盖 ===== */
+/* 覆盖 Element UI 的主色调 */
+.el-button--primary {
+  background-color: #e03426 !important;
+  border-color: #e03426 !important;
+}
+
+.el-button--primary:hover, 
+.el-button--primary:focus {
+  background-color: #f04838 !important;
+  border-color: #f04838 !important;
+}
+
+.el-button--primary:active {
+  background-color: #d02e20 !important;
+  border-color: #d02e20 !important;
+}
+
+.el-button--primary.is-disabled {
+  background-color: #f0a3a3 !important;
+  border-color: #f0a3a3 !important;
+}
+
+/* Tag primary */
+.el-tag--primary {
+  background-color: #e03426 !important;
+  border-color: #e03426 !important;
+}
+
+/* Link color */
+.el-link--primary {
+  color: #e03426 !important;
+}
+
+.el-link--primary:hover {
+  color: #f04838 !important;
+}
+
+/* Loading primary */
+.el-loading-spinner .el-loading-text {
+  color: #e03426 !important;
+}
+
+/* Switch primary */
+.el-switch.is-checked .el-switch__core {
+  background-color: #e03426 !important;
+  border-color: #e03426 !important;
+}
+
+/* Checkbox primary */
+.el-checkbox__input.is-checked .el-checkbox__inner {
+  background-color: #e03426 !important;
+  border-color: #e03426 !important;
+}
+
+/* Radio primary */
+.el-radio__input.is-checked .el-radio__inner {
+  background-color: #e03426 !important;
+  border-color: #e03426 !important;
+}
+
+/* Progress primary */
+.el-progress-bar__inner {
+  background-color: #e03426 !important;
+}
+
+/* Slider primary */
+.el-slider__button {
+  border-color: #e03426 !important;
+}
+
+.el-slider__bar {
+  background-color: #e03426 !important;
+}
+
+/* Menu 菜单项强制覆盖 */
+.el-menu--horizontal .el-menu-item {
+  background-color: transparent !important;
+  color: #ffffff !important;
+}
+
+.el-menu--horizontal .el-menu-item:hover {
+  background-color: transparent !important;
+  color: #e03426 !important;
+}
+
+.el-menu--horizontal .el-menu-item.is-active {
+  background-color: transparent !important;
+  color: #e03426 !important;
+  border-bottom: none !important;
+}
+
+/* 更强制的菜单项样式覆盖 */
+.navbar .el-menu-item,
+.navbar .el-menu-item:hover,
+.navbar .el-menu-item:focus,
+.navbar .el-menu-item.is-active,
+.navbar .el-menu-item.is-active:hover {
+  background-color: transparent !important;
+  background: transparent !important;
+}
+
+.navbar .nav-item,
+.navbar .nav-item:hover,
+.navbar .nav-item:focus,
+.navbar .nav-item.is-active,
+.navbar .nav-item.is-active:hover {
+  background-color: transparent !important;
+  background: transparent !important;
+}
+
+/* 终极覆盖 - 确保导航菜单项完全透明 */
+.navbar-container .el-menu,
+.navbar-container .el-menu-item,
+.navbar-container .nav-item {
+  background: none !important;
+  background-color: transparent !important;
+  background-image: none !important;
+}
+
+.navbar-container .el-menu-item::before,
+.navbar-container .el-menu-item::after {
+  display: none !important;
+}
+
+/* 强制所有状态下的透明背景 */
+.navbar-container .el-menu-item[class*="is-"],
+.navbar-container .el-menu-item[class*="el-"],
+.navbar-container .nav-item[class*="is-"],
+.navbar-container .nav-item[class*="el-"] {
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+/* 强制登录按钮白色文字 */
+.navbar-container .login-btn,
+.navbar-container .el-button.login-btn,
+.navbar-container button.login-btn {
+  color: #ffffff !important;
+  background-color: transparent !important;
+  border: none !important;
+}
+
+.navbar-container .login-btn:hover,
+.navbar-container .el-button.login-btn:hover,
+.navbar-container button.login-btn:hover {
+  color: #e03426 !important;
+  background-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+.navbar-container .login-btn:focus,
+.navbar-container .el-button.login-btn:focus,
+.navbar-container button.login-btn:focus {
+  color: #ffffff !important;
+  background-color: transparent !important;
 }
 
 .el-footer {
@@ -301,21 +493,33 @@ export default {
 
 /* ===== 导航栏样式 ===== */
 .navbar-container {
-  padding: 0;
-  background: #ffffff;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
-  border-bottom: none;
+  padding: 0 !important;
+  background: #000000 !important;
+  border-bottom: none !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3) !important;
+  overflow-x: hidden !important;
+  margin: 0 !important;
+}
+
+/* 确保导航栏完全覆盖 */
+.navbar-container::before,
+.navbar-container::after {
+  display: none !important;
 }
 
 .navbar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  height: 60px;
-  margin: 0 auto;
-  padding: 0 24px;
-  background: #ffffff;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  height: 60px !important;
+  margin: 0 auto !important;
+  padding: 0 12px !important;
+  background: #000000 !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
 }
 
 /* 左侧导航区域 */
@@ -323,13 +527,35 @@ export default {
   display: flex;
   align-items: center;
   gap: 32px;
-  min-width: 200px;
+  min-width: 150px;
+  flex-shrink: 0;
+}
+
+/* Logo样式 */
+.navbar-logo {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.navbar-logo:hover {
+  transform: scale(1.05);
+}
+
+.logo-image {
+  height: 40px;
+  width: auto;
+  object-fit: contain;
+  filter: brightness(1.2) contrast(1.1);
 }
 
 .navbar-center {
   flex: 1;
-  max-width: 600px;
+  max-width: 400px;
   margin: 0 20px;
+  min-width: 150px;
+  overflow: hidden;
 }
 
 .search-box {
@@ -344,13 +570,20 @@ export default {
   border-radius: 20px 0 0 20px;
   border-right: none;
   padding-left: 20px;
+  background-color: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.3);
+  color: #ffffff;
+}
+
+.search-input .el-input__inner::placeholder {
+  color: rgba(255, 255, 255, 0.7);
 }
 
 .search-input .el-input-group__append {
   border-radius: 0 20px 20px 0;
   padding: 0 20px;
-  background: #409EFF;
-  border-color: #409EFF;
+  background: #e03426;
+  border-color: #e03426;
 }
 
 .search-input .el-input-group__append .el-button {
@@ -364,6 +597,9 @@ export default {
   display: flex;
   align-items: center;
   gap: 20px;
+  flex-shrink: 1;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .navbar-menu {
@@ -373,8 +609,8 @@ export default {
 
 /* 重置Element UI默认样式 */
 .nav-menu-items {
-  border: none;
-  background: transparent;
+  border: none !important;
+  background: transparent !important;
   border-bottom: none !important;
 }
 
@@ -384,6 +620,7 @@ export default {
   margin: 0 12px !important;
   padding: 0 !important;
   border-radius: 6px !important;
+  background-color: transparent !important;
 }
 
 .nav-menu-items .el-menu-item::after {
@@ -392,17 +629,18 @@ export default {
 
 .nav-menu-items .el-menu-item:not(.is-disabled):hover {
   background-color: transparent !important;
-  color: inherit !important;
+  color: #e03426 !important;
 }
 
 .nav-menu-items .el-menu-item:not(.is-disabled):focus {
   background-color: transparent !important;
-  color: inherit !important;
+  color: #e03426 !important;
 }
 
 .nav-menu-items .el-menu-item.is-active {
   border-bottom: none !important;
   background-color: transparent !important;
+  color: #e03426 !important;
 }
 
 /* 导航项样式 - 参考右侧设计 */
@@ -414,7 +652,7 @@ export default {
   height: 36px !important;
   border-bottom: none !important;
   transition: all 0.2s ease !important;
-  color: #8c939d !important;
+  color: #ffffff !important;
   font-weight: 500 !important;
   border-radius: 6px !important;
   position: relative !important;
@@ -424,18 +662,18 @@ export default {
 }
 
 .nav-item:hover {
-  color: #606266 !important;
+  color: #e03426 !important;
   background-color: transparent !important;
 }
 
 .nav-item.is-active {
-  color: #409EFF !important;
+  color: #e03426 !important;
   background-color: transparent !important;
   font-weight: 600 !important;
 }
 
 .nav-item.is-active:hover {
-  color: #409EFF !important;
+  color: #e03426 !important;
   background-color: transparent !important;
 }
 
@@ -459,16 +697,23 @@ export default {
 }
 
 .login-btn {
-  color: #606266;
+  color: #ffffff !important;
   font-weight: 500;
   padding: 8px 16px;
   border-radius: 6px;
   transition: all 0.3s ease;
+  background-color: transparent !important;
+  border: none !important;
 }
 
 .login-btn:hover {
-  color: #409EFF;
-  background-color: #ecf5ff;
+  color: #e03426 !important;
+  background-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+.login-btn:focus {
+  color: #ffffff !important;
+  background-color: transparent !important;
 }
 
 .register-btn {
@@ -506,25 +751,25 @@ export default {
   display: flex;
   align-items: center;
   gap: 6px;
-  background: linear-gradient(135deg, #ffeaa7, #fab1a0);
-  color: #2d3436;
+  background: #e03426;
+  color: #ffffff;
   padding: 8px 12px;
   border-radius: 20px;
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
-  box-shadow: 0 2px 8px rgba(250, 177, 160, 0.3);
+  box-shadow: 0 2px 8px rgba(224, 52, 38, 0.3);
 }
 
 .points-display:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 16px rgba(250, 177, 160, 0.4);
+  box-shadow: 0 4px 16px rgba(224, 52, 38, 0.4);
 }
 
 .points-display i {
   font-size: 16px;
-  color: #f39c12;
+  color: #ffd700;
 }
 
 .points-value {
@@ -548,7 +793,7 @@ export default {
 }
 
 .user-profile-trigger:hover {
-  background-color: #f5f7fa;
+  background-color: rgba(255, 255, 255, 0.1);
 }
 
 .user-avatar {
@@ -561,13 +806,13 @@ export default {
 
 .username {
   font-weight: 500;
-  color: #606266;
+  color: #ffffff;
   font-size: 14px;
   transition: all 0.3s ease;
 }
 
 .user-profile-trigger:hover .username {
-  color: #409EFF;
+  color: #e03426;
 }
 
 .clickable-avatar {
@@ -599,7 +844,7 @@ export default {
 
 .user-dropdown-menu .el-dropdown-menu__item:hover {
   background-color: #f5f7fa;
-  color: #409EFF;
+  color: #e03426;
 }
 
 .user-dropdown-menu .el-dropdown-menu__item.is-divided {
@@ -625,77 +870,154 @@ export default {
 /* 下拉箭头图标 */
 .user-profile-trigger .el-icon-arrow-down {
   font-size: 12px;
-  color: #c0c4cc;
+  color: #ffffff;
   transition: all 0.3s ease;
 }
 
 .user-profile-trigger:hover .el-icon-arrow-down {
-  color: #409EFF;
+  color: #e03426;
 }
 
 /* 响应式设计 */
-@media (max-width: 1024px) {
+@media (min-width: 1400px) {
   .navbar {
     padding: 0 20px;
   }
-  
-  .navbar-left {
-    gap: 20px;
-  }
-  
-  .logo-text {
-    font-size: 20px;
-  }
-  
-  .logo-icon {
-    font-size: 18px;
-  }
-  
-  .nav-menu-items .el-menu-item {
-    padding: 0 10px;
-    margin: 0 2px;
-  }
-  
-  .nav-menu-items .el-menu-item span {
-    font-size: 13px;
-  }
 }
 
-@media (max-width: 768px) {
+@media (max-width: 1200px) {
   .navbar {
     padding: 0 12px;
   }
   
   .navbar-left {
-    min-width: auto;
-  }
-  
-  .logo-text {
-    display: none;
+    gap: 16px;
+    min-width: 120px;
   }
   
   .navbar-center {
-    margin: 0 10px;
+    max-width: 300px;
+    margin: 0 16px;
+    min-width: 150px;
   }
   
-  .search-input .el-input__inner {
-    padding-left: 15px;
+  .logo-image {
+    height: 36px;
   }
   
-  .search-input .el-input-group__append {
-    padding: 0 15px;
+  .nav-menu-items .el-menu-item {
+    padding: 0 8px !important;
+    margin: 0 4px !important;
   }
   
-  .navbar-menu {
-    display: none;
+  .nav-menu-items .el-menu-item span {
+    font-size: 13px;
   }
   
   .navbar-right {
+    gap: 16px;
+  }
+}
+
+@media (max-width: 1024px) {
+  .navbar {
+    padding: 0 10px;
+  }
+  
+  .navbar-left {
+    gap: 12px;
+    min-width: 100px;
+  }
+  
+  .navbar-center {
+    max-width: 250px;
+    margin: 0 12px;
+    min-width: 120px;
+  }
+  
+  .logo-image {
+    height: 32px;
+  }
+  
+  .nav-menu-items .el-menu-item {
+    padding: 0 6px !important;
+    margin: 0 2px !important;
+  }
+  
+  .nav-menu-items .el-menu-item span {
+    font-size: 12px;
+  }
+  
+  .navbar-right {
+    gap: 12px;
+  }
+}
+
+@media (max-width: 768px) {
+  .navbar {
+    padding: 0 10px;
+    min-width: 0;
+  }
+  
+  .navbar-left {
+    min-width: 60px;
+    gap: 6px;
     flex-shrink: 0;
   }
   
+  .logo-image {
+    height: 24px;
+  }
+  
+  .navbar-center {
+    margin: 0 6px;
+    max-width: none;
+    min-width: 0;
+    flex: 1;
+  }
+  
+  .search-input {
+    width: 100%;
+  }
+  
+  .search-input .el-input__inner {
+    padding-left: 10px;
+    font-size: 12px;
+  }
+  
+  .search-input .el-input-group__append {
+    padding: 0 8px;
+  }
+  
+  .navbar-menu {
+    display: flex;
+    min-width: 0;
+    overflow: hidden;
+  }
+  
+  .nav-menu-items {
+    min-width: 0;
+  }
+  
+  .nav-menu-items .el-menu-item {
+    padding: 0 3px !important;
+    margin: 0 1px !important;
+    min-width: 0;
+    white-space: nowrap;
+  }
+  
+  .nav-menu-items .el-menu-item span {
+    font-size: 10px;
+  }
+  
+  .navbar-right {
+    flex-shrink: 1;
+    gap: 4px;
+    min-width: 0;
+  }
+  
   .user-functions {
-    gap: 8px;
+    gap: 4px;
   }
   
   .username {
@@ -703,31 +1025,33 @@ export default {
   }
   
   .points-display {
-    padding: 4px 6px;
-    font-size: 12px;
+    padding: 2px 4px;
+    font-size: 9px;
   }
   
   .user-profile-trigger {
-    padding: 4px 6px;
+    padding: 2px 4px;
   }
   
   .user-avatar {
-    width: 28px !important;
-    height: 28px !important;
+    width: 24px !important;
+    height: 24px !important;
   }
   
   .auth-buttons {
-    gap: 6px;
+    gap: 2px;
   }
   
   .login-btn {
-    padding: 4px 8px;
-    font-size: 11px;
+    padding: 2px 4px;
+    font-size: 9px;
+    white-space: nowrap;
   }
   
   .register-btn {
-    padding: 4px 10px;
-    font-size: 11px;
+    padding: 2px 6px;
+    font-size: 9px;
+    white-space: nowrap;
   }
 }
 
@@ -746,12 +1070,8 @@ export default {
     flex-shrink: 0;
   }
   
-  .logo-text {
-    font-size: 11px;
-  }
-  
-  .logo-icon {
-    font-size: 9px;
+  .logo-image {
+    height: 24px;
   }
   
   .navbar-menu {
@@ -824,12 +1144,8 @@ export default {
     gap: 4px;
   }
   
-  .logo-text {
-    font-size: 9px;
-  }
-  
-  .logo-icon {
-    font-size: 8px;
+  .logo-image {
+    height: 20px;
   }
   
   .nav-menu-items .el-menu-item {
@@ -860,12 +1176,8 @@ export default {
     gap: 4px;
   }
   
-  .logo-text {
-    display: none;
-  }
-  
-  .logo-icon {
-    font-size: 12px;
+  .logo-image {
+    height: 18px;
   }
   
   .nav-menu-items .el-menu-item {

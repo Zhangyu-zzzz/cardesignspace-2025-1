@@ -296,14 +296,14 @@ export default {
 }
 
 .filter-btn:hover {
-  border-color: #409EFF;
-  color: #409EFF;
+  border-color: #e03426;
+  color: #e03426;
 }
 
 .filter-btn.active {
-  background: #409EFF;
+  background: #e03426;
   color: white;
-  border-color: #409EFF;
+  border-color: #e03426;
 }
 
 .model-list {
@@ -339,7 +339,7 @@ export default {
 .model-card:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-  border-color: #409EFF;
+  border-color: #e03426;
 }
 
 .model-image {

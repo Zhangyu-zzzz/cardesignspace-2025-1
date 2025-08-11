@@ -3,7 +3,7 @@ const Series = require('./Series');
 const Model = require('./Model');
 const Image = require('./Image');
 const User = require('./User');
-const { sequelize } = require('../config/database');
+const { sequelize } = require('../config/mysql');
 
 // 同步所有模型到数据库
 const syncModels = async () => {

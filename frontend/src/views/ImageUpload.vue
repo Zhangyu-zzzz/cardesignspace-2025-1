@@ -14,7 +14,7 @@
         <div class="brand-management">
           <!-- 品牌操作区 -->
           <div class="action-bar">
-            <el-button type="primary" @click="showBrandDialog(null)">
+            <el-button type="primary" @click="showBrandDialog(null)" class="red-primary-btn">
               <i class="el-icon-plus"></i> 新增品牌
             </el-button>
             <el-button @click="loadBrands">
@@ -73,6 +73,7 @@
               type="primary" 
               @click="showModelDialog(null)"
               :disabled="!selectedBrandId"
+              class="red-primary-btn"
             >
               <i class="el-icon-plus"></i> 新增车型
             </el-button>
@@ -122,7 +123,7 @@
             </div>
             
             <div v-if="selectedModelId" class="upload-buttons">
-              <el-button type="primary" @click="showUploadDialog('single')">
+              <el-button type="primary" @click="showUploadDialog('single')" class="red-primary-btn">
                 <i class="el-icon-upload"></i> 单图上传
               </el-button>
               <el-button type="success" @click="showUploadDialog('multiple')">
@@ -153,7 +154,7 @@
                 />
               </el-form-item>
               <el-form-item>
-                <el-button type="primary" @click="loadImages">搜索</el-button>
+                <el-button type="primary" @click="loadImages" class="red-primary-btn">搜索</el-button>
                 <el-button @click="resetImageSearch">重置</el-button>
               </el-form-item>
             </el-form>
@@ -165,7 +166,7 @@
               <div class="image-preview">
                 <img :src="image.url" :alt="image.title" @error="handleImageError" />
                 <div class="image-overlay">
-                  <el-button type="primary" size="small" @click="viewImage(image)">查看</el-button>
+                  <el-button type="primary" size="small" @click="viewImage(image)" class="red-primary-btn">查看</el-button>
                   <el-button type="success" size="small" @click="showEditImageDialog(image)">编辑</el-button>
                   <el-button type="danger" size="small" @click="deleteImage(image)">删除</el-button>
                 </div>
@@ -3249,5 +3250,99 @@ export default {
   background: #e03426;
   color: white;
   border-color: #e03426;
+}
+
+/* 图片上传页面主题色 */
+.red-primary-btn {
+  background-color: #e03426 !important;
+  border-color: #e03426 !important;
+}
+
+.red-primary-btn:hover:not(.is-disabled) {
+  background-color: #b8251a !important;
+  border-color: #b8251a !important;
+}
+
+/* 覆盖所有primary按钮为主题色 */
+.comprehensive-management >>> .el-button--primary {
+  background-color: #e03426 !important;
+  border-color: #e03426 !important;
+}
+
+.comprehensive-management >>> .el-button--primary:hover:not(.is-disabled) {
+  background-color: #b8251a !important;
+  border-color: #b8251a !important;
+}
+
+/* 分页组件主题色 */
+.comprehensive-management >>> .el-pagination .el-pagination__item.active {
+  background-color: #e03426 !important;
+  color: #fff !important;
+}
+
+.comprehensive-management >>> .el-pagination .el-pagination__item:hover {
+  color: #e03426 !important;
+}
+
+.comprehensive-management >>> .el-pagination .btn-next:hover,
+.comprehensive-management >>> .el-pagination .btn-prev:hover {
+  color: #e03426 !important;
+}
+
+/* Tab标签页主题色 */
+.management-tabs >>> .el-tabs__active-bar {
+  background-color: #e03426 !important;
+}
+
+.management-tabs >>> .el-tabs__item.is-active {
+  color: #e03426 !important;
+}
+
+.management-tabs >>> .el-tabs__item:hover {
+  color: #e03426 !important;
+}
+
+/* 下拉选择器主题色 */
+.comprehensive-management >>> .el-select .el-input.is-focus .el-input__inner {
+  border-color: #e03426 !important;
+}
+
+.comprehensive-management >>> .el-select-dropdown__item.selected {
+  color: #e03426 !important;
+  font-weight: bold !important;
+}
+
+/* 级联选择器主题色 */
+.comprehensive-management >>> .el-cascader .el-input.is-focus .el-input__inner {
+  border-color: #e03426 !important;
+}
+
+/* 表单输入框主题色 */
+.comprehensive-management >>> .el-input__inner:focus {
+  border-color: #e03426 !important;
+  outline: 0 !important;
+  box-shadow: 0 0 0 2px rgba(224, 52, 38, 0.2) !important;
+}
+
+/* 文本域主题色 */
+.comprehensive-management >>> .el-textarea__inner:focus {
+  border-color: #e03426 !important;
+  outline: 0 !important;
+  box-shadow: 0 0 0 2px rgba(224, 52, 38, 0.2) !important;
+}
+
+/* 开关组件主题色 */
+.comprehensive-management >>> .el-switch.is-checked .el-switch__core {
+  border-color: #e03426 !important;
+  background-color: #e03426 !important;
+}
+
+/* 链接文字主题色 */
+.comprehensive-management >>> .el-link--primary {
+  color: #e03426 !important;
+}
+
+.comprehensive-management >>> .el-link--primary:hover {
+  color: #b8251a !important;
 }
 </style> 

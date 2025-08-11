@@ -1021,7 +1021,7 @@ export default {
 .profile-banner {
   position: relative;
   height: 180px;
-  background: linear-gradient(135deg, #e03426 0%, #67C23A 100%);
+  background: #000000;
   overflow: hidden;
 }
 
@@ -1177,14 +1177,17 @@ export default {
 /* 主内容区域 */
 .main-content {
   background: transparent;
-  padding: 0px;
+  padding: 0 40px;
   margin-top: 10px;
   position: relative;
   z-index: 2;
+  max-width: 1400px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .content-container {
-  /* max-width: 1200px; */
+  max-width: 100%;
   margin: 0 auto;
 }
 
@@ -1200,18 +1203,23 @@ export default {
   margin: 0 !important;
   border-bottom: 1px solid #e4e7ed;
   background: #f8f9fa;
-  padding: 0 20px !important;
+  padding: 0 40px !important;
   position: relative !important;
-  text-align: center !important;
+  overflow: hidden;
+  display: flex !important;
+  justify-content: center !important;
 }
 
 .tabs-section .el-tabs__nav-wrap {
-  position: absolute !important;
-  left: 50% !important;
-  transform: translateX(-50%) !important;
+  position: relative !important;
+  left: auto !important;
+  transform: none !important;
   width: auto !important;
   padding: 20px 0 !important;
   background: transparent;
+  text-align: center;
+  display: flex !important;
+  justify-content: center !important;
 }
 
 .tabs-section .el-tabs__nav-wrap::after {
@@ -1221,11 +1229,13 @@ export default {
 .tabs-section .el-tabs__nav-scroll {
   overflow: visible !important;
   width: auto !important;
+  display: flex !important;
+  justify-content: center !important;
 }
 
 .tabs-section .el-tabs__nav {
   float: none !important;
-  display: block !important;
+  display: flex !important;
   position: relative !important;
   width: auto !important;
   margin: 0 !important;
@@ -1240,15 +1250,16 @@ export default {
   height: 40px;
   line-height: 40px;
   transition: all 0.3s ease;
-  float: left !important;
-  display: inline-block !important;
+  float: none !important;
+  display: block !important;
   margin: 0 !important;
-  padding: 0 30px !important;
+  padding: 0 25px !important;
+  flex-shrink: 0 !important;
 }
 
 .tabs-section .el-tabs__item:first-child {
   margin-left: 0 !important;
-  padding-left: 30px !important;
+  padding-left: 25px !important;
 }
 
 .tabs-section .el-tabs__item:hover {
@@ -1268,7 +1279,7 @@ export default {
 }
 
 .tabs-section .el-tabs__content {
-  padding: 30px !important;
+  padding: 40px !important;
 }
 
 /* 备用方案 - 如果上面不行就用这个 */
@@ -1286,8 +1297,8 @@ export default {
 
 /* 快速发帖优化 */
 .quick-post {
-  margin-bottom: 25px;
-  padding: 0 4px;
+  margin-bottom: 20px;
+  padding: 0;
 }
 
 .quick-post-card {
@@ -1338,7 +1349,7 @@ export default {
 .filter-section {
   margin-bottom: 20px;
   text-align: center;
-  padding: 0 4px;
+  padding: 0;
 }
 
 .filter-section .el-radio-group {
@@ -1374,9 +1385,9 @@ export default {
 .posts-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 24px;
-  margin-bottom: 40px;
-  padding: 0 4px;
+  gap: 20px;
+  margin-bottom: 30px;
+  padding: 0;
 }
 
 .post-card {
@@ -1386,7 +1397,7 @@ export default {
   overflow: hidden;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  margin: 4px;
+  margin: 0;
 }
 
 .post-card:hover {
@@ -1706,11 +1717,14 @@ export default {
   }
   
   .main-content {
-    padding: 15px;
+    padding: 20px;
+    max-width: 100%;
   }
 
   .tabs-section .el-tabs__header {
-    padding: 0 15px !important;
+    padding: 0 25px !important;
+    display: flex !important;
+    justify-content: center !important;
   }
 
   .tabs-section .el-tabs__nav-wrap {
@@ -1718,7 +1732,8 @@ export default {
   }
 
   .tabs-section .el-tabs__item {
-    padding: 0 25px !important;
+    padding: 0 20px !important;
+    font-size: 15px !important;
   }
 
   .tabs-section .el-tabs__content {
@@ -1785,11 +1800,14 @@ export default {
   }
   
   .main-content {
-    padding: 10px;
+    padding: 15px;
+    max-width: 100%;
   }
 
   .tabs-section .el-tabs__header {
-    padding: 0 10px !important;
+    padding: 0 20px !important;
+    display: flex !important;
+    justify-content: center !important;
   }
 
   .tabs-section .el-tabs__nav-wrap {
@@ -1797,8 +1815,8 @@ export default {
   }
 
   .tabs-section .el-tabs__item {
-    padding: 0 20px !important;
-    font-size: 15px !important;
+    padding: 0 15px !important;
+    font-size: 14px !important;
   }
   
   .tabs-section .el-tabs__content {
@@ -1873,24 +1891,27 @@ export default {
   }
   
   .main-content {
-    padding: 8px;
+    padding: 10px;
+    max-width: 100%;
   }
 
   .tabs-section .el-tabs__header {
-    padding: 0 5px !important;
+    padding: 0 15px !important;
+    display: flex !important;
+    justify-content: center !important;
   }
 
   .tabs-section .el-tabs__nav-wrap {
-    padding: 14px 0 !important;
+    padding: 12px 0 !important;
   }
 
   .tabs-section .el-tabs__item {
-    padding: 0 15px !important;
-    font-size: 14px !important;
+    padding: 0 12px !important;
+    font-size: 13px !important;
   }
 
   .tabs-section .el-tabs__content {
-    padding: 16px !important;
+    padding: 15px !important;
   }
 
   .quick-post {
@@ -2185,5 +2206,116 @@ export default {
 .view-hint {
   color: #909399;
   font-size: 12px;
+}
+
+/* 个人主页主题色修改 */
+/* 编辑资料按钮 */
+.profile-container >>> .el-button--primary {
+  background-color: #e03426 !important;
+  border-color: #e03426 !important;
+}
+
+.profile-container >>> .el-button--primary:hover {
+  background-color: #b8251a !important;
+  border-color: #b8251a !important;
+}
+
+/* Tab标签页主题色 */
+.profile-container >>> .el-tabs__active-bar {
+  background-color: #e03426 !important;
+}
+
+.profile-container >>> .el-tabs__item.is-active {
+  color: #e03426 !important;
+}
+
+.profile-container >>> .el-tabs__item:hover {
+  color: #e03426 !important;
+}
+
+/* 帖子筛选按钮主题色 */
+.profile-container >>> .el-radio-button__inner {
+  background-color: #fff !important;
+  border-color: #e03426 !important;
+  color: #e03426 !important;
+}
+
+.profile-container >>> .el-radio-button__orig-radio:checked + .el-radio-button__inner {
+  background-color: #e03426 !important;
+  border-color: #e03426 !important;
+  color: #fff !important;
+  box-shadow: -1px 0 0 0 #e03426 !important;
+}
+
+.profile-container >>> .el-radio-button__inner:hover {
+  color: #b8251a !important;
+  border-color: #b8251a !important;
+}
+
+.profile-container >>> .el-radio-button:first-child .el-radio-button__inner {
+  border-left-color: #e03426 !important;
+}
+
+/* 快捷发帖按钮 */
+.quick-post-btn {
+  color: #e03426 !important;
+}
+
+.quick-post-btn:hover {
+  color: #b8251a !important;
+  background-color: rgba(224, 52, 38, 0.1) !important;
+}
+
+/* 对话框按钮 */
+.profile-container >>> .el-dialog .el-button--primary {
+  background-color: #e03426 !important;
+  border-color: #e03426 !important;
+}
+
+.profile-container >>> .el-dialog .el-button--primary:hover {
+  background-color: #b8251a !important;
+  border-color: #b8251a !important;
+}
+
+/* 表单输入框焦点状态 */
+.profile-container >>> .el-input__inner:focus {
+  border-color: #e03426 !important;
+  outline: 0 !important;
+  box-shadow: 0 0 0 2px rgba(224, 52, 38, 0.2) !important;
+}
+
+.profile-container >>> .el-textarea__inner:focus {
+  border-color: #e03426 !important;
+  outline: 0 !important;
+  box-shadow: 0 0 0 2px rgba(224, 52, 38, 0.2) !important;
+}
+
+/* 分页组件主题色 */
+.profile-container >>> .el-pagination .el-pagination__item.active {
+  background-color: #e03426 !important;
+  color: #fff !important;
+}
+
+.profile-container >>> .el-pagination .el-pagination__item:hover {
+  color: #e03426 !important;
+}
+
+.profile-container >>> .el-pagination .btn-next:hover,
+.profile-container >>> .el-pagination .btn-prev:hover {
+  color: #e03426 !important;
+}
+
+/* 点赞相关颜色 */
+.like-action {
+  color: #e03426 !important;
+}
+
+/* 上传区域悬停颜色 */
+.avatar-uploader:hover {
+  border-color: #e03426 !important;
+}
+
+.like-item:hover {
+  border-color: #e03426 !important;
 }
 </style> 

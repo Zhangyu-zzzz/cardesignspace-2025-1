@@ -955,22 +955,23 @@ html, body {
 
 @media (max-width: 768px) {
   .navbar {
-    padding: 0 10px;
+    padding: 0 8px;
     min-width: 0;
+    height: 55px !important;
   }
   
   .navbar-left {
-    min-width: 60px;
-    gap: 6px;
+    min-width: 50px;
+    gap: 4px;
     flex-shrink: 0;
   }
   
   .logo-image {
-    height: 24px;
+    height: 22px;
   }
   
   .navbar-center {
-    margin: 0 6px;
+    margin: 0 8px;
     max-width: none;
     min-width: 0;
     flex: 1;
@@ -1057,7 +1058,30 @@ html, body {
 
 @media (max-width: 480px) {
   .navbar {
-    padding: 0 8px;
+    padding: 0 6px;
+    height: 50px !important;
+  }
+  
+  .navbar-left {
+    min-width: 45px;
+    gap: 2px;
+  }
+  
+  .logo-image {
+    height: 20px;
+  }
+  
+  .navbar-center {
+    margin: 0 6px;
+  }
+  
+  .search-input .el-input__inner {
+    padding-left: 8px;
+    font-size: 11px;
+  }
+  
+  .search-input .el-input-group__append {
+    padding: 0 6px;
   }
   
   .navbar-left {

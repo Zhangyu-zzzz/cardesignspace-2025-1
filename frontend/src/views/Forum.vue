@@ -225,10 +225,10 @@
           </div>
           
           <div class="sort-options">
-            <el-radio-group v-model="sortBy" @change="loadPosts">
-              <el-radio-button label="createdAt">最新</el-radio-button>
-              <el-radio-button label="likesCount">最热</el-radio-button>
-            </el-radio-group>
+                <el-radio-group v-model="sortBy" @change="loadPosts" class="forum-sort-buttons">
+      <el-radio-button label="createdAt">最新</el-radio-button>
+      <el-radio-button label="likesCount">最热</el-radio-button>
+    </el-radio-group>
           </div>
 
           <div class="posts" v-loading="loading">
@@ -1955,7 +1955,7 @@ export default {
 .forum-header {
   text-align: center;
   padding: 7px 20px;
-  background: linear-gradient(135deg, #e03426 0%, #67C23A 100%);
+  background: #e03426;
   color: white;
 }
 
@@ -3636,5 +3636,91 @@ export default {
 
 .el-dropdown-menu__item:hover i {
   color: #e03426;
+}
+
+/* 论坛页面主题色修改 */
+/* 排序按钮样式 */
+.forum-sort-buttons >>> .el-radio-button__inner {
+  background-color: #fff !important;
+  border-color: #e03426 !important;
+  color: #e03426 !important;
+}
+
+.forum-sort-buttons >>> .el-radio-button__orig-radio:checked + .el-radio-button__inner {
+  background-color: #e03426 !important;
+  border-color: #e03426 !important;
+  color: #fff !important;
+  box-shadow: -1px 0 0 0 #e03426 !important;
+}
+
+.forum-sort-buttons >>> .el-radio-button__inner:hover {
+  color: #b8251a !important;
+  border-color: #b8251a !important;
+}
+
+.forum-sort-buttons >>> .el-radio-button:first-child .el-radio-button__inner {
+  border-left-color: #e03426 !important;
+}
+
+/* 主题标签颜色修改 */
+.forum-container >>> .el-tag--primary {
+  background-color: #fdf0f0 !important;
+  border-color: #e03426 !important;
+  color: #e03426 !important;
+}
+
+/* 按钮样式修改 */
+.forum-container >>> .el-button--primary {
+  background-color: #e03426 !important;
+  border-color: #e03426 !important;
+}
+
+.forum-container >>> .el-button--primary:hover {
+  background-color: #b8251a !important;
+  border-color: #b8251a !important;
+}
+
+/* 发布按钮特殊样式保持 */
+.publish-btn {
+  background: #e03426 !important;
+  border: none !important;
+  border-radius: 20px !important;
+  padding: 10px 24px !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  box-shadow: 0 4px 12px rgba(224, 52, 38, 0.3) !important;
+  transition: all 0.3s ease !important;
+}
+
+.publish-btn:hover:not(.is-disabled) {
+  background: #b8251a !important;
+  transform: translateY(-2px) !important;
+  box-shadow: 0 6px 20px rgba(224, 52, 38, 0.4) !important;
+}
+
+/* 话题选择器中的primary标签 */
+.topic-selector-popover >>> .el-tag--primary {
+  background-color: #fdf0f0 !important;
+  border-color: #e03426 !important;
+  color: #e03426 !important;
+}
+
+/* 筛选标签 */
+.filter-status >>> .el-tag--primary {
+  background-color: #fdf0f0 !important;
+  border-color: #e03426 !important;
+  color: #e03426 !important;
+}
+
+/* 评论回复按钮 */
+.forum-container >>> .el-button--mini {
+  color: #e03426 !important;
+  border-color: #e03426 !important;
+}
+
+.forum-container >>> .el-button--mini:hover {
+  color: #b8251a !important;
+  border-color: #b8251a !important;
+  background-color: rgba(224, 52, 38, 0.1) !important;
 }
 </style> 

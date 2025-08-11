@@ -865,10 +865,43 @@ export default {
 
 .search-box {
   flex-grow: 1;
+  max-width: 600px;
 }
 
 .search-input {
   width: 100%;
+}
+
+/* 自定义搜索框样式 */
+.search-input >>> .el-input__inner {
+  border: 2px solid #e03426;
+  color: #333;
+  background-color: #fff;
+}
+
+.search-input >>> .el-input__inner:focus {
+  border-color: #b8251a;
+  box-shadow: 0 0 0 2px rgba(224, 52, 38, 0.2);
+}
+
+.search-input >>> .el-input__inner::placeholder {
+  color: #999;
+}
+
+.search-input >>> .el-input-group__append {
+  border: 2px solid #e03426;
+  border-left: none;
+  background-color: #e03426;
+}
+
+.search-input >>> .el-input-group__append .el-button {
+  background-color: transparent;
+  border: none;
+  color: #fff;
+}
+
+.search-input >>> .el-input-group__append .el-button:hover {
+  background-color: rgba(255, 255, 255, 0.1);
 }
 
 .toolbar-actions {
@@ -907,6 +940,85 @@ export default {
   margin-top: 24px;
   padding-top: 20px;
   border-top: 1px solid #ebeef5;
+}
+
+/* 高级筛选按钮样式 */
+.toolbar-actions >>> .el-button--text {
+  color: #333 !important;
+  background-color: transparent !important;
+}
+
+.toolbar-actions >>> .el-button--text:hover {
+  color: #000 !important;
+  background-color: transparent !important;
+}
+
+.toolbar-actions >>> .el-button--text:focus {
+  color: #333 !important;
+  background-color: transparent !important;
+}
+
+/* 清除搜索按钮样式 */
+.results-header >>> .el-button--text {
+  color: #333 !important;
+}
+
+.results-header >>> .el-button--text:hover {
+  color: #000 !important;
+  background-color: transparent !important;
+}
+
+.results-header >>> .el-button--text:focus {
+  color: #333 !important;
+  background-color: transparent !important;
+}
+
+/* 筛选面板应用按钮样式 */
+.filter-actions .el-button--primary {
+  background-color: #e03426;
+  border-color: #e03426;
+}
+
+.filter-actions .el-button--primary:hover {
+  background-color: #b8251a;
+  border-color: #b8251a;
+}
+
+/* 搜索标签样式 */
+.search-tag {
+  background-color: #fdf0f0;
+  border-color: #e03426;
+  color: #e03426;
+}
+
+.search-tag:hover {
+  background-color: #e03426;
+  color: #fff;
+  cursor: pointer;
+}
+
+/* 车型标签样式 */
+.model-tags .el-tag {
+  background-color: #fdf0f0;
+  border-color: #e8b4b0;
+  color: #e03426;
+}
+
+.model-tags .el-tag--info {
+  background-color: #fdf0f0;
+  border-color: #e8b4b0;
+  color: #e03426;
+}
+
+/* 加载更多按钮样式 */
+.load-more-btn.el-button--primary {
+  background-color: #e03426;
+  border-color: #e03426;
+}
+
+.load-more-btn.el-button--primary:hover {
+  background-color: #b8251a;
+  border-color: #b8251a;
 }
 
 /* 移动端适配 */
@@ -1207,5 +1319,81 @@ export default {
 
 .model-image.error::before {
   background: #fdf6f6;
+}
+
+/* 搜索建议区域样式 */
+.search-suggestions {
+  max-width: 1200px;
+  margin: 0 auto 40px auto;
+}
+
+.suggestions-section h3 {
+  color: #333;
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0 0 15px 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.suggestions-section h3 i {
+  color: #e03426;
+  font-size: 18px;
+}
+
+.search-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.hot-searches {
+  background: white;
+  padding: 20px;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  margin-bottom: 20px;
+}
+
+.search-history {
+  background: white;
+  padding: 20px;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.clear-history {
+  color: #e03426 !important;
+  font-size: 12px;
+  margin-left: auto;
+}
+
+.clear-history:hover {
+  color: #b8251a !important;
+  background-color: rgba(224, 52, 38, 0.1) !important;
+}
+
+/* 视图切换按钮样式 */
+.toolbar-actions >>> .el-radio-group .el-radio-button__inner {
+  background-color: #fff !important;
+  border-color: #e03426 !important;
+  color: #e03426 !important;
+}
+
+.toolbar-actions >>> .el-radio-group .el-radio-button__orig-radio:checked + .el-radio-button__inner {
+  background-color: #e03426 !important;
+  border-color: #e03426 !important;
+  color: #fff !important;
+  box-shadow: -1px 0 0 0 #e03426 !important;
+}
+
+.toolbar-actions >>> .el-radio-group .el-radio-button__inner:hover {
+  color: #b8251a !important;
+  border-color: #b8251a !important;
+}
+
+.toolbar-actions >>> .el-radio-group .el-radio-button:first-child .el-radio-button__inner {
+  border-left-color: #e03426 !important;
 }
 </style> 

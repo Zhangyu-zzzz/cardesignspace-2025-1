@@ -1497,12 +1497,12 @@ export default {
 
 /* 筛选控制栏样式 */
 .filter-control-bar {
-  padding: 20px 24px;
+  padding: 16px 16px;
   border-bottom: 1px solid #f0f0f0;
   background: #fafafa;
   display: flex;
   flex-wrap: wrap;
-  gap: 30px;
+  gap: 20px;
   align-items: flex-start;
   justify-content: center;
 }
@@ -1561,7 +1561,7 @@ export default {
 }
 
 .models-content {
-  padding: 20px 24px 24px 24px;
+  padding: 20px 16px 24px 16px;
 }
 
 .models-grid {
@@ -1587,7 +1587,7 @@ export default {
 
 .model-display-image {
   position: relative;
-  height: 180px;
+  height: 160px;
   overflow: hidden;
   background: #f8f9fa;
 }
@@ -2510,12 +2510,13 @@ body, html {
   }
   
   .models-grid {
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-    gap: 12px;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 10px;
   }
   
-  .model-image {
-    height: 160px;
+  .model-image,
+  .model-display-image {
+    height: 140px;
   }
   
   .model-info {
@@ -2539,7 +2540,33 @@ body, html {
 
 @media (max-width: 768px) {
   .content-container {
-    padding: 0 10px;
+    padding: 0 12px;
+  }
+  
+  .models-content {
+    padding: 16px 8px 20px 8px;
+  }
+  
+  .filter-control-bar {
+    padding: 12px 8px;
+    gap: 15px;
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .decade-control,
+  .sort-control {
+    gap: 8px;
+  }
+  
+  .decade-buttons {
+    gap: 6px;
+  }
+  
+  .decade-btn {
+    padding: 6px 12px;
+    font-size: 12px;
+    min-width: 50px;
   }
   
   .slide-info-overlay {
@@ -2781,11 +2808,32 @@ body, html {
   
   .models-grid {
     grid-template-columns: 1fr 1fr;
-    gap: 10px;
+    gap: 8px;
   }
   
-  .model-image {
-    height: 140px;
+  .models-content {
+    padding: 12px 6px 16px 6px;
+  }
+  
+  .filter-control-bar {
+    padding: 10px 6px;
+    gap: 12px;
+  }
+  
+  .decade-btn {
+    padding: 5px 10px;
+    font-size: 11px;
+    min-width: 45px;
+  }
+  
+  .sort-btn {
+    padding: 5px 10px;
+    font-size: 11px;
+  }
+  
+  .model-image,
+  .model-display-image {
+    height: 120px;
   }
   
   .model-name {

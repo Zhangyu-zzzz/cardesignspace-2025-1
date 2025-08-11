@@ -8,10 +8,17 @@
           <div class="navbar-left">
             <!-- 网站Logo -->
             <div class="navbar-logo" @click="$router.push('/')">
+              <!-- 桌面端logo -->
               <img 
                 src="https://cardesignspace-cos-1-1259492452.cos.ap-shanghai.myqcloud.com/CDS-LOGO.png" 
                 alt="CARDESIGNSPACE" 
-                class="logo-image"
+                class="logo-image logo-desktop"
+              />
+              <!-- 移动端logo -->
+              <img 
+                src="https://cardesignspace-cos-1-1259492452.cos.ap-shanghai.myqcloud.com/CDS-LOGO-SINGLE.png" 
+                alt="CARDESIGNSPACE" 
+                class="logo-image logo-mobile"
               />
             </div>
           </div>
@@ -550,6 +557,15 @@ html, body {
   filter: brightness(1.2) contrast(1.1);
 }
 
+/* 响应式logo显示控制 */
+.logo-desktop {
+  display: block;
+}
+
+.logo-mobile {
+  display: none;
+}
+
 .navbar-center {
   flex: 1;
   max-width: 400px;
@@ -939,6 +955,16 @@ html, body {
     height: 32px;
   }
   
+  /* 平板和小笔记本电脑使用移动端logo */
+  .logo-desktop {
+    display: none;
+  }
+  
+  .logo-mobile {
+    display: block;
+    height: 32px !important;
+  }
+  
   .nav-menu-items .el-menu-item {
     padding: 0 6px !important;
     margin: 0 2px !important;
@@ -950,6 +976,18 @@ html, body {
   
   .navbar-right {
     gap: 12px;
+  }
+}
+
+@media (max-width: 1024px) {
+  /* 平板和小笔记本电脑也使用移动端logo */
+  .logo-desktop {
+    display: none;
+  }
+  
+  .logo-mobile {
+    display: block;
+    height: 32px !important;
   }
 }
 
@@ -968,6 +1006,16 @@ html, body {
   
   .logo-image {
     height: 22px;
+  }
+  
+  /* 768px以下显示移动端logo */
+  .logo-desktop {
+    display: none;
+  }
+  
+  .logo-mobile {
+    display: block;
+    height: 24px !important;
   }
   
   .navbar-center {
@@ -1170,6 +1218,16 @@ html, body {
   
   .logo-image {
     height: 20px;
+  }
+  
+  /* 480px以下继续显示移动端logo */
+  .logo-desktop {
+    display: none;
+  }
+  
+  .logo-mobile {
+    display: block;
+    height: 22px !important;
   }
   
   .nav-menu-items .el-menu-item {

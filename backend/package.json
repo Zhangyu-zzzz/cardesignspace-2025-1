@@ -6,6 +6,7 @@
   "scripts": {
     "start": "node src/app.js",
     "dev": "nodemon src/app.js",
+    "db:sync": "node scripts/sync-models.js",
     "test": "echo \"Error: no test specified\" && exit 1",
     "db:tk01:migrate": "node scripts/run-tk01-migration.js",
     "db:tk01:rollback": "node scripts/run-tk01-rollback.js",

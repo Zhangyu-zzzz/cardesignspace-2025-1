@@ -1,9 +1,101 @@
 <template>
   <div class="home">
 
+    <!-- 全屏轮播图展示区域 -->
+    <div class="fullscreen-carousel" v-if="latestModels && latestModels.length > 0">
+      <!-- 轮播图容器 -->
+      <div 
+        class="carousel-container"
+        @mousedown="startDrag"
+        @mousemove="onDrag"
+        @mouseup="endDrag"
+        @mouseleave="endDrag"
+        @touchstart="startDrag"
+        @touchmove="onDrag"
+        @touchend="endDrag"
+      >
+        <div 
+          class="carousel-slide" 
+          v-for="(model, index) in latestModels" 
+          :key="model.id"
+          :class="{ active: currentSlide === index }"
+          :style="{ transform: `translateX(${(index - currentSlide) * 100}%)` }"
+          @click="goToModel(model.id)"
+        >
+          <div class="slide-image-container">
+            <img 
+              v-if="model.Images && model.Images.length > 0" 
+              :src="model.Images[0].url"
+              :alt="model.name"
+              @load="handleModelImageLoad"
+              @error="handleModelImageError"
+              class="slide-image"
+            >
+            <div class="slide-placeholder" :class="{ show: !model.Images || model.Images.length === 0 || modelImageLoadError[model.id] }">
+              <div class="placeholder-content">
+                <i class="el-icon-picture"></i>
+                <span>暂无图片</span>
+              </div>
+            </div>
+          </div>
+          
+          <!-- 车型信息覆盖层 -->
+          <div class="slide-info-overlay">
+            <div class="slide-content">
+              <h2 class="slide-title">{{ model.name }}</h2>
+              <p class="slide-brand">{{ model.Brand ? model.Brand.name : '未知品牌' }}</p>
+              <button class="view-details-btn" @click.stop="goToModel(model.id)">
+                查看详情
+                <i class="el-icon-arrow-right"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 导航指示器 -->
+      <div class="carousel-indicators">
+        <div 
+          v-for="(model, index) in latestModels" 
+          :key="model.id"
+          class="indicator"
+          :class="{ active: currentSlide === index }"
+          @click="goToSlide(index)"
+        ></div>
+      </div>
+      
+      <!-- 左右导航按钮 -->
+      <button class="carousel-nav prev" @click="prevSlide">
+        <i class="el-icon-arrow-left"></i>
+      </button>
+      <button class="carousel-nav next" @click="nextSlide">
+        <i class="el-icon-arrow-right"></i>
+      </button>
+    </div>
+    
+    <!-- 加载状态 -->
+    <div v-else-if="latestModelsLoading" class="fullscreen-carousel">
+      <div class="loading-container">
+        <div class="loading-spinner">
+          <i class="el-icon-loading"></i>
+          <p>加载最新车型...</p>
+        </div>
+      </div>
+    </div>
+    
+    <!-- 错误状态 -->
+    <div v-else-if="latestModelsError" class="fullscreen-carousel">
+      <div class="error-container">
+        <div class="error-icon">
+          <i class="el-icon-warning"></i>
+        </div>
+        <p class="error-text">{{ latestModelsError }}</p>
+      </div>
+    </div>
     
     <!-- 品牌导航区域 -->
     <div class="brand-section">
+      <div class="content-container">
       <!-- 品牌分类选择器 -->
       <div class="brand-category-tabs">
         <button 
@@ -96,52 +188,115 @@
           </span>
         </div>
       </div>
+      </div>
     </div>
 
-    <!-- 最新车型展示区域 -->
-    <div class="latest-models-section">
+    <!-- 车型展示区域 -->
+    <div class="models-display-section">
+      <div class="content-container">
       <div class="section-header">
-        <h2>最新车型</h2>
-        <p>发现最新上市的汽车车型</p>
-      </div>
-
-      <div v-if="modelLoading" class="loading-container">
-        <el-skeleton :rows="3" animated />
-      </div>
-      <div v-else class="models-grid">
-        <div 
-          v-for="model in latestModels" 
-          :key="model.id"
-          class="model-card"
-          @click="goToModel(model.id)"
-        >
-          <div class="model-image">
-            <img 
-              :data-src="getModelImageUrl(model)" 
-              :alt="model.name" 
-              @click.stop="goToModel(model.id)"
-              class="lazy-load"
-              src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjBmMGYwIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPuWKoOi9veS4rS4uLjwvdGV4dD48L3N2Zz4="
-            >
-          </div>
-          <div class="model-info">
-            <h3 class="model-name">{{ model.name }}</h3>
-          </div>
+        <div class="section-title">
+          <h2>车型展示</h2>
+          <p class="section-subtitle">浏览所有车型</p>
         </div>
       </div>
       
-      <!-- 加载更多按钮 -->
-      <div v-if="!modelLoading && latestModels.length > 0" class="load-more-section">
-        <el-button 
-          v-if="hasMoreModels"
-          type="primary" 
-          :loading="loadingMore"
-          @click="loadMoreModels"
-          class="load-more-btn"
-        >
-          {{ loadingMore ? '加载中...' : '加载更多车型' }}
-        </el-button>
-        <p v-else class="no-more-text">已显示所有车型</p>
+      <!-- 筛选控制栏 -->
+      <div class="filter-control-bar">
+        <!-- 年代筛选 -->
+        <div class="decade-control">
+          <span class="control-label">年代筛选：</span>
+          <div class="decade-buttons">
+            <button 
+              class="decade-btn" 
+              :class="{ active: selectedDecade === '' }"
+              @click="selectDecade('')"
+            >
+              全部
+            </button>
+            <button 
+              v-for="decade in decades" 
+              :key="decade.value"
+              class="decade-btn" 
+              :class="{ active: selectedDecade === decade.value }"
+              @click="selectDecade(decade.value)"
+            >
+              {{ decade.label }}
+            </button>
+          </div>
+        </div>
+        
+        <!-- 排序控制 -->
+        <div class="sort-control">
+          <span class="control-label">排序方式：</span>
+          <button class="sort-btn" @click="toggleSortOrder">
+            <i class="el-icon-sort"></i>
+            {{ sortOrder === 'desc' ? '最新优先' : '最老优先' }}
+          </button>
+        </div>
+      </div>
+      
+      <div class="models-content">
+        <div v-if="displayModelsLoading && displayModels.length === 0" class="loading-container">
+          <div class="loading-spinner">
+            <i class="el-icon-loading"></i>
+            <p>加载车型数据...</p>
+          </div>
+        </div>
+        <div v-else-if="displayModelsError" class="error-container">
+          <div class="error-icon">
+            <i class="el-icon-warning"></i>
+          </div>
+          <p class="error-text">{{ displayModelsError }}</p>
+        </div>
+        <div v-else-if="displayModels.length === 0" class="empty-container">
+          <div class="empty-icon">
+            <i class="el-icon-picture"></i>
+          </div>
+          <p class="empty-text">暂无车型数据</p>
+        </div>
+        <div v-else class="models-grid">
+          <div 
+            class="model-display-card" 
+            v-for="model in displayModels" 
+            :key="model.id"
+            @click="goToModel(model.id)"
+          >
+            <div class="model-display-image">
+              <img 
+                v-if="model.Images && model.Images.length > 0" 
+                :src="model.Images[0].url"
+                :alt="model.name"
+                @load="handleModelImageLoad"
+                @error="handleModelImageError"
+                class="model-display-img"
+              >
+              <div class="model-display-placeholder" :class="{ show: !model.Images || model.Images.length === 0 || modelImageLoadError[model.id] }">
+                <div class="placeholder-content">
+                  <i class="el-icon-picture"></i>
+                  <span>暂无图片</span>
+                </div>
+              </div>
+            </div>
+            <div class="model-display-info">
+              <h3 class="model-display-name">{{ model.name }}</h3>
+              <p class="model-display-brand">{{ model.Brand ? model.Brand.name : '未知品牌' }}</p>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 加载更多按钮 -->
+        <div v-if="hasMoreDisplayModels" class="load-more-container">
+          <button 
+            class="load-more-btn" 
+            @click="loadMoreModels"
+            :disabled="displayModelsLoading"
+          >
+            <span v-if="!displayModelsLoading">加载更多</span>
+            <i v-else class="el-icon-loading"></i>
+          </button>
+        </div>
+      </div>
       </div>
     </div>
   </div>
@@ -150,7 +305,7 @@
 <script>
 import { brandAPI, modelAPI, imageAPI } from '@/services/api';
 // 恢复使用chinese-to-pinyin库
-import chineseToPinyin from 'chinese-to-pinyin';
+import chineseToPinyin from 'chinese-to-pinyin'
 
 export default {
   name: 'Home',
@@ -236,6 +391,43 @@ export default {
       },
       brandCategory: 'all', // 新增：品牌分类
       logoLoadError: {},
+      latestModelsLoading: true,
+      latestModelsError: null,
+      modelImageLoadError: {},
+      
+      // 轮播图相关数据
+      currentSlide: 0,
+      autoPlayInterval: null,
+      isDragging: false,
+      dragStartX: 0,
+      dragCurrentX: 0,
+      
+      // 车型展示相关数据
+      displayModels: [],
+      displayModelsLoading: false,
+      displayModelsError: null,
+      sortOrder: 'desc', // 'desc' 为最新优先，'asc' 为最老优先
+      currentDisplayPage: 1,
+      displayPageSize: 12,
+      hasMoreDisplayModels: true,
+      
+      // 年代筛选相关
+      selectedDecade: '', // 当前选中的年代
+      decades: [
+        { label: '2020s', value: '2020s' },
+        { label: '2010s', value: '2010s' },
+        { label: '2000s', value: '2000s' },
+        { label: '90s', value: '1990s' },
+        { label: '80s', value: '1980s' },
+        { label: '70s', value: '1970s' },
+        { label: '60s', value: '1960s' },
+        { label: '50s', value: '1950s' },
+        { label: '40s', value: '1940s' },
+        { label: '30s', value: '1930s' },
+        { label: '20s', value: '1920s' },
+        { label: '10s', value: '1910s' },
+        { label: '00s', value: '1900s' }
+      ],
     }
   },
   computed: {
@@ -501,62 +693,6 @@ export default {
         this.loading = false;
       }
     },
-    // 获取最新车型数据
-    async fetchLatestModels() {
-      try {
-        // 显示加载状态
-        this.modelLoading = true;
-        console.log('开始加载最新车型...');
-        
-        // 调用优化后的API，使用分页和latest参数
-        const response = await modelAPI.getAll({
-          latest: true,
-          page: 1,
-          limit: this.pageSize
-        });
-        
-        console.log('获取到的车型数据:', response);
-        
-        if (response.success && Array.isArray(response.data)) {
-          // 后端已经返回了包含图片的完整数据
-          this.latestModels = response.data;
-          this.allModelsData = response.data; // 暂时存储当前页数据
-          
-          // 设置分页信息
-          this.hasMoreModels = response.page < response.totalPages;
-          this.currentPage = response.page;
-          
-          console.log(`成功加载 ${this.latestModels.length} 个车型，总共 ${response.total} 个`);
-          
-          // 为没有缩略图的车型设置默认图片
-          this.latestModels.forEach(model => {
-            if (!model.thumbnail && model.Images && model.Images.length > 0) {
-              const firstImage = model.Images[0];
-              model.thumbnail = firstImage.url;
-            }
-          });
-        } else {
-          console.error('无效的响应数据结构:', response);
-          this.latestModels = [];
-          this.allModelsData = [];
-          this.hasMoreModels = false;
-        }
-      } catch (error) {
-        console.error('获取最新车型失败:', error);
-        this.latestModels = [];
-        this.allModelsData = [];
-        this.hasMoreModels = false;
-      } finally {
-        // 无论成功失败，都关闭加载状态
-        this.modelLoading = false;
-        console.log('最新车型加载完成');
-        
-        // 重新初始化懒加载
-        this.$nextTick(() => {
-          this.initLazyLoading();
-        });
-      }
-    },
     // 加载更多车型
     async loadMoreModels() {
       this.loadingMore = true;
@@ -752,6 +888,221 @@ export default {
       }
     },
 
+    // 获取轮播图车型（最新5个）
+    async fetchCarouselModels() {
+      this.latestModelsLoading = true;
+      this.latestModelsError = null;
+      
+      try {
+        console.log('开始获取轮播图车型...');
+        const response = await modelAPI.getAll({
+          limit: 5,
+          page: 1
+        });
+        
+        console.log('轮播图API响应:', response);
+        
+        // 处理不同的响应格式
+        if (response && response.data && Array.isArray(response.data)) {
+          this.latestModels = response.data;
+          console.log('获取到轮播图车型数据:', this.latestModels);
+          // 启动自动播放
+          this.startAutoPlay();
+        } else if (Array.isArray(response)) {
+          // 如果响应直接是数组
+          this.latestModels = response;
+          console.log('获取到轮播图车型数据(数组格式):', this.latestModels);
+          // 启动自动播放
+          this.startAutoPlay();
+        } else {
+          console.error('无效的轮播图响应格式:', response);
+          throw new Error('获取轮播图车型失败');
+        }
+      } catch (error) {
+        console.error('获取轮播图车型失败:', error);
+        this.latestModelsError = error.message || '获取轮播图车型失败';
+      } finally {
+        this.latestModelsLoading = false;
+      }
+    },
+    
+    // 轮播图控制方法
+    startAutoPlay() {
+      if (this.latestModels.length > 1) {
+        this.autoPlayInterval = setInterval(() => {
+          this.nextSlide();
+        }, 3000);
+      }
+    },
+    
+    stopAutoPlay() {
+      if (this.autoPlayInterval) {
+        clearInterval(this.autoPlayInterval);
+        this.autoPlayInterval = null;
+      }
+    },
+    
+    nextSlide() {
+      if (this.latestModels.length > 1) {
+        this.currentSlide = (this.currentSlide + 1) % this.latestModels.length;
+      }
+    },
+    
+    prevSlide() {
+      if (this.latestModels.length > 1) {
+        this.currentSlide = this.currentSlide === 0 
+          ? this.latestModels.length - 1 
+          : this.currentSlide - 1;
+      }
+    },
+    
+    goToSlide(index) {
+      this.currentSlide = index;
+    },
+    
+    // 拖拽相关方法
+    startDrag(event) {
+      this.isDragging = true;
+      this.dragStartX = event.type === 'mousedown' ? event.clientX : event.touches[0].clientX;
+      this.dragCurrentX = this.dragStartX;
+      this.stopAutoPlay();
+    },
+    
+    onDrag(event) {
+      if (!this.isDragging) return;
+      
+      event.preventDefault();
+      this.dragCurrentX = event.type === 'mousemove' ? event.clientX : event.touches[0].clientX;
+    },
+    
+    endDrag() {
+      if (!this.isDragging) return;
+      
+      const dragDistance = this.dragCurrentX - this.dragStartX;
+      const threshold = 100; // 拖拽阈值
+      
+      if (Math.abs(dragDistance) > threshold) {
+        if (dragDistance > 0) {
+          this.prevSlide();
+        } else {
+          this.nextSlide();
+        }
+      }
+      
+      this.isDragging = false;
+      this.startAutoPlay();
+    },
+    
+    // 获取车型展示数据
+    async fetchDisplayModels() {
+      this.displayModelsLoading = true;
+      this.displayModelsError = null;
+      
+      try {
+        console.log('开始获取车型展示数据...');
+        console.log('排序参数:', this.sortOrder);
+        console.log('年代筛选:', this.selectedDecade);
+        
+        // 构建API请求参数
+        const params = {
+          limit: this.displayPageSize,
+          page: this.currentDisplayPage,
+          sortOrder: this.sortOrder
+        };
+        
+        // 如果选择了年代筛选，添加年代参数
+        if (this.selectedDecade) {
+          params.decade = this.selectedDecade;
+        }
+        
+        const response = await modelAPI.getAll(params);
+        
+        console.log('车型展示API响应:', response);
+        
+        // 处理不同的响应格式
+        if (response && response.data && Array.isArray(response.data)) {
+          if (this.currentDisplayPage === 1) {
+            this.displayModels = response.data;
+          } else {
+            this.displayModels = [...this.displayModels, ...response.data];
+          }
+          this.hasMoreDisplayModels = response.data.length === this.displayPageSize;
+          console.log('获取到车型展示数据:', this.displayModels);
+        } else if (Array.isArray(response)) {
+          if (this.currentDisplayPage === 1) {
+            this.displayModels = response;
+          } else {
+            this.displayModels = [...this.displayModels, ...response];
+          }
+          this.hasMoreDisplayModels = response.length === this.displayPageSize;
+          console.log('获取到车型展示数据(数组格式):', this.displayModels);
+        } else {
+          console.error('无效的车型展示响应格式:', response);
+          throw new Error('获取车型展示数据失败');
+        }
+      } catch (error) {
+        console.error('获取车型展示数据失败:', error);
+        this.displayModelsError = error.message || '获取车型展示数据失败';
+      } finally {
+        this.displayModelsLoading = false;
+      }
+    },
+    
+    // 切换排序方式
+    toggleSortOrder() {
+      this.sortOrder = this.sortOrder === 'desc' ? 'asc' : 'desc';
+      console.log('切换排序方式:', this.sortOrder);
+      this.currentDisplayPage = 1;
+      this.fetchDisplayModels();
+    },
+    
+    // 选择年代筛选
+    selectDecade(decade) {
+      this.selectedDecade = decade;
+      console.log('选择年代筛选:', decade);
+      this.currentDisplayPage = 1;
+      this.fetchDisplayModels();
+    },
+    
+    // 加载更多车型
+    loadMoreModels() {
+      if (this.hasMoreDisplayModels && !this.displayModelsLoading) {
+        this.currentDisplayPage++;
+        this.fetchDisplayModels();
+      }
+    },
+
+    // 处理车型图片加载成功
+    handleModelImageLoad(event) {
+      const img = event.target;
+      img.classList.add('loaded');
+      // 获取车型ID
+      const modelId = this.getModelIdFromImg(img);
+      if (modelId) {
+        this.$set(this.modelImageLoadError, modelId, false);
+      }
+    },
+
+    // 处理车型图片加载失败
+    handleModelImageError(event) {
+      const img = event.target;
+      img.style.display = 'none';
+      // 获取车型ID
+      const modelId = this.getModelIdFromImg(img);
+      if (modelId) {
+        this.$set(this.modelImageLoadError, modelId, true);
+      }
+    },
+
+    // 从图片元素获取车型ID
+    getModelIdFromImg(img) {
+      const modelCard = img.closest('.model-card');
+      if (modelCard) {
+        return modelCard.getAttribute('data-model-id');
+      }
+      return null;
+    },
+
     getBrandIdFromImg(img) {
       // 通过DOM遍历找到对应的brand-card元素
       let current = img;
@@ -777,7 +1128,8 @@ export default {
   },
   mounted() {
     this.initializeBrands();
-    this.fetchLatestModels();
+    this.fetchCarouselModels();
+    this.fetchDisplayModels();
     
     // 初始化图片懒加载
     this.initLazyLoading();
@@ -787,6 +1139,8 @@ export default {
     if (this.lazyLoadObserver) {
       this.lazyLoadObserver.disconnect();
     }
+    // 停止自动播放
+    this.stopAutoPlay();
   },
   watch: {
     // 监听路由变化，重置logo加载状态
@@ -834,18 +1188,724 @@ export default {
 }
 
 .menu-nav a:hover {
-  color: #409EFF;
+  color: #e03426;
 }
 
 .menu-nav a.router-link-active {
-  color: #409EFF;
+  color: #e03426;
   font-weight: bold;
+}
+
+/* 全屏轮播图样式 */
+/* 全局内容容器 - 自适应布局 */
+.content-container {
+  width: 100%;
+  margin: 0 auto;
+  padding: 0 12px;
+  box-sizing: border-box;
+}
+
+.fullscreen-carousel {
+  position: relative;
+  width: 100%;
+  height: 70vh;
+  overflow: hidden;
+  background: #000;
+  margin: 0 0 20px 0;
+}
+
+.carousel-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  cursor: grab;
+}
+
+.carousel-container:active {
+  cursor: grabbing;
+}
+
+.carousel-slide {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  transition: transform 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.slide-image-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.slide-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+}
+
+.slide-placeholder {
+  display: none;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  align-items: center;
+  justify-content: center;
+  color: white;
+}
+
+.slide-placeholder.show {
+  display: flex;
+}
+
+.placeholder-content {
+  text-align: center;
+}
+
+.placeholder-content i {
+  font-size: 64px;
+  margin-bottom: 16px;
+  opacity: 0.7;
+}
+
+.placeholder-content span {
+  font-size: 18px;
+  font-weight: 500;
+}
+
+.slide-info-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.8));
+  color: white;
+  padding: 60px 12px 40px;
+  z-index: 10;
+}
+
+.slide-content {
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+.model-badge {
+  display: inline-block;
+  background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+  color: white;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 20px;
+}
+
+.slide-title {
+  font-size: 48px;
+  font-weight: 700;
+  margin: 0 0 12px 0;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.slide-brand {
+  font-size: 24px;
+  margin: 0 0 20px 0;
+  opacity: 0.9;
+  font-weight: 300;
+}
+
+.view-details-btn {
+  background: rgba(255, 255, 255, 0.2);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  color: white;
+  padding: 12px 24px;
+  border-radius: 50px;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.view-details-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+  border-color: rgba(255, 255, 255, 0.5);
+  transform: translateY(-2px);
+}
+
+/* 导航指示器 */
+.carousel-indicators {
+  position: absolute;
+  bottom: 30px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 12px;
+  z-index: 20;
+}
+
+.indicator {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.3);
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.indicator.active {
+  background: white;
+  transform: scale(1.2);
+}
+
+/* 左右导航按钮 */
+.carousel-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  color: white;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+}
+
+.carousel-nav:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: translateY(-50%) scale(1.1);
+}
+
+.carousel-nav.prev {
+  left: 20px;
+}
+
+.carousel-nav.next {
+  right: 20px;
+}
+
+/* 加载和错误状态 */
+.loading-container,
+.error-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  color: white;
+  text-align: center;
+}
+
+.loading-spinner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+.loading-spinner i {
+  font-size: 48px;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.error-icon {
+  font-size: 64px;
+  margin-bottom: 20px;
+  opacity: 0.7;
+}
+
+.error-text {
+  font-size: 18px;
+  font-weight: 500;
+}
+
+/* 车型展示区域样式 */
+.models-display-section {
+  background: #fff;
+  margin: 20px 0;
+  border-radius: 12px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+  overflow: hidden;
+}
+
+.section-header {
+  padding: 24px 24px 16px 24px;
+  border-bottom: 1px solid #f0f0f0;
+  text-align: center;
+}
+
+.section-title {
+  text-align: center;
+}
+
+.section-title h2 {
+  margin: 0 0 4px 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: #333;
+}
+
+.section-subtitle {
+  font-size: 14px;
+  color: #666;
+  margin: 0;
+}
+
+.sort-btn {
+  background: #e03426;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sort-btn:hover {
+  background: #d02e20;
+}
+
+/* 筛选控制栏样式 */
+.filter-control-bar {
+  padding: 20px 24px;
+  border-bottom: 1px solid #f0f0f0;
+  background: #fafafa;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 30px;
+  align-items: flex-start;
+  justify-content: center;
+}
+
+.sort-control,
+.decade-control {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.control-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #333;
+  white-space: nowrap;
+}
+
+.decade-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.decade-btn {
+  padding: 8px 16px;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  color: #666;
+  transition: all 0.2s ease;
+  min-width: 60px;
+  text-align: center;
+}
+
+.decade-btn:hover {
+  background: #fce4e4;
+  border-color: #f5a5a5;
+  color: #e03426;
+  transform: translateY(-1px);
+}
+
+.decade-btn.active {
+  background: #e03426;
+  border-color: #e03426;
+  color: white;
+  box-shadow: 0 2px 6px rgba(224, 52, 38, 0.3);
+}
+
+.decade-btn:active {
+  transform: scale(0.95);
+}
+
+.models-content {
+  padding: 20px 24px 24px 24px;
+}
+
+.models-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 20px;
+}
+
+.model-display-card {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: 1px solid #f0f0f0;
+}
+
+.model-display-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+.model-display-image {
+  position: relative;
+  height: 180px;
+  overflow: hidden;
+  background: #f8f9fa;
+}
+
+.model-display-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.model-display-card:hover .model-display-img {
+  transform: scale(1.05);
+}
+
+.model-display-placeholder {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #ccc;
+  font-size: 48px;
+}
+
+.model-display-placeholder.show {
+  display: flex;
+}
+
+.model-display-info {
+  padding: 16px;
+}
+
+.model-display-name {
+  margin: 0 0 8px 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+}
+
+.model-display-brand {
+  margin: 0;
+  font-size: 14px;
+  color: #666;
+}
+
+.load-more-container {
+  text-align: center;
+  margin-top: 30px;
+}
+
+.load-more-btn {
+  background: #e03426;
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 6px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 auto;
+}
+
+.load-more-btn:hover:not(:disabled) {
+  background: #d02e20;
+}
+
+.load-more-btn:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+
+.hero-header {
+  max-width: 1200px;
+  margin: 0 auto 50px;
+  padding: 0 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: relative;
+  z-index: 2;
+}
+
+.hero-title h1 {
+  font-size: 48px;
+  font-weight: 700;
+  color: white;
+  margin: 0 0 12px 0;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.hero-subtitle {
+  font-size: 18px;
+  color: rgba(255, 255, 255, 0.9);
+  margin: 0;
+  font-weight: 300;
+}
+
+.view-all-btn {
+  background: rgba(255, 255, 255, 0.2);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  color: white;
+  padding: 12px 24px;
+  border-radius: 50px;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.view-all-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+  border-color: rgba(255, 255, 255, 0.5);
+  transform: translateY(-2px);
+}
+
+.hero-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px;
+  position: relative;
+  z-index: 2;
+}
+
+.models-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  gap: 30px;
+  margin-top: 40px;
+}
+
+.model-hero-card {
+  background: white;
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+  cursor: pointer;
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  position: relative;
+  animation: slideInUp 0.6s ease forwards;
+  opacity: 0;
+  transform: translateY(30px);
+}
+
+@keyframes slideInUp {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.model-hero-card:hover {
+  transform: translateY(-15px) scale(1.02);
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.25);
+}
+
+.model-image-container {
+  position: relative;
+  height: 280px;
+  overflow: hidden;
+}
+
+.model-hero-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.5s ease;
+}
+
+.model-hero-card:hover .model-hero-image {
+  transform: scale(1.1);
+}
+
+.model-placeholder {
+  display: none;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  align-items: center;
+  justify-content: center;
+  color: white;
+}
+
+.model-placeholder.show {
+  display: flex;
+}
+
+.placeholder-content {
+  text-align: center;
+}
+
+.placeholder-content i {
+  font-size: 48px;
+  margin-bottom: 12px;
+  opacity: 0.7;
+}
+
+.placeholder-content span {
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.model-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.model-hero-card:hover .model-overlay {
+  opacity: 1;
+}
+
+.overlay-content {
+  color: white;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 18px;
+  font-weight: 500;
+}
+
+.model-hero-info {
+  padding: 30px;
+  position: relative;
+}
+
+.model-badge {
+  position: absolute;
+  top: -15px;
+  right: 30px;
+  background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+  color: white;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.model-hero-name {
+  font-size: 24px;
+  font-weight: 700;
+  color: #333;
+  margin: 0 0 12px 0;
+  line-height: 1.3;
+}
+
+.model-hero-brand {
+  font-size: 16px;
+  color: #666;
+  margin: 0;
+  font-weight: 500;
+}
+
+/* 加载状态样式 */
+.loading-skeleton {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  gap: 30px;
+}
+
+.skeleton-card {
+  height: 400px;
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  border-radius: 20px;
+  animation: loading 1.5s infinite;
+}
+
+@keyframes loading {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* 错误和空状态样式 */
+.error-container,
+.empty-container {
+  text-align: center;
+  padding: 60px 20px;
+  color: white;
+}
+
+.error-icon,
+.empty-icon {
+  font-size: 64px;
+  margin-bottom: 20px;
+  opacity: 0.7;
+}
+
+.error-text,
+.empty-text {
+  font-size: 18px;
+  font-weight: 500;
 }
 
 /* 品牌展示区域样式优化 */
 .brand-section {
   background: #fff;
-  margin: 0 16px 20px 16px;
+  margin: 20px 0;
   border-radius: 12px;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
   overflow: hidden;
@@ -873,13 +1933,13 @@ export default {
 }
 
 .category-tab:hover {
-  background: rgba(64, 158, 255, 0.08);
-  color: #409EFF;
+  background: rgba(224, 52, 38, 0.08);
+  color: #e03426;
 }
 
 .category-tab.active {
   background: #fff;
-  color: #409EFF;
+  color: #e03426;
   font-weight: 600;
 }
 
@@ -890,7 +1950,7 @@ export default {
   left: 0;
   right: 0;
   height: 3px;
-  background: #409EFF;
+  background: #e03426;
 }
 
 /* 字母筛选器优化 */
@@ -921,22 +1981,22 @@ export default {
 }
 
 .alphabet-btn:hover {
-  background: #e3f2fd;
-  border-color: #90caf9;
-  color: #1976d2;
+  background: #fce4e4;
+  border-color: #f5a5a5;
+  color: #e03426;
   transform: translateY(-1px);
 }
 
 .alphabet-btn.active {
-  background: #409EFF;
-  border-color: #409EFF;
+  background: #e03426;
+  border-color: #e03426;
   color: white;
-  box-shadow: 0 2px 6px rgba(64, 158, 255, 0.3);
+  box-shadow: 0 2px 6px rgba(224, 52, 38, 0.3);
 }
 
 .alphabet-btn:active {
   transform: scale(0.95);
-  background: #e3f2fd;
+  background: #fce4e4;
 }
 
 /* 品牌展示网格 */
@@ -978,7 +2038,7 @@ export default {
   transform: translateY(-3px);
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
   background: #fff;
-  border-color: #409EFF;
+  border-color: #e03426;
 }
 
 .brand-card:active {
@@ -1060,7 +2120,7 @@ export default {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #409EFF, #67C23A);
+  background: linear-gradient(135deg, #e03426, #67C23A);
   color: white;
   font-size: clamp(6px, 1.2vw, 12px);
   font-weight: 600;
@@ -1109,7 +2169,7 @@ export default {
 
 .category-text {
   font-weight: 600;
-  color: #409EFF;
+  color: #e03426;
 }
 
 /* 移除旧的样式 */
@@ -1185,103 +2245,6 @@ export default {
   margin-bottom: 12px;
 }
 
-.latest-models-section {
-  padding: 12px;
-  background-color: #f8f9fa;
-  border-radius: 16px;
-  margin: 8px 20px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-}
-
-.section-header {
-  text-align: center;
-  margin-bottom: 12px;
-}
-
-.section-header h2 {
-  font-size: 24px;
-  font-weight: 600;
-  color: #333;
-  margin-bottom: 8px;
-}
-
-.section-header p {
-  font-size: 14px;
-  color: #606266;
-  margin: 0;
-}
-
-.models-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 20px;
-}
-
-.model-card {
-  background-color: #fff;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  overflow: hidden;
-  cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.model-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
-}
-
-.model-image {
-  position: relative;
-  height: 200px;
-  overflow: hidden;
-}
-
-.model-image img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  transition: transform 0.3s ease;
-}
-
-.model-card:hover .model-image img {
-  transform: scale(1.02);
-}
-
-.model-info {
-  padding: 16px;
-}
-
-.model-name {
-  font-size: 16px;
-  font-weight: 600;
-  color: #333;
-  margin: 0 0 8px 0;
-  line-height: 1.4;
-}
-
-.brand-name {
-  font-size: 14px;
-  color: #666;
-  margin: 0 0 10px 0;
-}
-
-.model-tags {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.year-tag,
-.type-tag {
-  padding: 4px 8px;
-  background-color: #f0f2f5;
-  color: #606266;
-  border-radius: 6px;
-  font-size: 12px;
-  font-weight: 500;
-}
-
 .load-more-section {
   text-align: center;
   margin-top: 16px;
@@ -1292,17 +2255,17 @@ export default {
   padding: 12px 32px;
   font-size: 16px;
   border-radius: 8px;
-  background: linear-gradient(135deg, #409EFF, #67C23A);
+  background: #e03426;
   border: none;
   color: white;
   font-weight: 600;
   transition: all 0.3s ease;
-  box-shadow: 0 4px 12px rgba(64, 158, 255, 0.3);
+  box-shadow: 0 4px 12px rgba(224, 52, 38, 0.3);
 }
 
 .load-more-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(64, 158, 255, 0.4);
+  box-shadow: 0 6px 20px rgba(224, 52, 38, 0.4);
 }
 
 .load-more-btn:active {
@@ -1325,9 +2288,19 @@ export default {
   -webkit-touch-callout: none;
 }
 
-/* 防止水平滚动 */
+/* 防止水平滚动和确保页面背景 */
 body, html {
   overflow-x: hidden;
+  margin: 0;
+  padding: 0;
+  background-color: #f5f5f5;
+}
+
+.home {
+  background-color: #f5f5f5;
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
 }
 
 .home * {
@@ -1335,13 +2308,33 @@ body, html {
 }
 
 .brand-card, .alphabet-btn, .category-tab {
-  -webkit-tap-highlight-color: rgba(64, 158, 255, 0.2);
+  -webkit-tap-highlight-color: rgba(224, 52, 38, 0.2);
   user-select: none;
 }
 
-/* 响应式设计 */
+/* 响应式设计 - 自适应padding */
+@media (min-width: 1400px) {
+  .content-container {
+    padding: 0 20px;
+  }
+  
+  .slide-info-overlay {
+    padding: 60px 20px 40px;
+  }
+}
+
+@media (max-width: 1200px) {
+  .content-container {
+    padding: 0 12px;
+  }
+  
+  .slide-info-overlay {
+    padding: 60px 12px 40px;
+  }
+}
+
 @media (max-width: 1400px) {
-  .brands-grid {
+.brands-grid {
     grid-template-columns: repeat(12, 1fr);
   }
 }
@@ -1351,9 +2344,20 @@ body, html {
     grid-template-columns: repeat(10, 1fr);
   }
   
-  .latest-models-section {
+  .models-display-section {
     margin: 6px 15px;
     padding: 10px;
+  }
+  
+  .filter-control-bar {
+    flex-direction: column;
+    gap: 16px;
+    align-items: center;
+  }
+  
+  .sort-control,
+  .decade-control {
+    justify-content: center;
   }
   
   .models-grid {
@@ -1368,10 +2372,27 @@ body, html {
   }
   
   .brand-filter-container,
-  .latest-models-section {
+  .models-display-section {
     margin: 4px 10px;
     padding: 8px;
     border-radius: 12px;
+  }
+  
+  .filter-control-bar {
+    padding: 16px 12px;
+    flex-direction: column;
+    gap: 12px;
+  }
+  
+  .sort-control,
+  .decade-control {
+    flex-direction: column;
+    gap: 8px;
+    text-align: center;
+  }
+  
+  .decade-buttons {
+    justify-content: center;
   }
   
   .brand-category-filter {
@@ -1441,6 +2462,53 @@ body, html {
     font-size: 20px;
   }
   
+  .fullscreen-carousel {
+    height: 60vh;
+  }
+  
+  .slide-title {
+    font-size: 36px;
+  }
+  
+  .slide-brand {
+    font-size: 20px;
+  }
+  
+  .slide-info-overlay {
+    padding: 50px 25px 35px;
+  }
+  
+  .carousel-nav {
+    width: 40px;
+    height: 40px;
+    font-size: 16px;
+  }
+  
+  .carousel-nav.prev {
+    left: 15px;
+  }
+  
+  .carousel-nav.next {
+    right: 15px;
+  }
+  
+  .carousel-indicators {
+    bottom: 20px;
+  }
+  
+  .indicator {
+    width: 10px;
+    height: 10px;
+  }
+  
+  .model-brand {
+    font-size: 11px;
+  }
+  
+  .model-series {
+    font-size: 10px;
+  }
+  
   .models-grid {
     grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
     gap: 12px;
@@ -1470,12 +2538,20 @@ body, html {
 }
 
 @media (max-width: 768px) {
+  .content-container {
+    padding: 0 10px;
+  }
+  
+  .slide-info-overlay {
+    padding: 50px 10px 35px;
+  }
+  
   .home {
     padding: 0;
   }
   
   .brand-section {
-    margin: 0 8px 20px 8px;
+    margin: 0 0 20px 0;
     border-radius: 8px;
   }
   
@@ -1581,7 +2657,7 @@ body, html {
   }
   
   .brands-display {
-    padding: 12px 8px;
+    padding: 12px 4px;
   }
   
   .brand-card .brand-logo {
@@ -1613,9 +2689,17 @@ body, html {
 }
 
 @media (max-width: 480px) {
+  .content-container {
+    padding: 0 8px;
+  }
+  
+  .slide-info-overlay {
+    padding: 40px 8px 30px;
+  }
+  
   .brand-section,
   .latest-models-section {
-    margin: 4px 4px;
+    margin: 4px 0;
     border-radius: 6px;
   }
   
@@ -1648,7 +2732,7 @@ body, html {
   }
   
   .brands-display {
-    padding: 8px 6px;
+    padding: 8px 4px;
   }
   
   .brands-grid {

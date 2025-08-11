@@ -1955,7 +1955,7 @@ export default {
 .forum-header {
   text-align: center;
   padding: 7px 20px;
-  background: linear-gradient(135deg, #409EFF 0%, #67C23A 100%);
+  background: linear-gradient(135deg, #e03426 0%, #67C23A 100%);
   color: white;
 }
 
@@ -2297,7 +2297,7 @@ export default {
   padding: 12px 32px;
   font-size: 16px;
   border-radius: 8px;
-  background: linear-gradient(135deg, #409EFF, #67C23A);
+  background: linear-gradient(135deg, #e03426, #67C23A);
   border: none;
   color: white;
   font-weight: 600;
@@ -2337,7 +2337,7 @@ export default {
 }
 
 .card-header i {
-  color: #409EFF;
+  color: #e03426;
 }
 
 .card-content {
@@ -2366,7 +2366,7 @@ export default {
 }
 
 .topic-tag {
-  color: #409EFF;
+  color: #e03426;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.3s ease;
@@ -2446,7 +2446,7 @@ export default {
 }
 
 .stat-value {
-  color: #409EFF;
+  color: #e03426;
   font-weight: 600;
   font-size: 16px;
 }
@@ -2804,18 +2804,18 @@ export default {
 }
 
 .username.clickable:hover {
-  color: #409EFF;
+  color: #e03426;
   text-decoration: underline;
 }
 
 .comment-username.clickable:hover {
-  color: #409EFF;
+  color: #e03426;
   text-decoration: underline;
 }
 
 /* 高亮帖子样式 */
 .highlighted-post {
-  border: 2px solid #409EFF !important;
+  border: 2px solid #e03426 !important;
   box-shadow: 0 0 20px rgba(64, 158, 255, 0.3) !important;
   background: linear-gradient(135deg, rgba(64, 158, 255, 0.05), rgba(103, 194, 58, 0.05)) !important;
   animation: pulse-highlight 2s ease-in-out;
@@ -2844,7 +2844,7 @@ export default {
 }
 
 .el-dropdown-link:hover {
-  color: #409EFF;
+  color: #e03426;
 }
 
 /* 图片上传组件样式优化 - 使用更强的优先级 */
@@ -2861,7 +2861,7 @@ export default {
 }
 
 ::v-deep .el-upload--picture-card:hover {
-  border-color: #409EFF !important;
+  border-color: #e03426 !important;
 }
 
 ::v-deep .el-upload-list--picture-card .el-upload-list__item {
@@ -3006,7 +3006,7 @@ export default {
 }
 
 .reply-btn:hover {
-  color: #409EFF;
+  color: #e03426;
 }
 
 /* 回复输入框 */
@@ -3301,7 +3301,7 @@ export default {
 
 .topic-name {
   font-size: 14px;
-  color: #409EFF;
+  color: #e03426;
   font-weight: 500;
 }
 
@@ -3322,12 +3322,12 @@ export default {
 
 .tool-button:hover {
   background-color: #f5f7fa;
-  color: #409EFF;
+  color: #e03426;
 }
 
 .tool-button.active {
   background-color: #ecf5ff;
-  color: #409EFF;
+  color: #e03426;
 }
 
 .tool-button i {
@@ -3352,7 +3352,7 @@ export default {
   align-items: center;
   gap: 4px;
   padding: 6px 12px;
-  background-color: #409EFF;
+  background-color: #e03426;
   border-radius: 4px;
   color: white;
   cursor: pointer;
@@ -3430,12 +3430,12 @@ export default {
 
 .tool-btn:hover:not(.disabled) {
   background-color: #f8f9fa;
-  color: #409EFF;
+  color: #e03426;
   transform: translateY(-2px);
 }
 
 .tool-btn.active {
-  color: #409EFF;
+  color: #e03426;
   background-color: #ecf5ff;
 }
 
@@ -3469,7 +3469,7 @@ export default {
 }
 
 .publish-btn {
-  background: #409EFF !important;
+  background: #e03426 !important;
   border: none !important;
   border-radius: 20px !important;
   padding: 10px 24px !important;
@@ -3568,7 +3568,7 @@ export default {
 }
 
 .add-image-item:hover {
-  border-color: #409EFF;
+  border-color: #e03426;
   background-color: #ecf5ff;
 }
 
@@ -3591,7 +3591,7 @@ export default {
 }
 
 .edit-post-form .el-textarea__inner:focus {
-  border-color: #409EFF;
+  border-color: #e03426;
   box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.2);
 }
 
@@ -3635,6 +3635,6 @@ export default {
 }
 
 .el-dropdown-menu__item:hover i {
-  color: #409EFF;
+  color: #e03426;
 }
 </style> 

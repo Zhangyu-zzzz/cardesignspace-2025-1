@@ -179,12 +179,12 @@ export default {
 
 .emoji-button:hover {
   background-color: #f5f7fa;
-  color: #409EFF;
+  color: #e03426;
 }
 
 .emoji-button.active {
   background-color: #ecf5ff;
-  color: #409EFF;
+  color: #e03426;
 }
 
 .emoji-button i {
@@ -223,7 +223,7 @@ export default {
 
 .emoji-tab.active {
   background-color: #ecf5ff;
-  color: #409EFF;
+  color: #e03426;
 }
 
 .tab-icon {

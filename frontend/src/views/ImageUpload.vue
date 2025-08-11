@@ -2404,8 +2404,8 @@ export default {
 }
 
 .model-count {
-  background: #e3f2fd;
-  color: #1976d2;
+  background: #fce4e4;
+  color: #e03426;
   padding: 4px 8px;
   border-radius: 4px;
   font-size: 12px;
@@ -2590,8 +2590,8 @@ export default {
 }
 
 .image-info .category {
-  background: #e3f2fd;
-  color: #1976d2;
+  background: #fce4e4;
+  color: #e03426;
   padding: 3px 8px;
   border-radius: 12px;
   font-size: 11px;
@@ -2650,7 +2650,7 @@ export default {
 }
 
 .upload-area:hover {
-  border-color: #409eff;
+  border-color: #e03426;
 }
 
 .upload-placeholder {
@@ -2694,7 +2694,7 @@ export default {
 
 .file-icon {
   margin-right: 8px;
-  color: #409eff;
+  color: #e03426;
 }
 
 .file-name {
@@ -2748,7 +2748,7 @@ export default {
 }
 
 .new-logo {
-  border-color: #409eff;
+  border-color: #e03426;
   background: #ecf5ff;
 }
 
@@ -2805,7 +2805,7 @@ export default {
 }
 
 .upload-tips .save-tip {
-  color: #409eff;
+  color: #e03426;
   font-weight: 500;
   background: #ecf5ff;
   padding: 8px;
@@ -3214,7 +3214,7 @@ export default {
 }
 
 .spec-item:hover {
-  border-color: #409eff;
+  border-color: #e03426;
   box-shadow: 0 2px 8px rgba(64, 158, 255, 0.1);
 }
 
@@ -3233,11 +3233,11 @@ export default {
   padding: 4px 8px;
   background: #f0f9ff;
   border-radius: 4px;
-  border-left: 3px solid #409eff;
+  border-left: 3px solid #e03426;
 }
 
 .specs-editor .el-button--text {
-  color: #409eff;
+  color: #e03426;
   font-weight: 500;
   padding: 8px 16px;
   border-radius: 4px;
@@ -3246,8 +3246,8 @@ export default {
 }
 
 .specs-editor .el-button--text:hover {
-  background: #409eff;
+  background: #e03426;
   color: white;
-  border-color: #409eff;
+  border-color: #e03426;
 }
 </style> 

@@ -179,7 +179,7 @@
                       </div>
                     </div>
                     <div class="like-action">
-                      <i class="el-icon-star-on" style="color: #409EFF;"></i>
+                      <i class="el-icon-star-on" style="color: #e03426;"></i>
                       <span>赞了你的帖子</span>
                     </div>
                   </div>
@@ -1021,7 +1021,7 @@ export default {
 .profile-banner {
   position: relative;
   height: 180px;
-  background: linear-gradient(135deg, #409EFF 0%, #67C23A 100%);
+  background: linear-gradient(135deg, #e03426 0%, #67C23A 100%);
   overflow: hidden;
 }
 
@@ -1078,7 +1078,7 @@ export default {
   position: absolute;
   bottom: 0;
   right: 0;
-  background: linear-gradient(135deg, #409EFF 0%, #67C23A 100%);
+  background: linear-gradient(135deg, #e03426 0%, #67C23A 100%);
   border: 3px solid white;
   border-radius: 50%;
   width: 24px;
@@ -1252,16 +1252,16 @@ export default {
 }
 
 .tabs-section .el-tabs__item:hover {
-  color: #409EFF;
+  color: #e03426;
 }
 
 .tabs-section .el-tabs__item.is-active {
-  color: #409EFF;
+  color: #e03426;
   font-weight: 600;
 }
 
 .tabs-section .el-tabs__active-bar {
-  background-color: #409EFF;
+  background-color: #e03426;
   height: 2px;
   position: absolute !important;
   bottom: 0 !important;
@@ -1331,7 +1331,7 @@ export default {
 
 .quick-post-btn i {
   font-size: 16px;
-  color: #409EFF;
+  color: #e03426;
 }
 
 /* 筛选区域 */
@@ -1360,14 +1360,14 @@ export default {
 }
 
 .filter-section .el-radio-button__orig-radio:checked + .el-radio-button__inner {
-  background: #409EFF;
+  background: #e03426;
   color: white;
   box-shadow: 0 2px 8px rgba(64, 158, 255, 0.3);
 }
 
 .filter-section .el-radio-button:hover .el-radio-button__inner {
   background: #ecf5ff;
-  color: #409EFF;
+  color: #e03426;
 }
 
 /* 帖子网格优化 */
@@ -1404,7 +1404,7 @@ export default {
 .clickable-post:hover {
   transform: translateY(-6px);
   box-shadow: 0 12px 35px rgba(0, 0, 0, 0.15);
-  border-color: #409EFF;
+  border-color: #e03426;
 }
 
 .clickable-post:hover .post-hint {
@@ -1420,7 +1420,7 @@ export default {
   align-items: center;
   gap: 4px;
   font-size: 12px;
-  color: #409EFF;
+  color: #e03426;
   opacity: 0;
   transform: translateY(10px);
   transition: all 0.3s ease;
@@ -1529,7 +1529,7 @@ export default {
 }
 
 .stat:hover {
-  color: #409EFF;
+  color: #e03426;
   background: #ecf5ff;
 }
 
@@ -1584,7 +1584,7 @@ export default {
   padding: 12px 32px;
   font-size: 16px;
   border-radius: 8px;
-  background: linear-gradient(135deg, #409EFF, #67C23A);
+  background: linear-gradient(135deg, #e03426, #67C23A);
   border: none;
   color: white;
   font-weight: 600;
@@ -1640,7 +1640,7 @@ export default {
 }
 
 .avatar-uploader:hover {
-  border-color: #409EFF;
+  border-color: #e03426;
 }
 
 .avatar-uploader-icon {
@@ -1989,7 +1989,7 @@ export default {
 }
 
 .brand-name {
-  background: linear-gradient(135deg, #409EFF, #67C23A);
+  background: linear-gradient(135deg, #e03426, #67C23A);
   color: white;
   padding: 2px 8px;
   border-radius: 4px;
@@ -2072,7 +2072,7 @@ export default {
 
 .like-item:hover {
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-  border-color: #409EFF;
+  border-color: #e03426;
   transform: translateY(-2px);
 }
 
@@ -2118,7 +2118,7 @@ export default {
   display: flex;
   align-items: center;
   gap: 6px;
-  color: #409EFF;
+  color: #e03426;
   font-size: 14px;
   font-weight: 500;
 }

@@ -694,7 +694,7 @@
   }
   
   .clickable-username:hover {
-    color: #409EFF !important;
+    color: #e03426 !important;
     text-decoration: underline;
   }
   

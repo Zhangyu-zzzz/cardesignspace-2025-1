@@ -424,7 +424,7 @@ export default {
 }
 
 .notification-trigger:hover {
-  color: #409EFF;
+  color: #e03426;
   background-color: rgba(64, 158, 255, 0.1);
 }
 
@@ -517,7 +517,7 @@ export default {
 }
 
 .type-icon.type-comment {
-  background-color: #409EFF;
+  background-color: #e03426;
 }
 
 .type-icon.type-follow {

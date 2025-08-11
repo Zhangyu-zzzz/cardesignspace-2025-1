@@ -1,0 +1,17 @@
+gantt
+  title "DELL → cardesignspace 数据整合与备份计划"
+  dateFormat  YYYY-MM-DD
+  axisFormat  %m/%d
+  section "准备"
+  "需求确认/设计冻结"           :active, a1, 2025-08-10, 2d
+  "二数据源配置/连通性验证"     :a2, after a1, 1d
+  "external_id_map/索引建表"    :a3, after a2, 1d
+  section "全量ETL"
+  "品牌对齐/导入"               :b1, after a3, 1d
+  "车系列表落库"               :b2, after b1, 1d
+  "车型聚合入模"               :b3, after b2, 2d
+  "侧表落地(dcd_*)"            :b4, after b3, 1d
+  section "增量/运维"
+  "增量同步作业与监控"          :c1, after b4, 1d
+  "备份策略上线(复制/逻辑备份)" :c2, after c1, 1d
+  "恢复演练与验收"             :c3, after c2, 1d

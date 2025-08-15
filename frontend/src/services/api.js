@@ -117,11 +117,24 @@ export const userAPI = {
   updateProfile: (data) => apiClient.put('/users/profile', data)
 };
 
+// 文章相关API
+export const articleAPI = {
+  getAll: (params) => apiClient.get('/articles', { params }),
+  getById: (id) => apiClient.get(`/articles/${id}`),
+  getPopular: () => apiClient.get('/articles/popular'),
+  getCategoryStats: () => apiClient.get('/articles/categories/stats'),
+  create: (data) => apiClient.post('/articles', data),
+  update: (id, data) => apiClient.put(`/articles/${id}`, data),
+  delete: (id) => apiClient.delete(`/articles/${id}`),
+  toggleLike: (id) => apiClient.post(`/articles/${id}/like`)
+};
+
 export default {
   brand: brandAPI,
   series: seriesAPI,
   model: modelAPI,
   image: imageAPI,
   auth: authAPI,
-  user: userAPI
+  user: userAPI,
+  article: articleAPI
 }; 

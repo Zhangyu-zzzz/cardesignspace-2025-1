@@ -8,6 +8,10 @@ const Comment = require('./Comment');
 const PostLike = require('./PostLike');
 const Notification = require('./Notification');
 const PostFavorite = require('./PostFavorite');
+const Article = require('./Article');
+const ArticleComment = require('./ArticleComment');
+const ArticleLike = require('./ArticleLike');
+const ArticleImage = require('./ArticleImage');
 
 // 设置模型之间的关联关系，避免循环引用问题
 
@@ -80,6 +84,39 @@ PostFavorite.belongsTo(User, { foreignKey: 'userId' });
 Post.hasMany(PostFavorite, { foreignKey: 'postId', as: 'PostFavorites' });
 PostFavorite.belongsTo(Post, { foreignKey: 'postId' });
 
+// === 文章模型关联 ===
+
+// 用户和文章的关联
+User.hasMany(Article, { foreignKey: 'authorId', as: 'Articles' });
+Article.belongsTo(User, { foreignKey: 'authorId', as: 'Author' });
+
+// 文章和评论的关联
+Article.hasMany(ArticleComment, { foreignKey: 'articleId', as: 'Comments' });
+ArticleComment.belongsTo(Article, { foreignKey: 'articleId' });
+
+// 用户和文章评论的关联
+User.hasMany(ArticleComment, { foreignKey: 'userId', as: 'ArticleComments' });
+ArticleComment.belongsTo(User, { foreignKey: 'userId', as: 'User' });
+
+// 评论的自关联（回复功能）
+ArticleComment.hasMany(ArticleComment, { foreignKey: 'parentId', as: 'Replies' });
+ArticleComment.belongsTo(ArticleComment, { foreignKey: 'parentId', as: 'Parent' });
+
+// 文章和点赞的关联
+Article.hasMany(ArticleLike, { foreignKey: 'articleId', as: 'Likes' });
+ArticleLike.belongsTo(Article, { foreignKey: 'articleId' });
+
+// 用户和文章点赞的关联
+User.hasMany(ArticleLike, { foreignKey: 'userId', as: 'ArticleLikes' });
+ArticleLike.belongsTo(User, { foreignKey: 'userId', as: 'User' });
+
+// 文章图片关联
+Article.hasMany(ArticleImage, { foreignKey: 'articleId', as: 'Images' });
+ArticleImage.belongsTo(Article, { foreignKey: 'articleId' });
+
+User.hasMany(ArticleImage, { foreignKey: 'userId', as: 'ArticleImages' });
+ArticleImage.belongsTo(User, { foreignKey: 'userId', as: 'Uploader' });
+
 module.exports = {
   Brand,
   Model,
@@ -90,5 +127,9 @@ module.exports = {
   Comment,
   PostLike,
   Notification,
-  PostFavorite
+  PostFavorite,
+  Article,
+  ArticleComment,
+  ArticleLike,
+  ArticleImage
 }; 

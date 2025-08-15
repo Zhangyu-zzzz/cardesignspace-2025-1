@@ -55,8 +55,8 @@ const corsOptions = {
 
 // 配置中间件
 app.use(cors(corsOptions));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '10mb' })); // 增加JSON请求体大小限制到10MB
+app.use(express.urlencoded({ extended: true, limit: '10mb' })); // 增加URL编码请求体大小限制到10MB
 
 // 配置请求日志
 app.use(morgan('combined', { stream: { write: message => logger.info(message.trim()) } }));
@@ -78,6 +78,7 @@ app.use('/api/auth', require('./routes/auth'));
 app.use('/api/forum', require('./routes/forumRoutes'));
 app.use('/api/search', require('./routes/searchRoutes'));
 app.use('/api/notifications', require('./routes/notificationRoutes'));
+app.use('/api/articles', require('./routes/articleRoutes'));
 
 console.log('所有API路由已加载完成');
 
@@ -85,9 +86,27 @@ console.log('所有API路由已加载完成');
 app.use((err, req, res, next) => {
   console.error('全局错误处理捕获到错误:', err);
   logger.error(`全局错误处理: ${err.message}\n${err.stack}`);
+  
+  // 特殊处理不同类型的错误
+  if (err.type === 'entity.too.large') {
+    return res.status(413).json({
+      success: false,
+      message: '请求内容过大，请减少内容大小后重试',
+      error: 'Payload too large'
+    });
+  }
+  
+  if (err.name === 'PayloadTooLargeError') {
+    return res.status(413).json({
+      success: false,
+      message: '请求内容过大，请减少内容大小后重试',
+      error: 'Payload too large'
+    });
+  }
+  
   res.status(err.status || 500).json({
     success: false,
-    message: '服务器内部错误',
+    message: err.status === 401 ? '认证失败' : '服务器内部错误',
     error: process.env.NODE_ENV === 'production' ? '内部错误' : err.message
   });
 });

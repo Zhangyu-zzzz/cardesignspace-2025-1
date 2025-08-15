@@ -27,9 +27,9 @@
           <div class="navbar-center">
             <div class="search-box">
               <el-input 
-                placeholder="搜索您感兴趣的汽车品牌或车型" 
+                :placeholder="searchPlaceholder" 
                 v-model="searchKeyword"
-                class="search-input"
+                class="search-input mobile-search-input"
                 @keyup.enter.native="handleSearch"
                 clearable
                 size="medium"
@@ -48,12 +48,18 @@
             <!-- 导航菜单 -->
             <div class="navbar-menu">
               <el-menu mode="horizontal" router class="nav-menu-items">
+                <el-menu-item index="/articles" class="nav-item">
+                  <span>汽车资讯</span>
+                </el-menu-item>
                 <el-menu-item index="/forum" class="nav-item">
                   <span>用户论坛</span>
                 </el-menu-item>
                 <el-menu-item index="/upload" class="nav-item">
                   <span>图片上传</span>
                 </el-menu-item>
+                <!-- <el-menu-item v-if="user" index="/articles/edit" class="nav-item">
+                  <span>写文章</span>
+                </el-menu-item> -->
               </el-menu>
             </div>
 
@@ -77,16 +83,6 @@
                   <NotificationCenter />
                 </div>
                 
-                <!-- 积分显示 -->
-                <div class="points-wrapper">
-                  <el-tooltip content="我的积分" placement="bottom">
-                    <div class="points-display" @click="$router.push('/profile')">
-                      <i class="el-icon-star-on"></i>
-                      <span class="points-value">{{ user.points || 0 }}</span>
-                    </div>
-                  </el-tooltip>
-                </div>
-                
                 <!-- 用户头像菜单 -->
                 <div class="user-menu-wrapper">
                   <el-dropdown @command="handleUserMenuCommand" placement="bottom-end">
@@ -101,7 +97,12 @@
                       <i class="el-icon-arrow-down el-icon--right"></i>
                     </div>
                     <el-dropdown-menu slot="dropdown" class="user-dropdown-menu">
-                      <el-dropdown-item command="profile">
+                      <el-dropdown-item command="points" class="points-dropdown-item">
+                        <i class="el-icon-star-on" style="color: #f39c12;"></i>
+                        <span class="dropdown-points-label">我的积分</span>
+                        <span class="dropdown-points-value">{{ user.points || 0 }}</span>
+                      </el-dropdown-item>
+                      <el-dropdown-item divided command="profile">
                         <i class="el-icon-user"></i>
                         个人资料
                       </el-dropdown-item>
@@ -161,14 +162,31 @@ export default {
     }
   },
   computed: {
-    ...mapState(['user', 'isAuthenticated'])
+    ...mapState(['user', 'isAuthenticated']),
+    searchPlaceholder() {
+      // 检测屏幕宽度来显示不同的placeholder
+      if (typeof window !== 'undefined' && window.innerWidth <= 768) {
+        return '搜索品牌或车型'
+      }
+      return '搜索您感兴趣的汽车品牌或车型'
+    }
   },
   mounted() {
     this.setupAxiosInterceptors()
     this.initializeAuth()
+    // 监听窗口大小变化以更新placeholder
+    window.addEventListener('resize', this.handleResize)
   },
-  methods: {
+  beforeDestroy() {
+    window.removeEventListener('resize', this.handleResize)
+  },
+      methods: {
     ...mapActions(['login', 'logout', 'updateUser', 'checkAuth']),
+    
+    // 处理窗口大小变化
+    handleResize() {
+      this.$forceUpdate() // 强制更新组件以重新计算placeholder
+    },
     
     // 初始化认证状态
     async initializeAuth() {
@@ -182,8 +200,17 @@ export default {
       axios.interceptors.request.use(
         config => {
           const token = localStorage.getItem('token')
+          console.log('🔐 请求拦截器:', {
+            url: config.url,
+            method: config.method,
+            hasToken: !!token,
+            tokenPreview: token ? token.substring(0, 20) + '...' : '无token'
+          })
           if (token) {
             config.headers.Authorization = `Bearer ${token}`
+            console.log('✅ 已添加Authorization头')
+          } else {
+            console.log('❌ 没有token，未添加Authorization头')
           }
           return config
         },
@@ -196,14 +223,60 @@ export default {
       axios.interceptors.response.use(
         response => response,
         error => {
+          console.log('🚨 拦截器捕获错误:', {
+            url: error.config && error.config.url,
+            status: error.response && error.response.status,
+            data: error.response && error.response.data,
+            message: error.message
+          })
+          
           // 只有在非checkAuth请求时才显示消息和清除数据
           // checkAuth请求应该自己处理错误
           if (error.response && error.response.status === 401) {
             const isCheckAuthRequest = error.config && error.config.url && error.config.url.includes('/api/auth/me')
+            const isArticleRequest = error.config && error.config.url && error.config.url.includes('/api/articles')
             
-            if (!isCheckAuthRequest) {
+            // 检查是否是真的认证错误（包含认证相关的错误信息）
+            const errorMessage = (error.response && error.response.data && error.response.data.message) || ''
+            const isAuthError = errorMessage.includes('认证') || errorMessage.includes('token') || errorMessage.includes('登录')
+            
+            console.log('🔍 401错误分析:', {
+              isCheckAuthRequest,
+              isArticleRequest,
+              errorMessage,
+              isAuthError,
+              url: error.config && error.config.url
+            })
+            
+            // 特殊处理"The user belonging to this token no longer exists"错误
+            if (errorMessage.includes('The user belonging to this token no longer exists')) {
+              console.log('💥 用户不存在，立即清除用户数据')
+              this.clearUserData()
+              this.$message.error('用户账户不存在，请重新登录')
+              return Promise.reject(error)
+            }
+            
+            // 对于文章相关请求，不在这里清除用户数据，让具体的组件处理
+            if (isArticleRequest) {
+              console.log('ℹ️ 文章请求401错误，让组件自行处理')
+              return Promise.reject(error)
+            }
+            
+            // 只有在特定的认证错误时才清除用户数据
+            // 避免因为偶发问题就清除用户会话
+            if (!isCheckAuthRequest && 
+                (errorMessage.includes('invalid signature') || 
+                 errorMessage.includes('expired') || 
+                 errorMessage.includes('malformed'))) {
+              console.log('💥 清除用户数据，显示登录过期消息')
               this.clearUserData()
               this.$message.warning('登录已过期，请重新登录')
+            } else {
+              console.log('ℹ️ 暂时忽略401错误，避免误清除用户数据')
+              // 只显示错误消息，不清除数据
+              if (!isCheckAuthRequest) {
+                this.$message.error('操作失败，请重试')
+              }
             }
           }
           return Promise.reject(error)
@@ -228,6 +301,9 @@ export default {
     // 处理用户菜单命令
     handleUserMenuCommand(command) {
       switch (command) {
+        case 'points':
+          this.$router.push('/profile')
+          break
         case 'profile':
           this.$router.push('/profile')
           break
@@ -551,7 +627,7 @@ html, body {
 }
 
 .logo-image {
-  height: 40px;
+  height: 32px; /* 从40px减少到32px */
   width: auto;
   object-fit: contain;
   filter: brightness(1.2) contrast(1.1);
@@ -593,6 +669,11 @@ html, body {
 
 .search-input .el-input__inner::placeholder {
   color: rgba(255, 255, 255, 0.7);
+}
+
+.search-input .el-input__inner:focus {
+  border-color: #e03426;
+  box-shadow: 0 0 0 2px rgba(224, 52, 38, 0.2);
 }
 
 .search-input .el-input-group__append {
@@ -758,39 +839,38 @@ html, body {
 }
 
 /* 积分显示 */
-.points-wrapper {
-  display: flex;
-  align-items: center;
+/* 下拉菜单积分项样式 */
+.points-dropdown-item {
+  background-color: #f8f9fa !important;
+  border-bottom: 1px solid #e9ecef !important;
+  cursor: pointer !important;
 }
 
-.points-display {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  background: #e03426;
+.points-dropdown-item:hover {
+  background-color: #e9ecef !important;
+}
+
+.points-dropdown-item .dropdown-points-label {
+  flex: 1;
+  margin-left: 4px;
+  font-weight: 500;
+}
+
+.points-dropdown-item .dropdown-points-value {
+  background: linear-gradient(135deg, #e03426, #ff6b4a);
   color: #ffffff;
-  padding: 8px 12px;
-  border-radius: 20px;
-  font-size: 14px;
+  padding: 3px 10px;
+  border-radius: 15px;
+  font-size: 12px;
   font-weight: 600;
-  cursor: pointer;
+  margin-left: auto;
+  box-shadow: 0 2px 4px rgba(224, 52, 38, 0.3);
   transition: all 0.3s ease;
-  box-shadow: 0 2px 8px rgba(224, 52, 38, 0.3);
 }
 
-.points-display:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 16px rgba(224, 52, 38, 0.4);
-}
-
-.points-display i {
-  font-size: 16px;
-  color: #ffd700;
-}
-
-.points-value {
-  font-size: 14px;
-  font-weight: 600;
+.points-dropdown-item:hover .dropdown-points-value {
+  transform: scale(1.05);
+  box-shadow: 0 3px 6px rgba(224, 52, 38, 0.4);
 }
 
 /* 用户菜单 */
@@ -918,7 +998,17 @@ html, body {
   }
   
   .logo-image {
-    height: 36px;
+    height: 28px; /* 从32px减少到28px */
+  }
+  
+  /* 平板和小笔记本电脑使用移动端logo */
+  .logo-desktop {
+    display: none;
+  }
+  
+  .logo-mobile {
+    display: block;
+    height: 28px !important; /* 从32px减少到28px */
   }
   
   .nav-menu-items .el-menu-item {
@@ -955,7 +1045,7 @@ html, body {
     height: 32px;
   }
   
-  /* 平板和小笔记本电脑使用移动端logo */
+  /* 平板和小笔记本电脑也使用移动端logo */
   .logo-desktop {
     display: none;
   }
@@ -987,7 +1077,7 @@ html, body {
   
   .logo-mobile {
     display: block;
-    height: 32px !important;
+    height: 28px !important; /* 从32px减少到28px */
   }
 }
 
@@ -999,13 +1089,13 @@ html, body {
   }
   
   .navbar-left {
-    min-width: 50px;
-    gap: 4px;
+    min-width: 40px;
+    gap: 2px;
     flex-shrink: 0;
   }
   
   .logo-image {
-    height: 22px;
+    height: 18px; /* 进一步减小logo尺寸 */
   }
   
   /* 768px以下显示移动端logo */
@@ -1015,14 +1105,14 @@ html, body {
   
   .logo-mobile {
     display: block;
-    height: 24px !important;
+    height: 18px !important; /* 进一步减小logo尺寸 */
   }
   
   .navbar-center {
-    margin: 0 8px;
+    margin: 0 6px;
     max-width: none;
-    min-width: 0;
-    flex: 1;
+    min-width: 120px;
+    flex: 2; /* 增加搜索框的权重 */
   }
   
   .search-input {
@@ -1030,52 +1120,61 @@ html, body {
   }
   
   .search-input .el-input__inner {
-    padding-left: 10px;
+    padding-left: 8px;
     font-size: 12px;
+    height: 32px; /* 减小搜索框高度 */
   }
   
   .search-input .el-input-group__append {
-    padding: 0 8px;
+    padding: 0 6px;
+  }
+  
+  .search-input .el-input-group__append .el-button {
+    height: 32px; /* 减小按钮高度 */
+    padding: 0;
+    min-width: 32px;
+  }
+  
+  .search-input .el-input-group__append .el-button .el-icon-search {
+    font-size: 14px;
+    font-weight: bold;
   }
   
   .navbar-menu {
     display: flex;
     min-width: 0;
     overflow: hidden;
+    flex-shrink: 2; /* 允许菜单收缩更多 */
   }
   
   .nav-menu-items {
     min-width: 0;
+    flex-shrink: 1;
   }
   
   .nav-menu-items .el-menu-item {
-    padding: 0 3px !important;
+    padding: 0 2px !important;
     margin: 0 1px !important;
     min-width: 0;
     white-space: nowrap;
   }
   
   .nav-menu-items .el-menu-item span {
-    font-size: 10px;
+    font-size: 9px; /* 进一步减小字体 */
   }
   
   .navbar-right {
-    flex-shrink: 1;
-    gap: 4px;
+    flex-shrink: 0; /* 右侧用户区域不收缩 */
+    gap: 3px;
     min-width: 0;
   }
   
   .user-functions {
-    gap: 4px;
+    gap: 3px;
   }
   
   .username {
     display: none;
-  }
-  
-  .points-display {
-    padding: 2px 4px;
-    font-size: 9px;
   }
   
   .user-profile-trigger {
@@ -1106,36 +1205,52 @@ html, body {
 
 @media (max-width: 480px) {
   .navbar {
-    padding: 0 6px;
+    padding: 0 4px;
     height: 50px !important;
   }
   
   .navbar-left {
-    min-width: 45px;
-    gap: 2px;
+    min-width: 35px;
+    gap: 1px;
   }
   
   .logo-image {
-    height: 20px;
+    height: 16px; /* 进一步减小 */
   }
   
   .navbar-center {
-    margin: 0 6px;
+    margin: 0 4px;
+    min-width: 100px;
+    flex: 3; /* 进一步增加搜索框权重 */
   }
   
   .search-input .el-input__inner {
-    padding-left: 8px;
+    padding-left: 6px;
     font-size: 11px;
+    height: 30px; /* 进一步减小高度 */
   }
   
   .search-input .el-input-group__append {
-    padding: 0 6px;
+    padding: 0 4px;
+  }
+  
+  .search-input .el-input-group__append .el-button {
+    height: 30px;
+    min-width: 30px;
+    background: #e03426 !important;
+    border-color: #e03426 !important;
+  }
+  
+  .search-input .el-input-group__append .el-button .el-icon-search {
+    font-size: 13px;
+    font-weight: bold;
+    color: #ffffff !important;
   }
   
   .navbar-left {
-    gap: 6px;
-    flex: 1;
-    min-width: 0;
+    gap: 2px;
+    flex-shrink: 0;
+    min-width: 30px;
   }
   
   .navbar-logo {
@@ -1143,7 +1258,7 @@ html, body {
   }
   
   .logo-image {
-    height: 24px;
+    height: 16px; /* 与480px保持一致 */
   }
   
   .navbar-menu {
@@ -1152,6 +1267,7 @@ html, body {
     overflow-x: auto;
     scrollbar-width: none;
     -ms-overflow-style: none;
+    flex-shrink: 2;
   }
   
   .navbar-menu::-webkit-scrollbar {
@@ -1164,27 +1280,23 @@ html, body {
   }
   
   .nav-menu-items .el-menu-item {
-    padding: 0 3px;
+    padding: 0 2px;
     margin: 0;
     white-space: nowrap;
     flex-shrink: 0;
   }
   
   .nav-menu-items .el-menu-item span {
-    font-size: 9px;
+    font-size: 8px; /* 进一步减小 */
   }
   
   .navbar-right {
     flex-shrink: 0;
+    min-width: 60px;
   }
   
   .user-functions {
-    gap: 6px;
-  }
-  
-  .points-display {
-    padding: 3px 5px;
-    font-size: 10px;
+    gap: 4px;
   }
   
   .user-avatar {
@@ -1209,49 +1321,112 @@ html, body {
 
 @media (max-width: 360px) {
   .navbar {
-    padding: 0 6px;
+    padding: 0 3px;
   }
   
   .navbar-left {
-    gap: 4px;
+    gap: 1px;
+    min-width: 25px;
   }
   
   .logo-image {
-    height: 20px;
+    height: 14px; /* 最小logo尺寸 */
   }
   
-  /* 480px以下继续显示移动端logo */
+  /* 360px以下继续显示移动端logo */
   .logo-desktop {
     display: none;
   }
   
   .logo-mobile {
     display: block;
-    height: 22px !important;
+    height: 14px !important;
+  }
+  
+  .navbar-center {
+    margin: 0 3px;
+    min-width: 80px;
+    flex: 4; /* 最大化搜索框权重 */
+  }
+  
+  .search-input .el-input__inner {
+    padding-left: 4px;
+    font-size: 10px;
+    height: 28px;
+  }
+  
+  .search-input .el-input-group__append {
+    padding: 0 3px;
+  }
+  
+  .search-input .el-input-group__append .el-button {
+    height: 28px;
+    min-width: 28px;
+    background: #e03426 !important;
+    border-color: #e03426 !important;
+  }
+  
+  .search-input .el-input-group__append .el-button .el-icon-search {
+    font-size: 12px;
+    font-weight: bold;
+    color: #ffffff !important;
   }
   
   .nav-menu-items .el-menu-item {
-    padding: 0 2px;
+    padding: 0 1px;
   }
   
   .nav-menu-items .el-menu-item span {
-    font-size: 8px;
+    font-size: 7px; /* 最小字体 */
+  }
+  
+  .navbar-right {
+    min-width: 50px;
+  }
+  
+  .user-functions {
+    gap: 2px;
   }
   
   .login-btn {
-    padding: 3px 5px;
-    font-size: 9px;
+    padding: 2px 3px;
+    font-size: 8px;
   }
   
   .register-btn {
-    padding: 3px 6px;
-    font-size: 9px;
+    padding: 2px 4px;
+    font-size: 8px;
   }
 }
 
 @media (max-width: 320px) {
   .navbar {
-    padding: 0 4px;
+    padding: 0 2px;
+  }
+  
+  .navbar-center {
+    margin: 0 2px;
+    min-width: 70px;
+    flex: 5; /* 在最小屏幕上最大化搜索框空间 */
+  }
+  
+  .search-input .el-input__inner {
+    padding-left: 3px;
+    font-size: 9px;
+    height: 26px;
+  }
+  
+  .search-input .el-input-group__append {
+    padding: 0 2px;
+  }
+  
+  .search-input .el-input-group__append .el-button {
+    height: 26px;
+    min-width: 26px;
+  }
+  
+  .search-input .el-input-group__append .el-button .el-icon-search {
+    font-size: 11px;
   }
   
   .navbar-left {

@@ -5,7 +5,7 @@ const authController = require('./authController');
 const activityService = require('../services/activityService');
 
 // 导入模型并确保关联关系
-const { Brand, Model, Image } = require('../models/mysql');
+const { Brand, Model, Image, ArticleImage } = require('../models/mysql');
 const User = require('../models/mysql/User');
 
 /**
@@ -908,6 +908,159 @@ const deleteModel = async (req, res) => {
   }
 };
 
+/**
+ * 文章封面上传（简化版本，不需要modelId）
+ */
+exports.uploadCoverImage = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: '没有上传文件'
+      });
+    }
+
+    // 生成唯一的文件名
+    const fileExtension = req.file.originalname.split('.').pop();
+    const fileName = `article-cover-${uuidv4()}.${fileExtension}`;
+    const cosKey = `articles/covers/${fileName}`;
+
+    try {
+      // 上传到腾讯云COS
+      const cosResult = await uploadToCOS(
+        req.file.buffer,
+        cosKey,
+        req.file.mimetype
+      );
+
+      // 保存到ArticleImage表
+      const articleImage = await ArticleImage.create({
+        userId: req.user.id,
+        url: cosResult.url,
+        filename: req.file.originalname,
+        cosKey: cosKey,
+        fileSize: req.file.size,
+        fileType: req.file.mimetype,
+        imageType: 'cover',
+        status: 'active'
+      });
+
+      res.json({
+        success: true,
+        status: 'success',
+        message: '封面上传成功',
+        data: {
+          id: articleImage.id,
+          url: cosResult.url,
+          filename: fileName,
+          imageType: 'cover'
+        }
+      });
+
+    } catch (cosError) {
+      console.error('COS上传失败:', cosError);
+      return res.status(500).json({
+        success: false,
+        message: '图片上传到云存储失败',
+        details: cosError.message
+      });
+    }
+
+  } catch (error) {
+    console.error('图片上传处理失败:', error);
+    res.status(500).json({
+      success: false,
+      message: '图片上传处理失败',
+      details: error.message
+    });
+  }
+};
+
+/**
+ * 文章内容图片上传（用于文章编辑器中的图片）
+ */
+exports.uploadArticleImage = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        status: 'error',
+        message: '没有上传文件'
+      });
+    }
+
+    // 验证文件类型
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+    if (!allowedTypes.includes(req.file.mimetype)) {
+      return res.status(400).json({
+        status: 'error',
+        message: '只支持 JPG、PNG、GIF、WebP 格式的图片'
+      });
+    }
+
+    // 验证文件大小（最大10MB）
+    const maxSize = 10 * 1024 * 1024; // 10MB
+    if (req.file.size > maxSize) {
+      return res.status(400).json({
+        status: 'error',
+        message: '图片大小不能超过10MB'
+      });
+    }
+
+    // 生成唯一的文件名
+    const fileExtension = req.file.originalname.split('.').pop();
+    const fileName = `article-content-${Date.now()}-${Math.random().toString(36).substr(2, 9)}.${fileExtension}`;
+    const cosKey = `articles/content/${fileName}`;
+
+    try {
+      // 上传到腾讯云COS
+      const cosResult = await uploadToCOS(
+        req.file.buffer,
+        cosKey,
+        req.file.mimetype
+      );
+
+      // 保存到ArticleImage表
+      const articleImage = await ArticleImage.create({
+        userId: req.user.id,
+        url: cosResult.url,
+        filename: req.file.originalname,
+        cosKey: cosKey,
+        fileSize: req.file.size,
+        fileType: req.file.mimetype,
+        imageType: 'content',
+        status: 'active'
+      });
+
+      res.json({
+        status: 'success',
+        message: '图片上传成功',
+        data: {
+          id: articleImage.id,
+          url: cosResult.url,
+          filename: fileName,
+          imageType: 'content'
+        }
+      });
+
+    } catch (cosError) {
+      console.error('COS上传失败:', cosError);
+      return res.status(500).json({
+        status: 'error',
+        message: '图片上传到云存储失败',
+        details: cosError.message
+      });
+    }
+
+  } catch (error) {
+    console.error('图片上传处理失败:', error);
+    res.status(500).json({
+      status: 'error',
+      message: '图片上传处理失败',
+      details: error.message
+    });
+  }
+};
+
 module.exports = {
   uploadSingleImage: exports.uploadSingleImage,
   uploadMultipleImages: exports.uploadMultipleImages,
@@ -923,5 +1076,7 @@ module.exports = {
   getModelsByBrand,
   createModel,
   updateModel,
-  deleteModel
+  deleteModel,
+  uploadCoverImage: exports.uploadCoverImage,
+  uploadArticleImage: exports.uploadArticleImage
 }; 

@@ -86,6 +86,22 @@ const routes = [
     name: 'UserProfile',
     component: () => import('../views/Profile.vue'),
     meta: { requiresAuth: false }
+  },
+  {
+    path: '/articles',
+    name: 'Articles',
+    component: () => import('../views/Articles.vue')
+  },
+  {
+    path: '/articles/edit/:id?',
+    name: 'ArticleEditor',
+    component: () => import('../views/ArticleEditor.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/articles/:id',
+    name: 'ArticleDetail',
+    component: () => import('../views/ArticleDetail.vue')
   }
 ]
 

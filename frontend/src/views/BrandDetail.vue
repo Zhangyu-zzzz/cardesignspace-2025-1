@@ -23,21 +23,41 @@
       <!-- 车型分类筛选 -->
       <div class="model-filter-section">
         <h2>车型</h2>
-        <div class="filters">
-          <el-button 
-            :class="['filter-btn', currentType === '全部车型' ? 'active' : '']" 
-            @click="setTypeFilter('全部车型')"
-          >
-            全部车型
-          </el-button>
-          <el-button 
-            v-for="type in availableTypes" 
-            :key="type"
-            :class="['filter-btn', currentType === type ? 'active' : '']" 
-            @click="setTypeFilter(type)"
-          >
-            {{ type }}
-          </el-button>
+        <div class="filters-with-toggle">
+          <div class="filters">
+            <el-button 
+              :class="['filter-btn', currentType === '全部车型' ? 'active' : '']" 
+              @click="setTypeFilter('全部车型')"
+            >
+              全部车型
+            </el-button>
+            <el-button 
+              v-for="type in availableTypes" 
+              :key="type"
+              :class="['filter-btn', currentType === type ? 'active' : '']" 
+              @click="setTypeFilter(type)"
+            >
+              {{ type }}
+            </el-button>
+          </div>
+          <div class="view-toggle">
+            <el-button-group>
+              <el-button 
+                :type="viewMode === 'grid' ? 'primary' : ''"
+                size="small"
+                @click="setViewMode('grid')"
+              >
+                <i class="el-icon-menu"></i> 网格
+              </el-button>
+              <el-button 
+                :type="viewMode === 'list' ? 'primary' : ''"
+                size="small"
+                @click="setViewMode('list')"
+              >
+                <i class="el-icon-document"></i> 列表
+              </el-button>
+            </el-button-group>
+          </div>
         </div>
       </div>
 
@@ -46,7 +66,8 @@
         <div v-if="filteredModels.length === 0" class="no-models">
           <p>该品牌下没有找到符合条件的车型</p>
         </div>
-        <div v-else class="models-grid">
+        <!-- 网格视图 -->
+        <div v-else-if="viewMode === 'grid'" class="models-grid">
           <div
             v-for="model in filteredModels"
             :key="model.id"
@@ -71,6 +92,56 @@
             </div>
           </div>
         </div>
+        <!-- 列表视图 -->
+        <div v-else class="models-list">
+          <div class="list-columns">
+            <div class="list-column">
+              <div
+                v-for="(model, index) in leftColumnModels"
+                :key="model.id"
+                class="model-list-item"
+                @click="goToModel(model.id)"
+                @mouseenter="showPreview(model, $event)"
+                @mouseleave="hidePreview"
+              >
+                {{ model.name }}
+              </div>
+            </div>
+            <div class="list-column">
+              <div
+                v-for="(model, index) in rightColumnModels"
+                :key="model.id"
+                class="model-list-item"
+                @click="goToModel(model.id)"
+                @mouseenter="showPreview(model, $event)"
+                @mouseleave="hidePreview"
+              >
+                {{ model.name }}
+              </div>
+            </div>
+          </div>
+          
+          <!-- 图片预览提示框 -->
+          <div 
+            v-show="previewVisible" 
+            class="image-preview-tooltip"
+            :class="previewPosition"
+            :style="previewStyle"
+          >
+            <img 
+              v-if="previewModel && previewModel.Images && previewModel.Images.length > 0"
+              :src="getImageUrl(previewModel.Images[0])"
+              :alt="previewModel.name"
+              class="preview-image"
+            />
+            <div v-else class="no-preview-image">
+              <i class="el-icon-picture-outline"></i>
+              <span>暂无图片</span>
+            </div>
+            <!-- 箭头指示器 -->
+            <div class="tooltip-arrow"></div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -88,7 +159,13 @@ export default {
       loading: true,
       error: null,
       currentType: '全部车型',
-      allTypes: ['轿车', 'SUV', 'MPV', 'WAGON', 'SHOOTINGBRAKE', '皮卡', '跑车', '其他']
+      allTypes: ['轿车', 'SUV', 'MPV', 'WAGON', 'SHOOTINGBRAKE', '皮卡', '跑车', '其他'],
+      viewMode: 'list', // 'grid' 或 'list'
+      // 图片预览相关
+      previewVisible: false,
+      previewModel: null,
+      previewStyle: {},
+      previewPosition: 'above' // 'above' 或 'below'
     };
   },
   computed: {
@@ -101,6 +178,16 @@ export default {
       } else {
         return this.models.filter(model => model.type === this.currentType);
       }
+    },
+    leftColumnModels() {
+      const models = this.filteredModels;
+      const halfLength = Math.ceil(models.length / 2);
+      return models.slice(0, halfLength);
+    },
+    rightColumnModels() {
+      const models = this.filteredModels;
+      const halfLength = Math.ceil(models.length / 2);
+      return models.slice(halfLength);
     }
   },
   methods: {
@@ -112,8 +199,64 @@ export default {
       if (image.largeUrl) return image.largeUrl;
       return '/images/default-car.jpg';
     },
+    getDisplayName(modelName) {
+      if (!modelName || !this.brand.name) return modelName;
+      
+      // 移除品牌名字（不区分大小写）
+      const brandName = this.brand.name.toLowerCase();
+      const lowerModelName = modelName.toLowerCase();
+      
+      // 如果车型名字包含品牌名字，则移除它
+      if (lowerModelName.includes(brandName)) {
+        // 使用正则表达式移除品牌名字，保持原始大小写
+        const regex = new RegExp(this.brand.name, 'gi');
+        let result = modelName.replace(regex, '').trim();
+        
+        // 移除多余的空格
+        result = result.replace(/\s+/g, ' ').trim();
+        
+        return result || modelName; // 如果结果为空，返回原始名字
+      }
+      
+      return modelName;
+    },
     setTypeFilter(type) {
       this.currentType = type;
+    },
+    setViewMode(mode) {
+      this.viewMode = mode;
+    },
+    showPreview(model, event) {
+      this.previewModel = model;
+      this.previewVisible = true;
+      
+      // 计算预览框位置
+      const rect = event.target.getBoundingClientRect();
+      const previewHeight = 136; // 预览框预估高度 (120px图片 + 16px padding)
+      const previewWidth = 200; // 预览框预估宽度
+      
+      // 水平居中对齐到车型名称
+      const centerX = rect.left + (rect.width / 2) - (previewWidth / 2);
+      
+      this.previewStyle = {
+        position: 'fixed',
+        left: Math.max(10, Math.min(centerX, window.innerWidth - previewWidth - 10)) + 'px',
+        zIndex: 1000
+      };
+      
+      // 优先显示在上方
+      if (rect.top - previewHeight - 10 >= 0) {
+        this.previewStyle.top = rect.top - previewHeight - 10 + 'px';
+        this.previewPosition = 'above';
+      } else {
+        // 上方空间不足，显示在下方
+        this.previewStyle.top = rect.bottom + 10 + 'px';
+        this.previewPosition = 'below';
+      }
+    },
+    hidePreview() {
+      this.previewVisible = false;
+      this.previewModel = null;
     },
     goToModel(modelId) {
       this.$router.push(`/model/${modelId}`);
@@ -157,10 +300,11 @@ export default {
           
           // 按年份排序，最新年份排在前面
           this.models.sort((a, b) => {
-            // 从车型名称中提取年份
+            // 从车型名称中提取年份 - 支持更广泛的年份范围
             const extractYear = (name) => {
-              const match = name.match(/^(20\d{2})/);
-              return match ? parseInt(match[1]) : 0;
+              // 匹配4位数字年份（1900-2099范围）
+              const match = name.match(/\b(19|20)\d{2}\b/);
+              return match ? parseInt(match[0]) : 0;
             };
             
             const yearA = extractYear(a.name);
@@ -279,10 +423,24 @@ export default {
   font-weight: 600;
 }
 
+.filters-with-toggle {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+}
+
+.view-toggle {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
 .filters {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
+  flex: 1;
 }
 
 .filter-btn {
@@ -323,8 +481,8 @@ export default {
 
 .models-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 20px;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 8px;
 }
 
 .model-card {
@@ -334,6 +492,7 @@ export default {
   cursor: pointer;
   transition: all 0.3s;
   background: white;
+  aspect-ratio: 1;
 }
 
 .model-card:hover {
@@ -344,7 +503,7 @@ export default {
 
 .model-image {
   width: 100%;
-  height: 200px;
+  height: 75%;
   overflow: hidden;
   background: #f8f9fa;
   display: flex;
@@ -364,18 +523,136 @@ export default {
 }
 
 .model-info {
-  padding: 16px;
+  padding: 6px 8px 8px 8px;
+  height: 25%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
 }
 
 .model-info h3 {
-  margin: 0 0 10px 0;
+  margin: 0 0 2px 0;
   color: #333;
-  font-size: 16px;
+  font-size: 11px;
   font-weight: 600;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  height: 26px;
 }
 
 .model-tag {
-  margin-top: 10px;
+  margin-top: 2px;
+}
+
+.model-tag .el-tag {
+  font-size: 10px;
+  height: 18px;
+  line-height: 16px;
+  padding: 0 6px;
+}
+
+/* 列表视图样式 */
+.models-list {
+  background: white;
+  border-radius: 8px;
+  padding: 20px;
+}
+
+.list-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 40px;
+}
+
+.list-column {
+  display: flex;
+  flex-direction: column;
+}
+
+.model-list-item {
+  padding: 4px 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  border-radius: 4px;
+  font-size: 14px;
+  color: #333;
+  line-height: 1.4;
+  margin-bottom: 1px;
+}
+
+.model-list-item:hover {
+  background: #f0f0f0;
+  color: #e03426;
+}
+
+/* 图片预览提示框样式 */
+.image-preview-tooltip {
+  position: fixed;
+  background: white;
+  border: 1px solid #e4e7ed;
+  border-radius: 8px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+  padding: 8px;
+  z-index: 1000;
+  pointer-events: none;
+  max-width: 200px;
+  transition: opacity 0.2s ease;
+}
+
+.preview-image {
+  width: 100%;
+  height: 120px;
+  object-fit: cover;
+  border-radius: 6px;
+  display: block;
+}
+
+.no-preview-image {
+  width: 100%;
+  height: 120px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: #f8f9fa;
+  border-radius: 6px;
+  color: #ccc;
+}
+
+.no-preview-image i {
+  font-size: 32px;
+  margin-bottom: 8px;
+}
+
+.no-preview-image span {
+  font-size: 12px;
+}
+
+/* 箭头指示器 */
+.tooltip-arrow {
+  position: absolute;
+  width: 0;
+  height: 0;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.image-preview-tooltip.above .tooltip-arrow {
+  bottom: -6px;
+  border-top: 6px solid white;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.1));
+}
+
+.image-preview-tooltip.below .tooltip-arrow {
+  top: -6px;
+  border-bottom: 6px solid white;
+  filter: drop-shadow(0 -1px 1px rgba(0, 0, 0, 0.1));
 }
 
 /* 响应式设计 */
@@ -401,19 +678,39 @@ export default {
   }
   
   .models-grid {
-    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-    gap: 15px;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
   }
   
   .model-filter-section,
   .model-list {
     padding: 20px;
   }
+  
+  .filters-with-toggle {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 15px;
+  }
+  
+  .view-toggle {
+    align-self: center;
+  }
+  
+  .list-columns {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+  
+  .models-list {
+    padding: 15px;
+  }
 }
 
 @media (max-width: 480px) {
   .models-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 6px;
   }
 }
 </style> 

@@ -14,8 +14,8 @@ const authenticateToken = async (req, res, next) => {
 
     if (!token) {
       return res.status(401).json({
-        success: false,
-        message: '缺少访问令牌'
+        status: 'error',
+        message: '未提供认证令牌'
       });
     }
 
@@ -25,15 +25,20 @@ const authenticateToken = async (req, res, next) => {
     // 获取用户信息
     const user = await User.findByPk(decoded.userId);
     if (!user) {
+      console.log('❌ 认证失败 - 用户不存在:', {
+        tokenUserId: decoded.userId,
+        url: req.originalUrl,
+        timestamp: new Date().toISOString()
+      });
       return res.status(401).json({
-        success: false,
-        message: '用户不存在'
+        status: 'error',
+        message: 'The user belonging to this token no longer exists.'
       });
     }
 
     if (user.status !== 'active') {
       return res.status(401).json({
-        success: false,
+        status: 'error',
         message: '账号已被禁用'
       });
     }
@@ -44,8 +49,8 @@ const authenticateToken = async (req, res, next) => {
   } catch (error) {
     console.error('Token验证失败:', error);
     return res.status(401).json({
-      success: false,
-      message: '无效的访问令牌'
+      status: 'error',
+      message: 'Invalid token. Please log in again.'
     });
   }
 };

@@ -487,7 +487,7 @@ export default {
       }
       
       // 使用环境变量或生产环境的基础URL
-      const baseURL = process.env.VUE_APP_API_BASE_URL || (process.env.NODE_ENV === 'production' ? '' : 'http://localhost:3000');
+      const baseURL = process.env.NODE_ENV === 'production' ? '' : (process.env.VUE_APP_API_BASE_URL || 'http://localhost:3000');
       const finalUrl = `${baseURL}${avatar}`;
       return finalUrl;
     },
@@ -786,7 +786,7 @@ export default {
       if (imageUrl.startsWith('http')) return imageUrl;
       
       // 使用环境变量或生产环境的基础URL
-      const baseURL = process.env.VUE_APP_API_BASE_URL || (process.env.NODE_ENV === 'production' ? '' : 'http://localhost:3000');
+      const baseURL = process.env.NODE_ENV === 'production' ? '' : (process.env.VUE_APP_API_BASE_URL || 'http://localhost:3000');
       return `${baseURL}${imageUrl}`;
     },
 

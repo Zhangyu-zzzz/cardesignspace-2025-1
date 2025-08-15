@@ -44,6 +44,12 @@ router.get('/models', uploadController.getModelsForUpload);
 // 单文件上传（需要认证）- 添加multer中间件
 router.post('/single', authenticateToken, imageUpload.single('image'), uploadController.uploadSingleImage);
 
+// 文章封面上传（简化版本）
+router.post('/cover', authenticateToken, imageUpload.single('file'), uploadController.uploadCoverImage);
+
+// 文章内容图片上传（用于文章编辑器）
+router.post('/article-image', authenticateToken, imageUpload.single('image'), uploadController.uploadArticleImage);
+
 // 多文件上传（需要认证）- 添加multer中间件
 router.post('/multiple', authenticateToken, imageUpload.array('images', 10), uploadController.uploadMultipleImages);
 

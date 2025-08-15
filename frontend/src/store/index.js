@@ -80,28 +80,37 @@ export default new Vuex.Store({
     async checkAuth({ commit, state }) {
       console.log('🔍 开始检查认证状态...')
       
+      // 从localStorage获取token，如果Vuex中没有的话
+      let token = state.token
+      if (!token) {
+        token = localStorage.getItem('token')
+        if (token) {
+          console.log('🔄 从localStorage恢复token')
+        }
+      }
+      
       // 如果没有token，不需要检查
-      if (!state.token) {
+      if (!token) {
         console.log('❌ 没有token，清除认证状态')
         commit('clearAuth')
         return false
       }
       
       console.log('📝 找到token，验证中...')
-      console.log('Token:', state.token.substring(0, 50) + '...')
+      console.log('Token:', token.substring(0, 50) + '...')
       
       try {
         // 使用专门的认证axios实例验证token
         console.log('🌐 发送请求到 /api/auth/me')
         const response = await authAxios.get('/api/auth/me', {
-          token: state.token  // 传递token给拦截器
+          token: token  // 传递token给拦截器
         })
         
         console.log('📥 收到响应:', response.data)
         
         // 兼容两种响应格式
         const isSuccess = response.data.status === 'success' || response.data.success === true
-        const userData = response.data.data
+        const userData = response.data.data || response.data.user
         
         console.log('✅ 响应解析:')
         console.log('- 成功状态:', isSuccess)
@@ -113,7 +122,7 @@ export default new Vuex.Store({
           commit('setAuth', {
             isAuthenticated: true,
             user: userData,
-            token: state.token
+            token: token
           })
           return true
         } else {

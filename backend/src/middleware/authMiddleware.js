@@ -25,9 +25,14 @@ exports.protect = async (req, res, next) => {
     // 验证token
     const decoded = await promisify(jwt.verify)(token, JWT_SECRET);
 
-    // 3) 检查用户是否仍然存在
-    const user = await User.findByPk(decoded.id);
+    // 检查用户是否仍然存在
+    const user = await User.findByPk(decoded.userId);
     if (!user) {
+      console.log('❌ 认证失败 - 用户不存在:', {
+        tokenUserId: decoded.userId,
+        url: req.originalUrl,
+        timestamp: new Date().toISOString()
+      });
       return res.status(401).json({
         status: 'error',
         message: 'The user belonging to this token no longer exists.'
@@ -50,6 +55,11 @@ exports.protect = async (req, res, next) => {
     req.user = user;
     next();
   } catch (error) {
+    console.log('❌ JWT验证失败:', {
+      error: error.message,
+      url: req.originalUrl,
+      timestamp: new Date().toISOString()
+    });
     return res.status(401).json({
       status: 'error',
       message: 'Invalid token. Please log in again.'

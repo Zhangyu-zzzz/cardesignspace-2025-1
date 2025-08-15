@@ -3,11 +3,7 @@
     <div class="forum-layout">
       <!-- 主内容区域 -->
       <div class="main-content">
-        <!-- 头部 -->
-        <div class="forum-header">
-          <h1>用户论坛</h1>
-          <p>分享你的想法，与大家一起讨论</p>
-        </div>
+
 
         <!-- 发布新帖子区域 -->
         <div class="post-editor" v-if="isAuthenticated">
@@ -1468,7 +1464,7 @@ export default {
       if (imagePath.startsWith('http')) return imagePath;
       
       // 使用环境变量或生产环境的基础URL
-      const baseURL = process.env.VUE_APP_API_BASE_URL || (process.env.NODE_ENV === 'production' ? '' : 'http://localhost:3000');
+      const baseURL = process.env.NODE_ENV === 'production' ? '' : (process.env.VUE_APP_API_BASE_URL || 'http://localhost:3000');
       return `${baseURL}${imagePath}`;
     },
 
@@ -1952,24 +1948,7 @@ export default {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
 
-.forum-header {
-  text-align: center;
-  padding: 7px 20px;
-  background: #e03426;
-  color: white;
-}
 
-.forum-header h1 {
-  margin: 0 0 0px 0;
-  font-size: 20px;
-  font-weight: 600;
-}
-
-.forum-header p {
-  margin: 0;
-  font-size: 12px;
-  opacity: 0.9;
-}
 
 .post-editor {
   display: flex;
@@ -2675,13 +2654,7 @@ export default {
     max-height: 90px;
   }
   
-  .forum-header {
-    padding: 20px 15px;
-  }
-  
-  .forum-header h1 {
-    font-size: 24px;
-  }
+
   
   .post-editor, .post-item {
     padding: 15px;

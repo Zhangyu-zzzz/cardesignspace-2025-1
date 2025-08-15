@@ -115,12 +115,14 @@ exports.getAllModels = async (req, res) => {
             attributes: ['id', 'name', 'logo', 'country']
           }
         ],
-        order: [['year', 'DESC'], ['name', 'ASC']] // 按年份降序排序
+        order: [['year', sortOrder.toUpperCase()], ['name', 'ASC']] // 根据sortOrder参数按年份排序
       });
       
       // 手动分页
       finalCount = allModels.length;
       const paginatedModels = allModels.slice(offset, offset + parseInt(limit));
+      
+      console.log(`最新车型查询: 总计 ${finalCount} 个，排序方式: ${sortOrder.toUpperCase()}`);
       
       // 为每个车型添加第一张图片
       finalModels = await Promise.all(paginatedModels.map(async (model) => {

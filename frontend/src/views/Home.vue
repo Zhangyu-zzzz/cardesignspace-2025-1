@@ -2,7 +2,7 @@
   <div class="home">
 
     <!-- 全屏轮播图展示区域 -->
-    <div class="fullscreen-carousel" v-if="latestModels && latestModels.length > 0">
+    <div class="fullscreen-carousel" v-if="carouselItems && carouselItems.length > 0">
       <!-- 轮播图容器 -->
       <div 
         class="carousel-container"
@@ -16,22 +16,37 @@
       >
         <div 
           class="carousel-slide" 
-          v-for="(model, index) in latestModels" 
-          :key="model.id"
+          v-for="(item, index) in carouselItems" 
+          :key="item.type + '-' + item.id"
           :class="{ active: currentSlide === index }"
           :style="{ transform: `translateX(${(index - currentSlide) * 100}%)` }"
-          @click="goToModel(model.id)"
+          @click="item.type === 'model' ? goToModel(item.id) : goToArticle(item.id)"
         >
           <div class="slide-image-container">
+            <!-- 车型图片 -->
             <img 
-              v-if="model.Images && model.Images.length > 0" 
-              :src="model.Images[0].url"
-              :alt="model.name"
+              v-if="item.type === 'model' && item.Images && item.Images.length > 0" 
+              :src="item.Images[0].url"
+              :alt="item.name"
               @load="handleModelImageLoad"
               @error="handleModelImageError"
               class="slide-image"
             >
-            <div class="slide-placeholder" :class="{ show: !model.Images || model.Images.length === 0 || modelImageLoadError[model.id] }">
+            <!-- 文章图片 -->
+            <img 
+              v-else-if="item.type === 'article' && item.coverImage" 
+              :src="item.coverImage"
+              :alt="item.title"
+              @load="handleModelImageLoad"
+              @error="handleModelImageError"
+              class="slide-image"
+            >
+            <!-- 占位符 -->
+            <div class="slide-placeholder" :class="{ 
+              show: (item.type === 'model' && (!item.Images || item.Images.length === 0)) || 
+                    (item.type === 'article' && !item.coverImage) ||
+                    modelImageLoadError[item.id] 
+            }">
               <div class="placeholder-content">
                 <i class="el-icon-picture"></i>
                 <span>暂无图片</span>
@@ -39,15 +54,29 @@
             </div>
           </div>
           
-          <!-- 车型信息覆盖层 -->
+          <!-- 信息覆盖层 -->
           <div class="slide-info-overlay">
             <div class="slide-content">
-              <h2 class="slide-title">{{ model.name }}</h2>
-              <p class="slide-brand">{{ model.Brand ? model.Brand.name : '未知品牌' }}</p>
-              <button class="view-details-btn" @click.stop="goToModel(model.id)">
-                查看详情
-                <i class="el-icon-arrow-right"></i>
-              </button>
+              <!-- 车型信息 -->
+              <template v-if="item.type === 'model'">
+                <div class="content-type-badge model-badge">车型</div>
+                <h2 class="slide-title">{{ item.name }}</h2>
+                <p class="slide-brand">{{ item.Brand ? item.Brand.name : '未知品牌' }}</p>
+                <button class="view-details-btn" @click.stop="goToModel(item.id)">
+                  查看详情
+                  <i class="el-icon-arrow-right"></i>
+                </button>
+              </template>
+                             <!-- 文章信息 -->
+               <template v-else-if="item.type === 'article'">
+                 <div class="content-type-badge article-badge">资讯</div>
+                 <h2 class="slide-title">{{ item.title }}</h2>
+                 <p class="slide-brand">{{ item.summary || '精彩汽车资讯内容，点击阅读全文了解更多...' }}</p>
+                 <button class="view-details-btn" @click.stop="goToArticle(item.id)">
+                   阅读全文
+                   <i class="el-icon-arrow-right"></i>
+                 </button>
+               </template>
             </div>
           </div>
         </div>
@@ -56,8 +85,8 @@
       <!-- 导航指示器 -->
       <div class="carousel-indicators">
         <div 
-          v-for="(model, index) in latestModels" 
-          :key="model.id"
+          v-for="(item, index) in carouselItems" 
+          :key="item.type + '-' + item.id"
           class="indicator"
           :class="{ active: currentSlide === index }"
           @click="goToSlide(index)"
@@ -105,16 +134,10 @@
           全部品牌
         </button>
         <button 
-          :class="['category-tab', brandCategory === 'chinese' ? 'active' : '']"
-          @click="setBrandCategory('chinese')"
+          :class="['category-tab', brandCategory === 'domestic' ? 'active' : '']"
+          @click="setBrandCategory('domestic')"
         >
-          自主品牌
-        </button>
-        <button 
-          :class="['category-tab', brandCategory === 'joint' ? 'active' : '']"
-          @click="setBrandCategory('joint')"
-        >
-          合资品牌
+          国内品牌
         </button>
         <button 
           :class="['category-tab', brandCategory === 'overseas' ? 'active' : '']"
@@ -248,6 +271,10 @@
             <i class="el-icon-warning"></i>
           </div>
           <p class="error-text">{{ displayModelsError }}</p>
+          <button class="retry-btn" @click="retryFetchDisplayModels">
+            <i class="el-icon-refresh"></i>
+            重试
+          </button>
         </div>
         <div v-else-if="displayModels.length === 0" class="empty-container">
           <div class="empty-icon">
@@ -265,22 +292,35 @@
             <div class="model-display-image">
               <img 
                 v-if="model.Images && model.Images.length > 0" 
-                :src="model.Images[0].url"
+                :data-src="getOptimizedImageUrl(model.Images[0].url, 300, 200)"
                 :alt="model.name"
                 @load="handleModelImageLoad"
                 @error="handleModelImageError"
-                class="model-display-img"
+                class="model-display-img lazy-load"
+                src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='200'%3E%3Crect width='100%25' height='100%25' fill='%23f8f9fa'/%3E%3C/svg%3E"
               >
               <div class="model-display-placeholder" :class="{ show: !model.Images || model.Images.length === 0 || modelImageLoadError[model.id] }">
                 <div class="placeholder-content">
                   <i class="el-icon-picture"></i>
                   <span>暂无图片</span>
                 </div>
+                <!-- 图片加载失败时显示重试按钮 -->
+                <button 
+                  v-if="modelImageLoadError[model.id]" 
+                  class="image-retry-btn" 
+                  @click="retryImageLoad(model)"
+                >
+                  <i class="el-icon-refresh"></i>
+                  重试
+                </button>
+              </div>
+              <!-- 加载中的骨架屏 -->
+              <div class="model-image-skeleton" v-if="model.Images && model.Images.length > 0">
+                <div class="skeleton-shimmer"></div>
               </div>
             </div>
             <div class="model-display-info">
-              <h3 class="model-display-name">{{ model.name }}</h3>
-              <p class="model-display-brand">{{ model.Brand ? model.Brand.name : '未知品牌' }}</p>
+              <h3 class="model-display-name">{{ model.name || '车型名称' }}</h3>
             </div>
           </div>
         </div>
@@ -303,7 +343,7 @@
 </template>
 
 <script>
-import { brandAPI, modelAPI, imageAPI } from '@/services/api';
+import { brandAPI, modelAPI, imageAPI, articleAPI } from '@/services/api';
 // 恢复使用chinese-to-pinyin库
 import chineseToPinyin from 'chinese-to-pinyin'
 
@@ -334,9 +374,11 @@ export default {
       modelLoading: true,
       error: null,
       latestModels: [],
+      latestArticles: [], // 最新文章
+      carouselItems: [], // 轮播项目（车型+文章）
       allModelsData: [], // 存储所有车型数据
       currentPage: 1,
-      pageSize: 12,
+      pageSize: 24,
       hasMoreModels: true,
       loadingMore: false,
       letters: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split(''),
@@ -365,7 +407,7 @@ export default {
         '阿维塔': 'A',
         '五菱': 'W',  // 确保"五菱"归到W类
         
-        // 合资品牌
+        // 合资品牌（现归类为国内品牌）
         '一汽-大众': 'Y',
         '上汽大众': 'S',
         '一汽丰田': 'Y',
@@ -408,7 +450,7 @@ export default {
       displayModelsError: null,
       sortOrder: 'desc', // 'desc' 为最新优先，'asc' 为最老优先
       currentDisplayPage: 1,
-      displayPageSize: 12,
+      displayPageSize: 24,
       hasMoreDisplayModels: true,
       
       // 年代筛选相关
@@ -474,17 +516,20 @@ export default {
       // 首先根据品牌分类筛选
       if (this.brandCategory === 'all') {
         brands = this.allBrands.slice();
-      } else if (this.brandCategory === 'chinese') {
-        brands = this.allBrands.filter(brand => brand.country === '中国');
-      } else if (this.brandCategory === 'joint') {
-        // 合资品牌筛选 - 可以根据实际数据调整判断条件
+      } else if (this.brandCategory === 'domestic') {
+        // 国内品牌（包括自主品牌和合资品牌）
         brands = this.allBrands.filter(brand => 
+          brand.country === '中国' || 
           brand.country === '合资' || 
           (brand.country && brand.country.includes('合资'))
         );
       } else if (this.brandCategory === 'overseas') {
+        // 海外品牌（排除中国和合资品牌）
         brands = this.allBrands.filter(brand => 
-          brand.country && brand.country !== '中国' && !brand.country.includes('合资')
+          brand.country && 
+          brand.country !== '中国' && 
+          brand.country !== '合资' && 
+          !brand.country.includes('合资')
         );
       }
       
@@ -589,11 +634,11 @@ export default {
     extractYearFromName(name) {
       if (!name) return null;
       
-      // 匹配4位数字年份（2019-2030范围内，涵盖更广的年份范围）
-      const yearMatch = name.match(/20[1-3][0-9]/g);
+      // 匹配4位数字年份（1900-2099范围内，支持更广泛的年份范围）
+      const yearMatch = name.match(/\b(19|20)\d{2}\b/g);
       if (yearMatch && yearMatch.length > 0) {
         // 如果有多个年份，返回最大的（最新的）
-        const years = yearMatch.map(year => parseInt(year)).filter(year => year >= 2019 && year <= 2030);
+        const years = yearMatch.map(year => parseInt(year)).filter(year => year >= 1900 && year <= 2099);
         if (years.length > 0) {
           return Math.max(...years);
         }
@@ -624,6 +669,10 @@ export default {
     // 导航到车型详情页
     goToModel(modelId) {
       this.$router.push(`/model/${modelId}`);
+    },
+    // 导航到文章详情页
+    goToArticle(articleId) {
+      this.$router.push(`/articles/${articleId}`);
     },
     // 获取品牌列表
     async fetchChineseBrands() {
@@ -704,7 +753,8 @@ export default {
         const response = await modelAPI.getAll({
           latest: true,
           page: nextPage,
-          limit: this.pageSize
+          limit: this.pageSize,
+          sortOrder: 'desc' // 确保按年份降序排列，最新车型在前
         });
         
         if (response.success && Array.isArray(response.data)) {
@@ -756,6 +806,15 @@ export default {
                   img.src = dataSrc;
                   img.classList.remove('lazy-load');
                   img.classList.add('loaded');
+                  
+                  // 隐藏骨架屏
+                  const nextElement = img.nextElementSibling;
+                  if (nextElement && nextElement.querySelector) {
+                    const skeleton = nextElement.querySelector('.model-image-skeleton');
+                    if (skeleton) {
+                      skeleton.style.display = 'none';
+                    }
+                  }
                 };
                 newImg.onerror = () => {
                   // 根据图片类型设置不同的默认图片
@@ -781,16 +840,12 @@ export default {
             }
           });
         }, {
-          rootMargin: '50px' // 提前50px开始加载，减少初始加载压力
+          rootMargin: '100px', // 提前100px开始加载，改善用户体验
+          threshold: 0.1 // 当图片10%进入视口时开始加载
         });
         
         // 观察所有懒加载图片
-        this.$nextTick(() => {
-          const lazyImages = document.querySelectorAll('.lazy-load');
-          lazyImages.forEach(img => {
-            this.lazyLoadObserver.observe(img);
-          });
-        });
+        this.observeLazyImages();
       } else {
         // 浏览器不支持Intersection Observer，直接加载所有图片
         this.$nextTick(() => {
@@ -805,6 +860,51 @@ export default {
         });
       }
     },
+    
+    // 观察懒加载图片
+    observeLazyImages() {
+      this.$nextTick(() => {
+        const lazyImages = document.querySelectorAll('.lazy-load:not([data-observed])');
+        lazyImages.forEach(img => {
+          if (this.lazyLoadObserver) {
+            this.lazyLoadObserver.observe(img);
+            img.setAttribute('data-observed', 'true');
+          }
+        });
+      });
+    },
+    
+    // 预加载下一批图片
+    preloadNextBatchImages(models) {
+      // 只预加载前6张图片，避免过度预加载
+      const imagesToPreload = models.slice(0, 6);
+      
+      imagesToPreload.forEach((model, index) => {
+        if (model.Images && model.Images.length > 0) {
+          // 延迟预加载，避免阻塞当前渲染
+          setTimeout(() => {
+            const img = new Image();
+            img.src = model.Images[0].url;
+            // 不需要处理onload/onerror，只是预加载
+          }, index * 100); // 每100ms预加载一张图片
+        }
+      });
+    },
+    
+    // 优化图片URL（添加压缩参数）
+    getOptimizedImageUrl(url, width = 300, height = 200) {
+      if (!url) return '';
+      
+      // 如果是本地图片URL，添加压缩参数
+      if (url.includes('/api/') || url.startsWith('/')) {
+        // 假设后端支持图片压缩参数
+        const separator = url.includes('?') ? '&' : '?';
+        return `${url}${separator}w=${width}&h=${height}&q=80&f=webp`;
+      }
+      
+      return url;
+    },
+    
     // 预加载品牌logo
     preloadBrandLogos() {
       if (!this.allBrands) return;
@@ -847,10 +947,8 @@ export default {
     getCategoryName() {
       if (this.brandCategory === 'all') {
         return '全部';
-      } else if (this.brandCategory === 'chinese') {
-        return '自主品牌';
-      } else if (this.brandCategory === 'joint') {
-        return '合资品牌';
+      } else if (this.brandCategory === 'domestic') {
+        return '国内品牌';
       } else if (this.brandCategory === 'overseas') {
         return '海外品牌';
       }
@@ -888,39 +986,86 @@ export default {
       }
     },
 
-    // 获取轮播图车型（最新5个）
+    // 获取轮播图内容（5个车型+3篇文章）
     async fetchCarouselModels() {
       this.latestModelsLoading = true;
       this.latestModelsError = null;
       
       try {
-        console.log('开始获取轮播图车型...');
-        const response = await modelAPI.getAll({
+        console.log('开始获取轮播图内容...');
+        
+        // 获取车型数据
+        const modelsResponse = await modelAPI.getAll({
+          latest: true,
           limit: 5,
-          page: 1
+          page: 1,
+          sortOrder: 'desc' // 确保按年份降序排列，最新车型在前
         });
         
-        console.log('轮播图API响应:', response);
+        // 尝试获取文章数据（如果失败，继续使用车型数据）
+        let articlesResponse = null;
+        try {
+          articlesResponse = await articleAPI.getAll({
+            limit: 3,
+            page: 1,
+            sort: 'createdAt',
+            order: 'desc'
+          });
+        } catch (articleError) {
+          console.warn('获取文章数据失败，将只显示车型:', articleError);
+          articlesResponse = { data: [] };
+        }
         
-        // 处理不同的响应格式
-        if (response && response.data && Array.isArray(response.data)) {
-          this.latestModels = response.data;
-          console.log('获取到轮播图车型数据:', this.latestModels);
-          // 启动自动播放
-          this.startAutoPlay();
-        } else if (Array.isArray(response)) {
-          // 如果响应直接是数组
-          this.latestModels = response;
-          console.log('获取到轮播图车型数据(数组格式):', this.latestModels);
-          // 启动自动播放
+        console.log('轮播图车型API响应:', modelsResponse);
+        console.log('轮播图文章API响应:', articlesResponse);
+        
+        // 处理车型数据
+        if (modelsResponse && modelsResponse.data && Array.isArray(modelsResponse.data)) {
+          this.latestModels = modelsResponse.data;
+        } else if (Array.isArray(modelsResponse)) {
+          this.latestModels = modelsResponse;
+        } else {
+          console.warn('无效的车型响应格式:', modelsResponse);
+          this.latestModels = [];
+        }
+        
+        // 处理文章数据
+        if (articlesResponse && articlesResponse.data && articlesResponse.data.articles && Array.isArray(articlesResponse.data.articles)) {
+          this.latestArticles = articlesResponse.data.articles;
+        } else if (articlesResponse && articlesResponse.data && Array.isArray(articlesResponse.data)) {
+          this.latestArticles = articlesResponse.data;
+        } else if (Array.isArray(articlesResponse)) {
+          this.latestArticles = articlesResponse;
+        } else {
+          console.warn('无效的文章响应格式:', articlesResponse);
+          this.latestArticles = [];
+        }
+        
+        // 合并车型和文章到轮播项目中
+        this.carouselItems = [
+          ...this.latestModels.map(model => ({ ...model, type: 'model' })),
+          ...this.latestArticles.map(article => ({ ...article, type: 'article' }))
+        ];
+        
+        console.log('获取到轮播图内容:', this.carouselItems);
+        console.log('车型数量:', this.latestModels.length);
+        console.log('文章数量:', this.latestArticles.length);
+        
+        // 如果没有任何内容（车型和文章都没有），使用车型数据作为fallback
+        if (this.carouselItems.length === 0 && this.latestModels.length > 0) {
+          this.carouselItems = this.latestModels.map(model => ({ ...model, type: 'model' }));
+          console.log('使用车型数据作为fallback:', this.carouselItems);
+        }
+        
+        // 如果有内容，启动自动播放
+        if (this.carouselItems.length > 0) {
           this.startAutoPlay();
         } else {
-          console.error('无效的轮播图响应格式:', response);
-          throw new Error('获取轮播图车型失败');
+          console.warn('没有可用的轮播内容');
         }
       } catch (error) {
-        console.error('获取轮播图车型失败:', error);
-        this.latestModelsError = error.message || '获取轮播图车型失败';
+        console.error('获取轮播图内容失败:', error);
+        this.latestModelsError = error.message || '获取轮播图内容失败';
       } finally {
         this.latestModelsLoading = false;
       }
@@ -928,7 +1073,7 @@ export default {
     
     // 轮播图控制方法
     startAutoPlay() {
-      if (this.latestModels.length > 1) {
+      if (this.carouselItems.length > 1) {
         this.autoPlayInterval = setInterval(() => {
           this.nextSlide();
         }, 3000);
@@ -943,15 +1088,15 @@ export default {
     },
     
     nextSlide() {
-      if (this.latestModels.length > 1) {
-        this.currentSlide = (this.currentSlide + 1) % this.latestModels.length;
+      if (this.carouselItems.length > 1) {
+        this.currentSlide = (this.currentSlide + 1) % this.carouselItems.length;
       }
     },
     
     prevSlide() {
-      if (this.latestModels.length > 1) {
+      if (this.carouselItems.length > 1) {
         this.currentSlide = this.currentSlide === 0 
-          ? this.latestModels.length - 1 
+          ? this.carouselItems.length - 1 
           : this.currentSlide - 1;
       }
     },
@@ -1021,21 +1166,29 @@ export default {
         
         // 处理不同的响应格式
         if (response && response.data && Array.isArray(response.data)) {
+          const newModels = response.data;
           if (this.currentDisplayPage === 1) {
-            this.displayModels = response.data;
+            this.displayModels = newModels;
           } else {
-            this.displayModels = [...this.displayModels, ...response.data];
+            this.displayModels = [...this.displayModels, ...newModels];
           }
-          this.hasMoreDisplayModels = response.data.length === this.displayPageSize;
+          this.hasMoreDisplayModels = newModels.length === this.displayPageSize;
           console.log('获取到车型展示数据:', this.displayModels);
+          
+          // 预加载下一批图片
+          this.preloadNextBatchImages(newModels);
         } else if (Array.isArray(response)) {
+          const newModels = response;
           if (this.currentDisplayPage === 1) {
-            this.displayModels = response;
+            this.displayModels = newModels;
           } else {
-            this.displayModels = [...this.displayModels, ...response];
+            this.displayModels = [...this.displayModels, ...newModels];
           }
-          this.hasMoreDisplayModels = response.length === this.displayPageSize;
+          this.hasMoreDisplayModels = newModels.length === this.displayPageSize;
           console.log('获取到车型展示数据(数组格式):', this.displayModels);
+          
+          // 预加载下一批图片
+          this.preloadNextBatchImages(newModels);
         } else {
           console.error('无效的车型展示响应格式:', response);
           throw new Error('获取车型展示数据失败');
@@ -1068,7 +1221,35 @@ export default {
     loadMoreModels() {
       if (this.hasMoreDisplayModels && !this.displayModelsLoading) {
         this.currentDisplayPage++;
-        this.fetchDisplayModels();
+        this.fetchDisplayModels().then(() => {
+          // 新加载的车型图片也需要懒加载
+          this.observeLazyImages();
+        });
+      }
+    },
+    
+    // 重试获取车型数据
+    retryFetchDisplayModels() {
+      this.currentDisplayPage = 1;
+      this.displayModels = [];
+      this.fetchDisplayModels().then(() => {
+        this.observeLazyImages();
+      });
+    },
+    
+    // 重试单个图片加载
+    retryImageLoad(model) {
+      if (model.Images && model.Images.length > 0) {
+        // 重置错误状态
+        this.$set(this.modelImageLoadError, model.id, false);
+        
+        // 找到对应的图片元素并重新加载
+        this.$nextTick(() => {
+          const img = document.querySelector(`img[alt="${model.name}"]`);
+          if (img) {
+            img.src = this.getOptimizedImageUrl(model.Images[0].url, 300, 200);
+          }
+        });
       }
     },
 
@@ -1129,10 +1310,12 @@ export default {
   mounted() {
     this.initializeBrands();
     this.fetchCarouselModels();
-    this.fetchDisplayModels();
-    
-    // 初始化图片懒加载
-    this.initLazyLoading();
+    this.fetchDisplayModels().then(() => {
+      // 初始化图片懒加载
+      this.initLazyLoading();
+      // 观察初始加载的图片
+      this.observeLazyImages();
+    });
   },
   beforeDestroy() {
     // 清理懒加载观察器
@@ -1298,9 +1481,8 @@ export default {
   box-sizing: border-box;
 }
 
-.model-badge {
+.content-type-badge {
   display: inline-block;
-  background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
   color: white;
   padding: 8px 16px;
   border-radius: 20px;
@@ -1309,6 +1491,14 @@ export default {
   text-transform: uppercase;
   letter-spacing: 0.5px;
   margin-bottom: 20px;
+}
+
+.model-badge {
+  background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+}
+
+.article-badge {
+  background: linear-gradient(135deg, #4dabf7 0%, #339af0 100%);
 }
 
 .slide-title {
@@ -1371,6 +1561,8 @@ export default {
   background: white;
   transform: scale(1.2);
 }
+
+
 
 /* 左右导航按钮 */
 .carousel-nav {
@@ -1561,35 +1753,43 @@ export default {
 }
 
 .models-content {
-  padding: 20px 16px 24px 16px;
+  padding: 12px 8px 16px 8px;
 }
 
-.models-grid {
+.models-content .models-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 20px;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 8px;
+  padding: 0 4px;
 }
 
 .model-display-card {
   background: #fff;
   border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
   overflow: hidden;
   cursor: pointer;
   transition: all 0.3s ease;
   border: 1px solid #f0f0f0;
+  aspect-ratio: 4/5;
+  min-height: 200px;
 }
 
 .model-display-card:hover {
   transform: translateY(-4px);
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
+  border-color: #e03426;
 }
 
 .model-display-image {
   position: relative;
-  height: 160px;
+  height: 75%;
   overflow: hidden;
   background: #f8f9fa;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px 12px 0 0;
 }
 
 .model-display-img {
@@ -1617,21 +1817,35 @@ export default {
 }
 
 .model-display-info {
-  padding: 16px;
+  padding: 10px 8px 12px 8px;
+  height: 25%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  background: #fff;
+  position: relative;
+  z-index: 10;
+  border-radius: 0 0 12px 12px;
 }
 
 .model-display-name {
-  margin: 0 0 8px 0;
-  font-size: 16px;
+  margin: 0;
+  font-size: 13px;
   font-weight: 600;
   color: #333;
+  line-height: 1.3;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  max-height: 100%;
+  width: 100%;
 }
 
-.model-display-brand {
-  margin: 0;
-  font-size: 14px;
-  color: #666;
-}
+
 
 .load-more-container {
   text-align: center;
@@ -1718,7 +1932,7 @@ export default {
   z-index: 2;
 }
 
-.models-grid {
+.hero-content .models-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
   gap: 30px;
@@ -1957,21 +2171,21 @@ export default {
 .alphabet-filter {
   display: flex;
   flex-wrap: wrap;
-  padding: 16px 20px;
-  gap: 8px;
+  padding: 12px 16px;
+  gap: 6px;
   background: #fff;
   border-bottom: 1px solid #f0f0f0;
 }
 
 .alphabet-btn {
-  min-width: 36px;
-  height: 36px;
-  padding: 0 8px;
+  min-width: 32px;
+  height: 32px;
+  padding: 0 6px;
   background: #f8f9fa;
   border: 1px solid #e9ecef;
   border-radius: 6px;
   cursor: pointer;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 500;
   color: #666;
   transition: all 0.2s ease;
@@ -2001,15 +2215,15 @@ export default {
 
 /* 品牌展示网格 */
 .brands-display {
-  padding: 20px 16px;
+  padding: 16px 12px;
   background: #fff;
 }
 
 .brands-grid {
   display: grid;
   grid-template-columns: repeat(13, 1fr);
-  gap: min(1.2vw, 12px);
-  margin-bottom: 20px;
+  gap: min(0.8vw, 8px);
+  margin-bottom: 16px;
   justify-items: center;
   align-items: start;
 }
@@ -2018,7 +2232,7 @@ export default {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: min(1.5vw, 12px) min(1vw, 8px);
+  padding: min(1vw, 8px) min(0.6vw, 6px);
   background: #ffffff;
   border: 1px solid #f0f2f5;
   border-radius: min(1vw, 8px);
@@ -2031,7 +2245,7 @@ export default {
   max-width: 100px;
   height: auto;
   min-height: 0;
-  padding-top: min(2.5vw, 20px);
+  padding-top: min(1.8vw, 14px);
 }
 
 .brand-card:hover {
@@ -2053,7 +2267,7 @@ export default {
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: clamp(2px, 0.5vw, 6px);
+  margin-bottom: clamp(1px, 0.3vw, 4px);
   border-radius: clamp(2px, 0.5vw, 4px);
   flex-shrink: 0;
   background: #fff;
@@ -2149,7 +2363,7 @@ export default {
   padding: 0 clamp(1px, 0.3vw, 3px);
   min-height: clamp(16px, 2.8vw, 24px);
   font-family: "Microsoft YaHei", "PingFang SC", "Helvetica Neue", Arial, sans-serif;
-  margin-bottom: clamp(1px, 0.5vw, 4px);
+  margin-bottom: clamp(1px, 0.3vw, 3px);
 }
 
 /* 品牌统计信息 */
@@ -2360,9 +2574,9 @@ body, html {
     justify-content: center;
   }
   
-  .models-grid {
-    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-    gap: 16px;
+  .models-content .models-grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
   }
 }
 
@@ -2509,18 +2723,39 @@ body, html {
     font-size: 10px;
   }
   
-  .models-grid {
-    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-    gap: 10px;
+  .models-content .models-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+    padding: 0 2px;
   }
   
   .model-image,
   .model-display-image {
-    height: 140px;
+    height: 70% !important;
   }
   
   .model-info {
     padding: 12px;
+  }
+  
+  .model-display-card {
+    min-height: 160px !important;
+  }
+  
+  .model-display-info {
+    height: 30% !important;
+    padding: 8px 6px 10px 6px !important;
+    background: #fff !important;
+    border-top: 1px solid #eee !important;
+  }
+  
+  .model-display-name {
+    font-size: 13px !important;
+    line-height: 1.3 !important;
+    color: #333 !important;
+    font-weight: 600 !important;
+    text-align: center !important;
+    display: block !important;
   }
   
   .model-name {
@@ -2544,7 +2779,7 @@ body, html {
   }
   
   .models-content {
-    padding: 16px 8px 20px 8px;
+    padding: 12px 6px 16px 6px;
   }
   
   .filter-control-bar {
@@ -2623,21 +2858,21 @@ body, html {
   }
   
   .brands-display {
-    padding: 16px 12px;
+    padding: 12px 8px;
   }
   
   .brands-grid {
     grid-template-columns: repeat(8, 1fr);
-    gap: 8px;
+    gap: 6px;
   }
   
   .brand-card {
-    padding: 8px 4px;
+    padding: 6px 3px;
     aspect-ratio: 1 / 1;
     max-width: none;
     height: auto;
     min-height: 0;
-    padding-top: 16px;
+    padding-top: 12px;
   }
   
   .brand-card .brand-logo {
@@ -2671,26 +2906,26 @@ body, html {
   
   .brands-grid {
     grid-template-columns: repeat(6, 1fr);
-    gap: 5px;
+    gap: 4px;
   }
   
   .brand-card {
-    padding: 6px 2px;
+    padding: 4px 2px;
     min-height: 70px;
     max-width: none;
     aspect-ratio: 1 / 1;
     height: auto;
-    padding-top: 12px;
+    padding-top: 10px;
   }
   
   .brands-display {
-    padding: 12px 4px;
+    padding: 10px 4px;
   }
   
   .brand-card .brand-logo {
     width: 24px;
     height: 24px;
-    margin-bottom: 4px;
+    margin-bottom: 2px;
   }
   
   .brand-card .brand-logo img {
@@ -2707,11 +2942,11 @@ body, html {
   .brand-card .brand-name {
     font-size: 10px;
     line-height: 1.1;
-    min-height: 20px;
+    min-height: 18px;
     -webkit-line-clamp: 2;
     color: #333333;
     font-family: "Microsoft YaHei", "PingFang SC", "Helvetica Neue", Arial, sans-serif;
-    margin-bottom: 2px;
+    margin-bottom: 1px;
   }
 }
 
@@ -2806,9 +3041,10 @@ body, html {
     margin-bottom: 1px;
   }
   
-  .models-grid {
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
+  .models-content .models-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 6px;
+    padding: 0 4px;
   }
   
   .models-content {
@@ -2833,11 +3069,53 @@ body, html {
   
   .model-image,
   .model-display-image {
-    height: 120px;
+    height: 65% !important;
   }
   
   .model-name {
     font-size: 14px;
+  }
+  
+  .model-display-name {
+    font-size: 12px !important;
+    line-height: 1.3 !important;
+    height: auto !important;
+    max-height: none !important;
+    padding: 4px 6px !important;
+    color: #333 !important;
+    font-weight: 600 !important;
+    text-align: center !important;
+    display: block !important;
+    overflow: visible !important;
+    background: rgba(255, 255, 255, 0.9) !important;
+    min-height: 20px !important;
+  }
+  
+  .model-display-card {
+    min-height: 180px !important;
+    aspect-ratio: 1/1 !important;
+  }
+  
+  .model-display-info {
+    height: 35% !important;
+    padding: 8px 6px 10px 6px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+    background: #fff !important;
+    border-top: 1px solid #eee !important;
+    position: relative !important;
+    z-index: 100 !important;
+  }
+  
+  /* 确保骨架屏不会覆盖文字区域 */
+  .model-image-skeleton {
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    z-index: 1 !important;
   }
   
   .brand-name {
@@ -2910,5 +3188,140 @@ body, html {
 
 .model-card:hover .model-image img {
   transform: scale(1.02);
+}
+
+/* 车型图片骨架屏 */
+.model-image-skeleton {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: #f8f9fa;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1;
+}
+
+.skeleton-shimmer {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    #f8f9fa 25%,
+    #e9ecef 50%,
+    #f8f9fa 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+/* 车型展示图片样式优化 */
+.model-display-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: all 0.3s ease;
+  position: relative;
+  z-index: 2;
+}
+
+.model-display-img.lazy-load {
+  opacity: 0;
+}
+
+.model-display-img.loaded {
+  opacity: 1;
+}
+
+.model-display-image {
+  position: relative;
+  width: 100%;
+  height: 200px;
+  overflow: hidden;
+  background: #f8f9fa;
+  border-radius: 8px;
+}
+
+/* 重试按钮样式 */
+.retry-btn {
+  margin-top: 16px;
+  padding: 8px 16px;
+  background: #e03426;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: background 0.3s ease;
+}
+
+.retry-btn:hover {
+  background: #c12e21;
+}
+
+.retry-btn i {
+  font-size: 16px;
+}
+
+/* 加载更多状态优化 */
+.loading-more-container {
+  text-align: center;
+  padding: 20px;
+  margin-top: 16px;
+}
+
+.loading-more-spinner {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #666;
+  font-size: 14px;
+}
+
+.loading-more-spinner i {
+  font-size: 16px;
+  animation: rotating 1s linear infinite;
+}
+
+/* 图片加载失败时的重试按钮 */
+.image-retry-btn {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(224, 52, 38, 0.9);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 6px 12px;
+  cursor: pointer;
+  font-size: 12px;
+  z-index: 3;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.model-display-image:hover .image-retry-btn {
+  opacity: 1;
+}
+
+/* 优化加载动画 */
+@keyframes rotating {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 </style> 

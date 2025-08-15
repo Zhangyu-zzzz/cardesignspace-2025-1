@@ -5,7 +5,14 @@ import store from './store'
 import ElementUI from 'element-ui'
 import 'element-ui/lib/theme-chalk/index.css'
 
+// 导入富文本编辑器
+import VueQuillEditor from 'vue-quill-editor'
+import 'quill/dist/quill.core.css'
+import 'quill/dist/quill.snow.css'
+import 'quill/dist/quill.bubble.css'
+
 Vue.use(ElementUI)
+Vue.use(VueQuillEditor)
 Vue.config.productionTip = false
 
 // 创建Vue实例前检查并恢复用户认证状态

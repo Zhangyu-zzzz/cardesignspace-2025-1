@@ -190,11 +190,18 @@
         console.log('当前选中标签页:', this.activeTab);
         console.log('筛选前图片数量:', this.images.length);
         
+        // 首先过滤掉.txt文件
+        let imageFiles = this.images.filter(image => {
+          // 检查图片URL是否包含.txt扩展名
+          const imageUrl = this.getImageUrl(image);
+          return !imageUrl.toLowerCase().includes('.txt');
+        });
+        
         let result = [];
         if (this.activeTab === 'all') {
-          result = this.images;
+          result = imageFiles;
         } else {
-          result = this.images.filter(image => image.category === this.activeTab);
+          result = imageFiles.filter(image => image.category === this.activeTab);
         }
         
         console.log('筛选后图片数量:', result.length);
@@ -453,10 +460,10 @@
   
   <style scoped>
   .model-detail {
-    padding: 0px;
-    max-width: 1200px;
-    margin: 0 auto;
-  }
+  padding: 20px 0px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
   
   .loading-container, .error-message {
     padding: 40px;
@@ -597,21 +604,22 @@
   }
   
   .images-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 16px;
-    margin-top: 20px;
-    padding: 0;
-  }
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 8px;
+  margin-top: 20px;
+  padding: 0;
+}
   
   .image-card {
-    border-radius: 16px;
+    border-radius: 8px;
     overflow: hidden;
     transition: all 0.3s ease;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
     background-color: #fff;
     position: relative;
     cursor: pointer; /* Added cursor pointer for clickability */
+    aspect-ratio: 1;
   }
   
   .image-card:hover {
@@ -621,7 +629,7 @@
   
   .grid-image {
     width: 100%;
-    height: 240px;
+    height: 100%;
     display: block;
     object-fit: cover; /* Changed to object-fit: cover */
   }
@@ -643,11 +651,14 @@
     bottom: 0;
     left: 0;
     right: 0;
-    background: linear-gradient(transparent, rgba(0, 0, 0, 0.7));
+    background: linear-gradient(transparent, rgba(0, 0, 0, 0.8));
     color: white;
-    padding: 12px;
+    padding: 8px 12px 12px 12px;
     opacity: 0;
     transition: opacity 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
   }
   
   .image-card:hover .image-overlay {
@@ -655,32 +666,50 @@
   }
   
   .image-title {
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 500;
-    margin-bottom: 8px;
+    margin-bottom: 0;
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   
   .image-user-info {
     display: flex;
     align-items: center;
-    gap: 8px;
-    font-size: 12px;
+    gap: 6px;
+    font-size: 11px;
+    line-height: 1.2;
   }
   
   .image-user-info .username {
     font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 80px;
   }
   
   .image-user-info .upload-date {
     margin-left: auto;
-    opacity: 0.8;
+    opacity: 0.9;
+    font-size: 10px;
+    white-space: nowrap;
   }
   
   /* 可点击的头像和用户名样式 */
   .clickable-avatar {
     cursor: pointer;
     transition: all 0.3s ease;
+  }
+  
+  /* 确保头像为正圆形 */
+  .image-user-info .el-avatar {
+    border-radius: 50% !important;
+    width: 20px !important;
+    height: 20px !important;
+    flex-shrink: 0;
   }
   
   .clickable-avatar:hover {
@@ -708,8 +737,8 @@
   /* 响应式设计 - Pinterest风格 */
   @media (max-width: 1200px) {
     .images-grid {
-      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-      gap: 14px;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 8px;
     }
   }
   
@@ -723,12 +752,12 @@
     }
     
     .images-grid {
-      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-      gap: 12px;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 6px;
     }
     
     .grid-image {
-      height: 200px;
+      height: 100%;
     }
   }
   
@@ -751,16 +780,16 @@
     }
     
     .images-grid {
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
     }
     
     .image-card {
-      border-radius: 8px;
+      border-radius: 6px;
     }
     
     .grid-image {
-      height: 180px;
+      height: 100%;
     }
   }
 

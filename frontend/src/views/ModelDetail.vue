@@ -11,7 +11,7 @@
         <div class="model-header">
           <div class="model-title">
             <h1>{{ model.name }}</h1>
-            <el-tag size="medium" effect="dark">{{ model.type }}</el-tag>
+            <el-tag size="medium" effect="dark" class="model-type-tag">{{ model.type }}</el-tag>
             <!-- <el-tag v-if="model.year" size="medium" type="info" class="year-tag">{{ model.year }}年</el-tag> -->
           </div>
           <div class="model-brand">
@@ -471,7 +471,7 @@
   }
   
   .error-message {
-    color: #F56C6C;
+    color: #e03426;
   }
   
   .model-header {
@@ -480,6 +480,18 @@
     align-items: center;
     margin-bottom: 10px;
     padding: 0 10px;
+  }
+
+  /* 车型类型标签样式 - 使用主题色 */
+  .model-type-tag {
+    background-color: #e03426 !important;
+    border-color: #e03426 !important;
+    color: white !important;
+  }
+
+  .model-type-tag:hover {
+    background-color: #c12e21 !important;
+    border-color: #c12e21 !important;
   }
   
   .model-title {
@@ -586,7 +598,7 @@
   
   .price-info .price {
     font-size: 24px;
-    color: #F56C6C;
+    color: #e03426;
     font-weight: bold;
   }
   
@@ -594,7 +606,7 @@
     margin-top: 20px;
     padding-top: 20px;
     border-top: 1px dashed #eee;
-    color: #606266;
+    color: #666;
     line-height: 1.6;
   }
   
@@ -730,7 +742,7 @@
   .no-images {
     text-align: center;
     padding: 40px;
-    color: #909399;
+    color: #666;
     font-size: 16px;
   }
   
@@ -806,13 +818,13 @@
   .specs-title {
     margin: 0 0 25px 0;
     font-size: 22px;
-    color: #2c3e50;
+    color: #333;
     font-weight: 600;
     display: flex;
     align-items: center;
     gap: 10px;
     padding-bottom: 15px;
-    border-bottom: 2px solid #3498db;
+    border-bottom: 2px solid #e03426;
     position: relative;
   }
 
@@ -823,12 +835,12 @@
     left: 0;
     width: 60px;
     height: 2px;
-    background: linear-gradient(90deg, #3498db, #2980b9);
+    background: linear-gradient(90deg, #e03426, #c12e21);
     border-radius: 1px;
   }
 
   .specs-title i {
-    color: #3498db;
+    color: #e03426;
     font-size: 24px;
   }
 
@@ -863,7 +875,7 @@
     left: 0;
     width: 4px;
     height: 100%;
-    background: linear-gradient(45deg, #3498db, #2980b9);
+    background: linear-gradient(45deg, #e03426, #c12e21);
     transition: width 0.3s ease;
   }
 
@@ -879,19 +891,19 @@
   .spec-icon {
     width: 48px;
     height: 48px;
-    background: linear-gradient(135deg, #3498db, #2980b9);
+    background: linear-gradient(135deg, #e03426, #c12e21);
     border-radius: 12px;
     display: flex;
     align-items: center;
     justify-content: center;
     margin-right: 16px;
-    box-shadow: 0 4px 12px rgba(52, 152, 219, 0.3);
+    box-shadow: 0 4px 12px rgba(224, 52, 38, 0.3);
     transition: all 0.3s ease;
   }
 
   .spec-item:hover .spec-icon {
     transform: scale(1.05);
-    box-shadow: 0 6px 20px rgba(52, 152, 219, 0.4);
+    box-shadow: 0 6px 20px rgba(224, 52, 38, 0.4);
   }
 
   .spec-icon i {
@@ -907,7 +919,7 @@
 
   .spec-label {
     font-size: 14px;
-    color: #7f8c8d;
+    color: #666;
     font-weight: 500;
     margin-bottom: 4px;
     text-transform: uppercase;
@@ -916,7 +928,7 @@
 
   .spec-value {
     font-size: 18px;
-    color: #2c3e50;
+    color: #333;
     font-weight: 700;
     line-height: 1.2;
     word-break: break-all;

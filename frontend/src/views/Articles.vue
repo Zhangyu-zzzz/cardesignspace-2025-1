@@ -3,8 +3,22 @@
     <!-- 页面头部 -->
     <div class="page-header">
       <div class="container">
-        <h1 class="page-title">汽车资讯</h1>
-        <p class="page-subtitle">最新的汽车行业资讯、评测和技术解析</p>
+        <div class="header-content">
+          <div class="header-left">
+            <h1 class="page-title">汽车资讯</h1>
+            <p class="page-subtitle">最新的汽车行业资讯、评测和技术解析</p>
+          </div>
+          <div class="header-right" v-if="$store.state.isAuthenticated">
+            <el-button 
+              type="primary" 
+              @click="goToDrafts" 
+              icon="el-icon-document"
+              size="small"
+            >
+              我的草稿
+            </el-button>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -360,6 +374,17 @@ export default {
       this.$router.push(`/articles/${articleId}`)
     },
 
+    goToDrafts() {
+      // 检查用户是否登录
+      if (!this.$store.state.user) {
+        this.$message.warning('请先登录后再查看草稿')
+        return
+      }
+      
+      // 跳转到草稿列表页面
+      this.$router.push('/articles/drafts')
+    },
+
     retryLoad() {
       this.loadArticles()
     },
@@ -415,7 +440,21 @@ export default {
   background: #000000; /* 改为黑色背景 */
   color: white;
   padding: 30px 0;
-  text-align: center;
+}
+
+.header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  text-align: left;
+}
+
+.header-left {
+  flex: 1;
+}
+
+.header-right {
+  flex-shrink: 0;
 }
 
 .page-title {

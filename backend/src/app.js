@@ -79,6 +79,7 @@ app.use('/api/forum', require('./routes/forumRoutes'));
 app.use('/api/search', require('./routes/searchRoutes'));
 app.use('/api/notifications', require('./routes/notificationRoutes'));
 app.use('/api/articles', require('./routes/articleRoutes'));
+app.use('/api/inspiration', require('./routes/inspirationRoutes'));
 
 console.log('所有API路由已加载完成');
 

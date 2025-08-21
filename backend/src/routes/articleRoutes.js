@@ -8,6 +8,7 @@ const { authMiddleware, adminMiddleware } = require('../middleware/authMiddlewar
 router.get('/', articleController.getAllArticles);
 router.get('/popular', articleController.getPopularArticles);
 router.get('/categories/stats', articleController.getCategoryStats);
+router.get('/drafts', authMiddleware, articleController.getUserDrafts);
 router.get('/:id', articleController.getArticleById);
 
 // 评论相关路由

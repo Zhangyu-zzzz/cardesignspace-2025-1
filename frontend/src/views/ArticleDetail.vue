@@ -87,16 +87,6 @@
                 <el-button @click="shareArticle" icon="el-icon-share">
                   分享
                 </el-button>
-
-                <!-- 编辑按钮（仅作者和管理员可见） -->
-                <el-button
-                  v-if="canEditArticle"
-                  type="warning"
-                  @click="editArticle"
-                  icon="el-icon-edit"
-                >
-                  编辑文章
-                </el-button>
               </div>
             </div>
             
@@ -300,6 +290,19 @@
           </el-button>
         </div>
       </div>
+    </div>
+    
+    <!-- 固定浮动编辑按钮 -->
+    <div v-if="canEditArticle" class="floating-edit-button">
+      <el-button
+        type="warning"
+        @click="editArticle"
+        icon="el-icon-edit"
+        size="large"
+        round
+      >
+        编辑文章
+      </el-button>
     </div>
   </div>
 </template>
@@ -847,6 +850,41 @@ export default {
   height: auto;
   border-radius: 8px;
   margin: 20px 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+/* 图片尺寸类样式 */
+.article-content >>> img.image-small {
+  max-width: 200px !important;
+  width: 200px !important;
+  height: auto !important;
+  display: block !important;
+  margin: 20px auto !important;
+}
+
+.article-content >>> img.image-medium {
+  max-width: 400px !important;
+  width: 400px !important;
+  height: auto !important;
+  display: block !important;
+  margin: 20px auto !important;
+}
+
+.article-content >>> img.image-large {
+  max-width: 600px !important;
+  width: 600px !important;
+  height: auto !important;
+  display: block !important;
+  margin: 20px auto !important;
+}
+
+.article-content >>> img.image-full {
+  max-width: 100% !important;
+  width: 100% !important;
+  height: auto !important;
+  display: block !important;
+  margin: 20px auto !important;
 }
 
 .article-actions {
@@ -1344,6 +1382,27 @@ export default {
   color: #303133 !important;
 }
 
+/* 浮动编辑按钮 */
+.floating-edit-button {
+  position: fixed;
+  bottom: 30px;
+  right: 30px;
+  z-index: 1000;
+}
+
+.floating-edit-button .el-button {
+  box-shadow: 0 4px 16px rgba(224, 52, 38, 0.3);
+  font-size: 16px;
+  padding: 12px 24px;
+  height: auto;
+  transition: all 0.3s ease;
+}
+
+.floating-edit-button .el-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(224, 52, 38, 0.4);
+}
+
 /* 响应式调整 */
 @media (max-width: 768px) {
   .sidebar {
@@ -1372,6 +1431,17 @@ export default {
   .tag-item {
     font-size: 0.75rem;
     padding: 3px 10px;
+  }
+  
+  /* 移动端浮动按钮调整 */
+  .floating-edit-button {
+    bottom: 20px;
+    right: 20px;
+  }
+  
+  .floating-edit-button .el-button {
+    font-size: 14px;
+    padding: 10px 20px;
   }
 }
 </style> 

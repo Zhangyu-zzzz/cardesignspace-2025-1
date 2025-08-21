@@ -51,6 +51,9 @@
                 <el-menu-item index="/articles" class="nav-item">
                   <span>汽车资讯</span>
                 </el-menu-item>
+                <el-menu-item index="/inspiration" class="nav-item">
+                  <span>灵感图片</span>
+                </el-menu-item>
                 <el-menu-item index="/forum" class="nav-item">
                   <span>用户论坛</span>
                 </el-menu-item>
@@ -379,6 +382,16 @@ html, body {
   max-width: 100%;
   margin: 0;
   padding: 0;
+}
+
+/* 当灵感图片模态框打开时隐藏导航栏 */
+body:has(.inspiration-modal) .navbar-container {
+  display: none !important;
+}
+
+/* 兼容性处理 - 为不支持:has的浏览器 */
+.modal-open .navbar-container {
+  display: none !important;
 }
 
 #app {

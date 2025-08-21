@@ -1,4 +1,5 @@
 const { Sequelize } = require('sequelize');
+const mysql = require('mysql2/promise');
 const logger = require('../../utils/logger');
 
 // 加载环境变量
@@ -22,6 +23,19 @@ const sequelize = new Sequelize(
   }
 );
 
+// 创建原生MySQL连接池
+const mysqlPool = mysql.createPool({
+  host: process.env.DB_HOST,
+  port: parseInt(process.env.DB_PORT),
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+  database: process.env.DB_NAME,
+  charset: 'utf8mb4',
+  waitForConnections: true,
+  connectionLimit: 10,
+  queueLimit: 0
+});
+
 const connectMySQL = async () => {
   try {
     await sequelize.authenticate();
@@ -34,5 +48,6 @@ const connectMySQL = async () => {
 
 module.exports = {
   sequelize,
-  connectMySQL
+  connectMySQL,
+  getConnection: () => mysqlPool.getConnection()
 }; 

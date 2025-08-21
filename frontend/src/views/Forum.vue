@@ -2276,17 +2276,17 @@ export default {
   padding: 12px 32px;
   font-size: 16px;
   border-radius: 8px;
-  background: linear-gradient(135deg, #e03426, #67C23A);
+  background: #e03426;
   border: none;
   color: white;
   font-weight: 600;
   transition: all 0.3s ease;
-  box-shadow: 0 4px 12px rgba(64, 158, 255, 0.3);
+  box-shadow: 0 4px 12px rgba(224, 52, 38, 0.3);
 }
 
 .load-more .el-button:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(64, 158, 255, 0.4);
+  box-shadow: 0 6px 20px rgba(224, 52, 38, 0.4);
 }
 
 /* 侧边栏样式 */

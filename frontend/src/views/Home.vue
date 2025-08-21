@@ -287,6 +287,7 @@
             class="model-display-card" 
             v-for="model in displayModels" 
             :key="model.id"
+            :data-model-id="model.id"
             @click="goToModel(model.id)"
           >
             <div class="model-display-image">
@@ -807,6 +808,12 @@ export default {
                   img.classList.remove('lazy-load');
                   img.classList.add('loaded');
                   
+                  // 隐藏占位符
+                  const placeholder = img.parentElement.querySelector('.model-display-placeholder');
+                  if (placeholder) {
+                    placeholder.classList.remove('show');
+                  }
+                  
                   // 隐藏骨架屏
                   const nextElement = img.nextElementSibling;
                   if (nextElement && nextElement.querySelector) {
@@ -826,8 +833,18 @@ export default {
                       noLogoElement.style.display = 'flex';
                     }
                   } else {
-                    // 车型图片加载失败，显示默认图片
-                    img.src = '/images/default-car.jpg';
+                    // 车型图片加载失败，显示占位符而不是默认图片
+                    img.style.display = 'none';
+                    // 显示占位符
+                    const placeholder = img.parentElement.querySelector('.model-display-placeholder');
+                    if (placeholder) {
+                      placeholder.classList.add('show');
+                    }
+                    // 标记为加载错误
+                    const modelId = this.getModelIdFromImg(img);
+                    if (modelId) {
+                      this.$set(this.modelImageLoadError, modelId, true);
+                    }
                   }
                   img.classList.remove('lazy-load');
                   img.classList.add('error');
@@ -864,9 +881,12 @@ export default {
     // 观察懒加载图片
     observeLazyImages() {
       this.$nextTick(() => {
-        const lazyImages = document.querySelectorAll('.lazy-load:not([data-observed])');
+        // 清除之前的观察状态，重新观察所有懒加载图片
+        const lazyImages = document.querySelectorAll('.lazy-load');
         lazyImages.forEach(img => {
           if (this.lazyLoadObserver) {
+            // 先停止观察，再重新观察
+            this.lazyLoadObserver.unobserve(img);
             this.lazyLoadObserver.observe(img);
             img.setAttribute('data-observed', 'true');
           }
@@ -1142,6 +1162,10 @@ export default {
     async fetchDisplayModels() {
       this.displayModelsLoading = true;
       this.displayModelsError = null;
+      // 如果是第一页，重置图片加载错误状态
+      if (this.currentDisplayPage === 1) {
+        this.modelImageLoadError = {};
+      }
       
       try {
         console.log('开始获取车型展示数据...');
@@ -1177,6 +1201,11 @@ export default {
           
           // 预加载下一批图片
           this.preloadNextBatchImages(newModels);
+          
+          // 重新观察懒加载图片
+          this.$nextTick(() => {
+            this.observeLazyImages();
+          });
         } else if (Array.isArray(response)) {
           const newModels = response;
           if (this.currentDisplayPage === 1) {
@@ -1189,6 +1218,11 @@ export default {
           
           // 预加载下一批图片
           this.preloadNextBatchImages(newModels);
+          
+          // 重新观察懒加载图片
+          this.$nextTick(() => {
+            this.observeLazyImages();
+          });
         } else {
           console.error('无效的车型展示响应格式:', response);
           throw new Error('获取车型展示数据失败');
@@ -1206,6 +1240,8 @@ export default {
       this.sortOrder = this.sortOrder === 'desc' ? 'asc' : 'desc';
       console.log('切换排序方式:', this.sortOrder);
       this.currentDisplayPage = 1;
+      // 重置图片加载错误状态
+      this.modelImageLoadError = {};
       this.fetchDisplayModels();
     },
     
@@ -1214,6 +1250,8 @@ export default {
       this.selectedDecade = decade;
       console.log('选择年代筛选:', decade);
       this.currentDisplayPage = 1;
+      // 重置图片加载错误状态
+      this.modelImageLoadError = {};
       this.fetchDisplayModels();
     },
     
@@ -1232,6 +1270,8 @@ export default {
     retryFetchDisplayModels() {
       this.currentDisplayPage = 1;
       this.displayModels = [];
+      // 重置图片加载错误状态
+      this.modelImageLoadError = {};
       this.fetchDisplayModels().then(() => {
         this.observeLazyImages();
       });
@@ -1247,6 +1287,14 @@ export default {
         this.$nextTick(() => {
           const img = document.querySelector(`img[alt="${model.name}"]`);
           if (img) {
+            // 隐藏占位符
+            const placeholder = img.parentElement.querySelector('.model-display-placeholder');
+            if (placeholder) {
+              placeholder.classList.remove('show');
+            }
+            // 显示图片元素
+            img.style.display = 'block';
+            // 重新加载图片
             img.src = this.getOptimizedImageUrl(model.Images[0].url, 300, 200);
           }
         });
@@ -1257,6 +1305,11 @@ export default {
     handleModelImageLoad(event) {
       const img = event.target;
       img.classList.add('loaded');
+      // 隐藏占位符
+      const placeholder = img.parentElement.querySelector('.model-display-placeholder');
+      if (placeholder) {
+        placeholder.classList.remove('show');
+      }
       // 获取车型ID
       const modelId = this.getModelIdFromImg(img);
       if (modelId) {
@@ -1268,6 +1321,11 @@ export default {
     handleModelImageError(event) {
       const img = event.target;
       img.style.display = 'none';
+      // 显示占位符
+      const placeholder = img.parentElement.querySelector('.model-display-placeholder');
+      if (placeholder) {
+        placeholder.classList.add('show');
+      }
       // 获取车型ID
       const modelId = this.getModelIdFromImg(img);
       if (modelId) {
@@ -1277,7 +1335,13 @@ export default {
 
     // 从图片元素获取车型ID
     getModelIdFromImg(img) {
-      const modelCard = img.closest('.model-card');
+      // 查找车型展示卡片
+      let modelCard = img.closest('.model-display-card');
+      if (modelCard) {
+        return modelCard.getAttribute('data-model-id');
+      }
+      // 如果没有找到，尝试查找普通的车型卡片
+      modelCard = img.closest('.model-card');
       if (modelCard) {
         return modelCard.getAttribute('data-model-id');
       }
@@ -1315,6 +1379,10 @@ export default {
       this.initLazyLoading();
       // 观察初始加载的图片
       this.observeLazyImages();
+    }).catch(error => {
+      console.error('初始化车型展示数据失败:', error);
+      // 即使失败也要初始化懒加载
+      this.initLazyLoading();
     });
   },
   beforeDestroy() {

@@ -129,6 +129,8 @@ export const articleAPI = {
   toggleLike: (id) => apiClient.post(`/articles/${id}/like`)
 };
 
+export { apiClient };
+
 export default {
   brand: brandAPI,
   series: seriesAPI,

@@ -1,3 +1,5 @@
+const path = require('path')
+
 module.exports = {
   devServer: {
     proxy: {
@@ -16,5 +18,14 @@ module.exports = {
   // 生产环境配置
   publicPath: process.env.NODE_ENV === 'production' ? '/' : '/',
   outputDir: 'dist',
-  assetsDir: 'static'
+  assetsDir: 'static',
+  
+  // 配置路径别名
+  configureWebpack: {
+    resolve: {
+      alias: {
+        '@': path.resolve(__dirname, 'src')
+      }
+    }
+  }
 } 

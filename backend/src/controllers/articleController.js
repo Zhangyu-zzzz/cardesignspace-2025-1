@@ -497,4 +497,40 @@ exports.getPopularArticles = async (req, res) => {
       message: '获取热门文章失败'
     });
   }
+};
+
+// 获取用户草稿文章
+exports.getUserDrafts = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    
+    const drafts = await Article.findAll({
+      where: {
+        authorId: userId,
+        status: 'draft'
+      },
+      include: [
+        {
+          model: User,
+          as: 'Author',
+          attributes: ['id', 'username', 'avatar']
+        }
+      ],
+      order: [['updatedAt', 'DESC']]
+    });
+    
+    res.json({
+      status: 'success',
+      data: {
+        drafts: drafts
+      }
+    });
+    
+  } catch (error) {
+    logger.error('获取用户草稿失败:', error);
+    res.status(500).json({
+      status: 'error',
+      message: '获取用户草稿失败'
+    });
+  }
 }; 

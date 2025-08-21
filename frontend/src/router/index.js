@@ -93,6 +93,11 @@ const routes = [
     component: () => import('../views/Articles.vue')
   },
   {
+    path: '/inspiration',
+    name: 'Inspiration',
+    component: () => import('../views/Inspiration.vue')
+  },
+  {
     path: '/articles/edit/:id?',
     name: 'ArticleEditor',
     component: () => import('../views/ArticleEditor.vue'),

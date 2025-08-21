@@ -230,8 +230,11 @@
             </el-tab-pane>
 
             <el-tab-pane label="我的收藏" name="favorites" v-if="isCurrentUser">
-              <!-- 收藏帖子网格 -->
-              <div class="posts-grid" v-loading="loading">
+              <!-- 收藏类型切换 -->
+              <el-tabs v-model="favoriteType" class="favorite-tabs">
+                <el-tab-pane label="收藏帖子" name="posts">
+                  <!-- 收藏帖子网格 -->
+                  <div class="posts-grid" v-loading="loading">
                 <div 
                   class="post-card clickable-post" 
                   v-for="post in favoritePosts" 
@@ -306,7 +309,89 @@
                     加载更多
                   </el-button>
                 </div>
-              </div>
+                  </div>
+                </el-tab-pane>
+
+                <el-tab-pane label="收藏图片" name="images">
+                  <!-- 收藏图片网格 -->
+                  <div class="favorite-images-grid" v-loading="loadingFavoriteImages">
+                    <div 
+                      class="favorite-image-card" 
+                      v-for="image in favoriteImages" 
+                      :key="image.id"
+                      @click="openImageModal(image)"
+                    >
+                      <div class="image-wrapper">
+                        <img 
+                          :src="image.imageUrl" 
+                          :alt="image.filename"
+                          @error="handleImageError"
+                        />
+                        <div class="image-overlay">
+                          <div class="overlay-content">
+                            <div class="image-actions">
+                              <el-button 
+                                type="primary"
+                                size="small"
+                                icon="el-icon-view"
+                                @click.stop="openImageModal(image)"
+                                circle
+                              >
+                              </el-button>
+                              <el-button 
+                                type="danger"
+                                size="small"
+                                icon="el-icon-delete"
+                                @click.stop="removeFavoriteImage(image.id)"
+                                circle
+                              >
+                              </el-button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div class="image-info">
+                        <div class="image-tags" v-if="image.tags && image.tags.length > 0">
+                          <el-tag
+                            v-for="tag in image.tags.slice(0, 3)"
+                            :key="tag"
+                            size="mini"
+                            class="image-tag"
+                          >
+                            {{ tag }}
+                          </el-tag>
+                          <span v-if="image.tags.length > 3" class="more-tags">
+                            +{{ image.tags.length - 3 }}
+                          </span>
+                        </div>
+                        <div class="image-meta">
+                          <span class="favorite-time">收藏于 {{ formatTime(image.createdAt) }}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- 空状态 -->
+                    <div class="empty-state" v-if="!loadingFavoriteImages && favoriteImages.length === 0">
+                      <div class="empty-content">
+                        <i class="el-icon-picture"></i>
+                        <h3>还没有收藏过图片</h3>
+                        <p>去灵感页面收藏喜欢的图片吧！</p>
+                        <el-button type="primary" @click="goToInspiration">
+                          浏览灵感图片
+                        </el-button>
+                      </div>
+                    </div>
+
+                    <!-- 加载更多 -->
+                    <div class="load-more" v-if="favoriteImagesHasMore && favoriteImages.length > 0">
+                      <el-button @click="loadMoreFavoriteImages" :loading="loadingMoreFavoriteImages" class="load-more-btn">
+                        加载更多
+                      </el-button>
+                    </div>
+                  </div>
+                </el-tab-pane>
+              </el-tabs>
             </el-tab-pane>
 
             <el-tab-pane label="我的上传" name="uploads" v-if="isCurrentUser">
@@ -412,14 +497,25 @@
         <el-button @click="nextImage" :disabled="currentImageIndex === previewImagesList.length - 1">下一张</el-button>
       </div>
     </el-dialog>
+
+    <!-- 收藏图片模态框 -->
+    <InspirationImageModal 
+      :visible="favoriteImageModalVisible"
+      :image="currentFavoriteImage"
+      @close="favoriteImageModalVisible = false"
+    />
   </div>
 </template>
 
 <script>
 import axios from 'axios';
+import InspirationImageModal from '@/components/InspirationImageModal.vue';
 
 export default {
   name: 'Profile',
+  components: {
+    InspirationImageModal
+  },
   data() {
     return {
       user: {},
@@ -465,7 +561,14 @@ export default {
       loadingMoreUploads: false,
       userLikes: [],
       likeHasMore: true,
-      loadingMoreLikes: false
+      loadingMoreLikes: false,
+      favoriteType: 'posts',
+      favoriteImages: [],
+      favoriteImagesHasMore: true,
+      loadingFavoriteImages: false,
+      loadingMoreFavoriteImages: false,
+      currentFavoriteImage: null,
+      favoriteImageModalVisible: false
     };
   },
   computed: {
@@ -512,6 +615,9 @@ export default {
     
     // 根据路由路径自动切换标签页
     this.setActiveTabFromRoute();
+    
+    // 根据当前激活的标签页加载相应数据
+    await this.loadTabData();
   },
   watch: {
     // 监听路由变化，当userId改变时重新加载数据
@@ -520,6 +626,15 @@ export default {
         this.loadUserProfile();
         this.loadUserStats();
         this.loadUserPosts();
+      }
+    },
+    
+    // 监听收藏类型切换
+    favoriteType(newType) {
+      if (newType === 'posts' && this.favoritePosts.length === 0) {
+        this.loadFavoritePosts();
+      } else if (newType === 'images' && this.favoriteImages.length === 0) {
+        this.loadFavoriteImages();
       }
     }
   },
@@ -960,6 +1075,23 @@ export default {
         this.activeTab = 'posts';
       }
     },
+    
+    // 根据当前激活的标签页加载相应数据
+    async loadTabData() {
+      if (this.activeTab === 'favorites' && this.isCurrentUser) {
+        if (this.favoritePosts.length === 0) {
+          await this.loadFavoritePosts();
+        }
+      } else if (this.activeTab === 'uploads' && this.isCurrentUser) {
+        if (this.userUploads.length === 0) {
+          await this.loadUserUploads();
+        }
+      } else if (this.activeTab === 'likes') {
+        if (this.userLikes.length === 0) {
+          await this.loadUserLikes();
+        }
+      }
+    },
 
     async loadUserLikes() {
       try {
@@ -1005,6 +1137,81 @@ export default {
 
     getUserAvatar(user) {
       return this.getImageUrl(user.avatar);
+    },
+
+    // 加载收藏图片
+    async loadFavoriteImages() {
+      if (!this.isCurrentUser) return; // 只有当前用户才能查看收藏图片
+      
+      this.loadingFavoriteImages = true;
+      try {
+        const response = await axios.get('/api/inspiration/favorites', {
+          params: {
+            page: 1,
+            limit: 12
+          }
+        });
+        
+        if (response.data.success) {
+          this.favoriteImages = response.data.data.images;
+          this.favoriteImagesHasMore = response.data.data.hasMore;
+        }
+      } catch (error) {
+        console.error('加载收藏图片失败:', error);
+        this.$message.error('加载收藏图片失败');
+      } finally {
+        this.loadingFavoriteImages = false;
+      }
+    },
+
+    // 加载更多收藏图片
+    async loadMoreFavoriteImages() {
+      this.loadingMoreFavoriteImages = true;
+      try {
+        const nextPage = Math.floor(this.favoriteImages.length / 12) + 1;
+        const response = await axios.get('/api/inspiration/favorites', {
+          params: {
+            page: nextPage,
+            limit: 12
+          }
+        });
+        
+        if (response.data.success) {
+          this.favoriteImages.push(...response.data.data.images);
+          this.favoriteImagesHasMore = response.data.data.hasMore;
+        }
+      } catch (error) {
+        console.error('加载更多收藏图片失败:', error);
+        this.$message.error('加载更多收藏图片失败');
+      } finally {
+        this.loadingMoreFavoriteImages = false;
+      }
+    },
+
+    // 移除收藏图片
+    async removeFavoriteImage(imageId) {
+      try {
+        const response = await axios.delete(`/api/inspiration/favorites/${imageId}`);
+        if (response.data.success) {
+          // 从列表中移除该图片
+          this.favoriteImages = this.favoriteImages.filter(image => image.id !== imageId);
+          this.$message.success('取消收藏成功');
+        }
+      } catch (error) {
+        console.error('取消收藏失败:', error);
+        this.$message.error('取消收藏失败');
+      }
+    },
+
+    // 打开图片模态框
+    openImageModal(image) {
+      this.currentFavoriteImage = image;
+      this.favoriteImageModalVisible = true;
+    },
+
+    // 跳转到灵感页面
+    goToInspiration() {
+      this.$router.push('/inspiration');
     }
   }
 };
@@ -2317,5 +2524,155 @@ export default {
 
 .like-item:hover {
   border-color: #e03426 !important;
+}
+
+/* 收藏图片网格样式 */
+.favorite-images-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 20px;
+  padding: 20px 0;
+}
+
+.favorite-image-card {
+  background: white;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.favorite-image-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+}
+
+.favorite-image-card .image-wrapper {
+  position: relative;
+  width: 100%;
+  height: 200px;
+  overflow: hidden;
+}
+
+.favorite-image-card .image-wrapper img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.favorite-image-card:hover .image-wrapper img {
+  transform: scale(1.05);
+}
+
+.favorite-image-card .image-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, rgba(0, 0, 0, 0.8) 0%, rgba(0, 0, 0, 0.6) 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: all 0.3s ease;
+}
+
+.favorite-image-card:hover .image-overlay {
+  opacity: 1;
+}
+
+.favorite-image-card .overlay-content {
+  text-align: center;
+}
+
+.favorite-image-card .image-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.favorite-image-card .image-info {
+  padding: 16px;
+}
+
+.favorite-image-card .image-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.favorite-image-card .image-tag {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 12px;
+  background: #f8f9fa;
+  color: #666;
+  border: 1px solid #e4e7ed;
+}
+
+.favorite-image-card .more-tags {
+  font-size: 11px;
+  color: #999;
+  align-self: center;
+}
+
+.favorite-image-card .image-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  color: #999;
+}
+
+.favorite-image-card .favorite-time {
+  font-size: 12px;
+  color: #999;
+}
+
+/* 收藏标签页样式 */
+.favorite-tabs {
+  margin-top: 20px;
+}
+
+.favorite-tabs >>> .el-tabs__active-bar {
+  background-color: #e03426 !important;
+}
+
+.favorite-tabs >>> .el-tabs__item.is-active {
+  color: #e03426 !important;
+}
+
+.favorite-tabs >>> .el-tabs__item:hover {
+  color: #e03426 !important;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .favorite-images-grid {
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 16px;
+  }
+  
+  .favorite-image-card .image-wrapper {
+    height: 180px;
+  }
+  
+  .favorite-image-card .image-info {
+    padding: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .favorite-images-grid {
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 12px;
+  }
+  
+  .favorite-image-card .image-wrapper {
+    height: 160px;
+  }
 }
 </style> 

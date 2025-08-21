@@ -1,7 +1,7 @@
 <template>
   <div class="home">
 
-    <!-- 全屏轮播图展示区域 -->
+    <!-- 全屏轮播图展示区域 - 最新上传的车型 -->
     <div class="fullscreen-carousel" v-if="carouselItems && carouselItems.length > 0">
       <!-- 轮播图容器 -->
       <div 
@@ -20,7 +20,7 @@
           :key="item.type + '-' + item.id"
           :class="{ active: currentSlide === index }"
           :style="{ transform: `translateX(${(index - currentSlide) * 100}%)` }"
-          @click="item.type === 'model' ? goToModel(item.id) : goToArticle(item.id)"
+          @click="goToModel(item.id)"
         >
           <div class="slide-image-container">
             <!-- 车型图片 -->
@@ -32,21 +32,12 @@
               @error="handleModelImageError"
               class="slide-image"
             >
-            <!-- 文章图片 -->
-            <img 
-              v-else-if="item.type === 'article' && item.coverImage" 
-              :src="item.coverImage"
-              :alt="item.title"
-              @load="handleModelImageLoad"
-              @error="handleModelImageError"
-              class="slide-image"
-            >
-            <!-- 占位符 -->
-            <div class="slide-placeholder" :class="{ 
-              show: (item.type === 'model' && (!item.Images || item.Images.length === 0)) || 
-                    (item.type === 'article' && !item.coverImage) ||
-                    modelImageLoadError[item.id] 
-            }">
+
+                          <!-- 占位符 -->
+              <div class="slide-placeholder" :class="{ 
+                show: (!item.Images || item.Images.length === 0) || 
+                      modelImageLoadError[item.id] 
+              }">
               <div class="placeholder-content">
                 <i class="el-icon-picture"></i>
                 <span>暂无图片</span>
@@ -59,7 +50,7 @@
             <div class="slide-content">
               <!-- 车型信息 -->
               <template v-if="item.type === 'model'">
-                <div class="content-type-badge model-badge">车型</div>
+                <div class="content-type-badge model-badge">最新上传</div>
                 <h2 class="slide-title">{{ item.name }}</h2>
                 <p class="slide-brand">{{ item.Brand ? item.Brand.name : '未知品牌' }}</p>
                 <button class="view-details-btn" @click.stop="goToModel(item.id)">
@@ -67,16 +58,7 @@
                   <i class="el-icon-arrow-right"></i>
                 </button>
               </template>
-                             <!-- 文章信息 -->
-               <template v-else-if="item.type === 'article'">
-                 <div class="content-type-badge article-badge">资讯</div>
-                 <h2 class="slide-title">{{ item.title }}</h2>
-                 <p class="slide-brand">{{ item.summary || '精彩汽车资讯内容，点击阅读全文了解更多...' }}</p>
-                 <button class="view-details-btn" @click.stop="goToArticle(item.id)">
-                   阅读全文
-                   <i class="el-icon-arrow-right"></i>
-                 </button>
-               </template>
+
             </div>
           </div>
         </div>
@@ -107,7 +89,7 @@
       <div class="loading-container">
         <div class="loading-spinner">
           <i class="el-icon-loading"></i>
-          <p>加载最新车型...</p>
+          <p>加载最新上传的车型...</p>
         </div>
       </div>
     </div>
@@ -344,7 +326,7 @@
 </template>
 
 <script>
-import { brandAPI, modelAPI, imageAPI, articleAPI } from '@/services/api';
+import { brandAPI, modelAPI, imageAPI } from '@/services/api';
 // 恢复使用chinese-to-pinyin库
 import chineseToPinyin from 'chinese-to-pinyin'
 
@@ -375,8 +357,7 @@ export default {
       modelLoading: true,
       error: null,
       latestModels: [],
-      latestArticles: [], // 最新文章
-      carouselItems: [], // 轮播项目（车型+文章）
+      carouselItems: [], // 轮播项目（最新上传的车型）
       allModelsData: [], // 存储所有车型数据
       currentPage: 1,
       pageSize: 24,
@@ -671,10 +652,7 @@ export default {
     goToModel(modelId) {
       this.$router.push(`/model/${modelId}`);
     },
-    // 导航到文章详情页
-    goToArticle(articleId) {
-      this.$router.push(`/articles/${articleId}`);
-    },
+
     // 获取品牌列表
     async fetchChineseBrands() {
       this.loading = true;
@@ -1006,7 +984,7 @@ export default {
       }
     },
 
-    // 获取轮播图内容（5个车型+3篇文章）
+    // 获取轮播图内容（最新上传的车型）
     async fetchCarouselModels() {
       this.latestModelsLoading = true;
       this.latestModelsError = null;
@@ -1014,30 +992,16 @@ export default {
       try {
         console.log('开始获取轮播图内容...');
         
-        // 获取车型数据
+        // 获取最新上传的车型数据
         const modelsResponse = await modelAPI.getAll({
           latest: true,
-          limit: 5,
+          limit: 8, // 增加数量，只展示车型
           page: 1,
-          sortOrder: 'desc' // 确保按年份降序排列，最新车型在前
+          sortOrder: 'desc', // 降序排列
+          sortBy: 'createdAt' // 按创建时间排序，展示最新上传的车型
         });
         
-        // 尝试获取文章数据（如果失败，继续使用车型数据）
-        let articlesResponse = null;
-        try {
-          articlesResponse = await articleAPI.getAll({
-            limit: 3,
-            page: 1,
-            sort: 'createdAt',
-            order: 'desc'
-          });
-        } catch (articleError) {
-          console.warn('获取文章数据失败，将只显示车型:', articleError);
-          articlesResponse = { data: [] };
-        }
-        
         console.log('轮播图车型API响应:', modelsResponse);
-        console.log('轮播图文章API响应:', articlesResponse);
         
         // 处理车型数据
         if (modelsResponse && modelsResponse.data && Array.isArray(modelsResponse.data)) {
@@ -1049,33 +1013,11 @@ export default {
           this.latestModels = [];
         }
         
-        // 处理文章数据
-        if (articlesResponse && articlesResponse.data && articlesResponse.data.articles && Array.isArray(articlesResponse.data.articles)) {
-          this.latestArticles = articlesResponse.data.articles;
-        } else if (articlesResponse && articlesResponse.data && Array.isArray(articlesResponse.data)) {
-          this.latestArticles = articlesResponse.data;
-        } else if (Array.isArray(articlesResponse)) {
-          this.latestArticles = articlesResponse;
-        } else {
-          console.warn('无效的文章响应格式:', articlesResponse);
-          this.latestArticles = [];
-        }
-        
-        // 合并车型和文章到轮播项目中
-        this.carouselItems = [
-          ...this.latestModels.map(model => ({ ...model, type: 'model' })),
-          ...this.latestArticles.map(article => ({ ...article, type: 'article' }))
-        ];
+        // 只展示车型到轮播项目中
+        this.carouselItems = this.latestModels.map(model => ({ ...model, type: 'model' }));
         
         console.log('获取到轮播图内容:', this.carouselItems);
-        console.log('车型数量:', this.latestModels.length);
-        console.log('文章数量:', this.latestArticles.length);
-        
-        // 如果没有任何内容（车型和文章都没有），使用车型数据作为fallback
-        if (this.carouselItems.length === 0 && this.latestModels.length > 0) {
-          this.carouselItems = this.latestModels.map(model => ({ ...model, type: 'model' }));
-          console.log('使用车型数据作为fallback:', this.carouselItems);
-        }
+        console.log('最新上传车型数量:', this.latestModels.length);
         
         // 如果有内容，启动自动播放
         if (this.carouselItems.length > 0) {
@@ -1176,7 +1118,8 @@ export default {
         const params = {
           limit: this.displayPageSize,
           page: this.currentDisplayPage,
-          sortOrder: this.sortOrder
+          sortOrder: this.sortOrder,
+          sortBy: 'year' // 车型展示区域按年份排序
         };
         
         // 如果选择了年代筛选，添加年代参数
@@ -1545,7 +1488,7 @@ export default {
 .slide-content {
   max-width: none;
   margin: 0;
-  padding: 0;
+  padding: 0 80px 0 80px; /* 为文字内容添加左右边距，避免被导航按钮遮挡 */
   box-sizing: border-box;
 }
 
@@ -1565,9 +1508,7 @@ export default {
   background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
 }
 
-.article-badge {
-  background: linear-gradient(135deg, #4dabf7 0%, #339af0 100%);
-}
+
 
 .slide-title {
   font-size: 48px;
@@ -2760,6 +2701,10 @@ body, html {
     padding: 50px 25px 35px;
   }
   
+  .slide-content {
+    padding: 0 60px 0 60px; /* 为文字内容添加左右边距 */
+  }
+  
   .carousel-nav {
     width: 40px;
     height: 40px;
@@ -2874,6 +2819,10 @@ body, html {
   
   .slide-info-overlay {
     padding: 50px 10px 35px;
+  }
+  
+  .slide-content {
+    padding: 0 50px 0 50px; /* 为文字内容添加左右边距 */
   }
   
   .home {
@@ -3025,6 +2974,10 @@ body, html {
   
   .slide-info-overlay {
     padding: 40px 8px 30px;
+  }
+  
+  .slide-content {
+    padding: 0 40px 0 40px; /* 为文字内容添加左右边距 */
   }
   
   .brand-section,

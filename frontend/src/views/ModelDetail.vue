@@ -117,6 +117,29 @@
           @close="closeImageViewer"
         />
 
+        <!-- 车型描述区域 -->
+        <div class="model-description-section" v-if="model.description">
+          <h2 class="description-title">
+            <i class="el-icon-document"></i>
+            车型描述
+          </h2>
+          <div class="description-container">
+            <div class="description-content">
+              <p class="description-text">{{ model.description }}</p>
+            </div>
+            <div class="description-meta">
+              <div class="meta-item">
+                <i class="el-icon-time"></i>
+                <span>更新时间：{{ formatDate(model.updatedAt) }}</span>
+              </div>
+              <div class="meta-item" v-if="model.year">
+                <i class="el-icon-date"></i>
+                <span>车型年份：{{ model.year }}年</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- 车型参数展示 -->
         <div class="model-specs-section" v-if="orderedSpecs && orderedSpecs.length > 0">
           <h2 class="specs-title">
@@ -805,6 +828,93 @@
     }
   }
 
+  /* 车型描述区域样式 */
+  .model-description-section {
+    margin: 40px 10px 20px 10px;
+    padding: 30px;
+    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    border: 1px solid #e3e6ea;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .model-description-section::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #e03426, #ff6b6b, #e03426);
+    border-radius: 4px 4px 0 0;
+  }
+
+  .description-title {
+    margin: 0 0 25px 0;
+    font-size: 22px;
+    color: #333;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding-bottom: 15px;
+    border-bottom: 2px solid #e9ecef;
+    position: relative;
+  }
+
+  .description-title i {
+    color: #e03426;
+    font-size: 24px;
+  }
+
+  .description-container {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .description-content {
+    flex: 1;
+  }
+
+  .description-text {
+    font-size: 16px;
+    line-height: 1.8;
+    color: #555;
+    margin: 0;
+    text-align: justify;
+    word-break: break-word;
+    white-space: pre-wrap;
+  }
+
+  .description-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    padding-top: 20px;
+    border-top: 1px solid #e9ecef;
+    margin-top: 10px;
+  }
+
+  .meta-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    color: #666;
+    padding: 8px 12px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border: 1px solid #e9ecef;
+  }
+
+  .meta-item i {
+    color: #e03426;
+    font-size: 16px;
+  }
+
   /* 车型参数展示样式 */
   .model-specs-section {
     margin: 40px 10px 20px 10px;
@@ -936,6 +1046,31 @@
 
   /* 响应式设计 */
   @media (max-width: 768px) {
+    .model-description-section {
+      margin: 30px 5px 15px 5px;
+      padding: 20px 15px;
+    }
+
+    .description-title {
+      font-size: 20px;
+      margin-bottom: 20px;
+    }
+
+    .description-text {
+      font-size: 15px;
+      line-height: 1.7;
+    }
+
+    .description-meta {
+      gap: 15px;
+      padding-top: 15px;
+    }
+
+    .meta-item {
+      font-size: 13px;
+      padding: 6px 10px;
+    }
+
     .model-specs-section {
       margin: 30px 5px 15px 5px;
       padding: 20px 15px;
@@ -971,6 +1106,32 @@
   }
 
   @media (max-width: 480px) {
+    .model-description-section {
+      margin: 20px 5px 10px 5px;
+      padding: 15px 10px;
+    }
+
+    .description-title {
+      font-size: 18px;
+      margin-bottom: 15px;
+    }
+
+    .description-text {
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    .description-meta {
+      gap: 10px;
+      padding-top: 12px;
+      flex-direction: column;
+    }
+
+    .meta-item {
+      font-size: 12px;
+      padding: 5px 8px;
+    }
+
     .model-specs-section {
       margin: 20px 5px 10px 5px;
       padding: 15px 10px;

@@ -6,7 +6,7 @@ const logger = require('../config/logger');
 // 获取所有车型
 exports.getAllModels = async (req, res) => {
   try {
-    const { brandId, search, page = 1, limit = 20, latest = false, sortOrder = 'desc', decade } = req.query;
+    const { brandId, search, page = 1, limit = 20, latest = false, sortOrder = 'desc', decade, sortBy = 'year' } = req.query;
     
     console.log(`排序参数: sortOrder=${sortOrder}, 类型: ${typeof sortOrder}`);
     console.log(`年代筛选: decade=${decade}`);
@@ -105,7 +105,10 @@ exports.getAllModels = async (req, res) => {
     let finalCount;
     
     if (latest === 'true') {
-      // 获取所有启用的车型进行排序（不包含图片，减少数据传输）
+      // 获取所有启用的车型进行排序
+      const sortField = sortBy === 'createdAt' ? 'createdAt' : 'year';
+      console.log(`轮播图排序字段: ${sortField}, 排序方式: ${sortOrder.toUpperCase()}`);
+      
       const allModels = await Model.findAll({
         where: whereCondition,
         include: [
@@ -115,7 +118,7 @@ exports.getAllModels = async (req, res) => {
             attributes: ['id', 'name', 'logo', 'country']
           }
         ],
-        order: [['year', sortOrder.toUpperCase()], ['name', 'ASC']] // 根据sortOrder参数按年份排序
+        order: [[sortField, sortOrder.toUpperCase()], ['name', 'ASC']] // 根据sortBy参数决定排序字段
       });
       
       // 手动分页
@@ -142,7 +145,8 @@ exports.getAllModels = async (req, res) => {
       console.log(`最新车型排序完成: 总计 ${finalCount} 个，当前页 ${finalModels.length} 个`);
     } else {
       // 常规查询（包括按品牌筛选）
-      console.log(`执行常规查询，排序方式: ${sortOrder.toUpperCase()}`);
+      const sortField = sortBy === 'createdAt' ? 'createdAt' : 'year';
+      console.log(`常规查询排序字段: ${sortField}, 排序方式: ${sortOrder.toUpperCase()}`);
       
       const { count, rows: models } = await Model.findAndCountAll({
         where: whereCondition,
@@ -154,7 +158,7 @@ exports.getAllModels = async (req, res) => {
           }
         ],
         order: [
-          ['year', sortOrder.toUpperCase()], // 根据sortOrder参数按年份排序
+          [sortField, sortOrder.toUpperCase()], // 根据sortBy参数决定排序字段
           ['name', 'ASC'] // 名称升序
         ],
         limit: parseInt(limit),

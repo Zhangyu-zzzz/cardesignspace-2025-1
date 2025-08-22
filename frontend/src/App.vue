@@ -60,6 +60,9 @@
                 <el-menu-item index="/upload" class="nav-item">
                   <span>图片上传</span>
                 </el-menu-item>
+                <el-menu-item index="/about" class="nav-item">
+                  <span>关于我们</span>
+                </el-menu-item>
                 <!-- <el-menu-item v-if="user" index="/articles/edit" class="nav-item">
                   <span>写文章</span>
                 </el-menu-item> -->

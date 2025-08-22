@@ -3,7 +3,7 @@
     <!-- 页面头部 -->
     <div class="about-header">
       <div class="header-content">
-        <h1 class="main-title">Create. Design. Share.</h1>
+        <h1 class="main-title">CREATE. DESIGN. SHARE.</h1>
         <p class="main-subtitle">
           CarDesignSpace 是全球汽车设计爱好者的灵感库与创意社区，
         </p>
@@ -19,9 +19,6 @@
         <!-- 三个核心功能区域 -->
         <div class="features-section">
           <div class="feature-card">
-            <div class="feature-icon">
-              <i class="el-icon-plus"></i>
-            </div>
             <div class="feature-content">
               <h3 class="feature-title">CREATE · 创造发现</h3>
               <p class="feature-description">
@@ -31,9 +28,6 @@
           </div>
 
           <div class="feature-card">
-            <div class="feature-icon">
-              <i class="el-icon-collection"></i>
-            </div>
             <div class="feature-content">
               <h3 class="feature-title">DESIGN · 设计收藏</h3>
               <p class="feature-description">
@@ -43,9 +37,6 @@
           </div>
 
           <div class="feature-card">
-            <div class="feature-icon">
-              <i class="el-icon-share"></i>
-            </div>
             <div class="feature-content">
               <h3 class="feature-title">SHARE · 分享启迪</h3>
               <p class="feature-description">
@@ -76,12 +67,30 @@
           
           <div class="platform-info">
             <div class="platform-card">
-              <div class="platform-icon">
-                <i class="el-icon-mobile-phone"></i>
-              </div>
               <div class="platform-content">
-                <h4 class="platform-name">CarDesignSpace</h4>
-                <p class="platform-desc">持续更新，持续进化。</p>
+                <h4 class="platform-name">微信公众号</h4>
+                <p class="platform-desc">扫码关注，获取最新资讯</p>
+                <div class="qr-code">
+                  <img 
+                    src="https://cardesignspace-cos-1-1259492452.cos.ap-shanghai.myqcloud.com/wechat/CDS%E5%BE%AE%E4%BF%A1%E5%85%AC%E4%BC%97%E5%8F%B7%E4%BA%8C%E7%BB%B4%E7%A0%81.jpg" 
+                    alt="CarDesignSpace微信公众号二维码"
+                    class="qr-image"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div class="platform-card">
+              <div class="platform-content">
+                <h4 class="platform-name">微信小程序</h4>
+                <p class="platform-desc">扫码使用，随时随地浏览</p>
+                <div class="qr-code">
+                  <img 
+                    src="https://cardesignspace-cos-1-1259492452.cos.ap-shanghai.myqcloud.com/wechat/CDS%E5%BE%AE%E4%BF%A1%E5%B0%8F%E7%A8%8B%E5%BA%8F%E4%BA%8C%E7%BB%B4%E7%A0%81.png" 
+                    alt="CarDesignSpace微信小程序二维码"
+                    class="qr-image"
+                  />
+                </div>
               </div>
             </div>
           </div>
@@ -184,7 +193,6 @@ export default {
   background: white;
   border-radius: 20px;
   padding: 40px 30px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
   border: 1px solid rgba(255, 255, 255, 0.2);
   transition: all 0.3s ease;
   position: relative;
@@ -204,32 +212,9 @@ export default {
 
 .feature-card:hover {
   transform: translateY(-8px);
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.15);
 }
 
-.feature-icon {
-  width: 80px;
-  height: 80px;
-  background: linear-gradient(135deg, #e03426, #c12e21);
-  border-radius: 20px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 25px;
-  box-shadow: 0 8px 24px rgba(224, 52, 38, 0.3);
-  transition: all 0.3s ease;
-}
 
-.feature-card:hover .feature-icon {
-  transform: scale(1.1);
-  box-shadow: 0 12px 32px rgba(224, 52, 38, 0.4);
-}
-
-.feature-icon i {
-  color: white;
-  font-size: 32px;
-  font-weight: bold;
-}
 
 .feature-title {
   font-size: 24px;
@@ -254,7 +239,6 @@ export default {
   padding: 60px 0;
   background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
   border-radius: 20px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
 }
 
 .join-content {
@@ -290,7 +274,6 @@ export default {
   height: 12px;
   background: #e03426;
   border-radius: 50%;
-  box-shadow: 0 0 20px rgba(224, 52, 38, 0.5);
 }
 
 /* 关注我们区域 */
@@ -298,7 +281,6 @@ export default {
   background: white;
   border-radius: 20px;
   padding: 50px 40px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
   border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
@@ -325,6 +307,8 @@ export default {
 .platform-info {
   display: flex;
   justify-content: center;
+  gap: 40px;
+  flex-wrap: wrap;
 }
 
 .platform-card {
@@ -340,25 +324,9 @@ export default {
 
 .platform-card:hover {
   transform: translateY(-4px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
 }
 
-.platform-icon {
-  width: 60px;
-  height: 60px;
-  background: linear-gradient(135deg, #e03426, #c12e21);
-  border-radius: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 4px 16px rgba(224, 52, 38, 0.3);
-}
 
-.platform-icon i {
-  color: white;
-  font-size: 24px;
-  font-weight: bold;
-}
 
 .platform-content {
   text-align: left;
@@ -374,7 +342,25 @@ export default {
 .platform-desc {
   font-size: 14px;
   color: #666;
-  margin: 0;
+  margin: 0 0 15px 0;
+}
+
+.qr-code {
+  display: flex;
+  justify-content: center;
+  margin-top: 15px;
+}
+
+.qr-image {
+  width: 120px;
+  height: 120px;
+  border-radius: 8px;
+  border: 2px solid #f0f0f0;
+  transition: all 0.3s ease;
+}
+
+.qr-image:hover {
+  transform: scale(1.05);
 }
 
 /* 响应式设计 */
@@ -410,15 +396,7 @@ export default {
     padding: 30px 20px;
   }
 
-  .feature-icon {
-    width: 60px;
-    height: 60px;
-    margin-bottom: 20px;
-  }
 
-  .feature-icon i {
-    font-size: 24px;
-  }
 
   .feature-title {
     font-size: 20px;
@@ -449,6 +427,10 @@ export default {
     font-size: 16px;
   }
 
+  .platform-info {
+    gap: 20px;
+  }
+
   .platform-card {
     padding: 20px;
     flex-direction: column;
@@ -457,6 +439,11 @@ export default {
 
   .platform-content {
     text-align: center;
+  }
+
+  .qr-image {
+    width: 100px;
+    height: 100px;
   }
 }
 
@@ -491,15 +478,7 @@ export default {
     padding: 25px 15px;
   }
 
-  .feature-icon {
-    width: 50px;
-    height: 50px;
-    margin-bottom: 15px;
-  }
 
-  .feature-icon i {
-    font-size: 20px;
-  }
 
   .feature-title {
     font-size: 18px;
@@ -530,18 +509,20 @@ export default {
     font-size: 14px;
   }
 
+  .platform-info {
+    gap: 15px;
+  }
+
   .platform-card {
     padding: 15px;
   }
 
-  .platform-icon {
-    width: 50px;
-    height: 50px;
+  .qr-image {
+    width: 80px;
+    height: 80px;
   }
 
-  .platform-icon i {
-    font-size: 20px;
-  }
+
 
   .platform-name {
     font-size: 16px;

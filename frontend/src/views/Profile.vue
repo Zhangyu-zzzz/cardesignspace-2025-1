@@ -1221,7 +1221,7 @@ export default {
 .profile-container {
   min-height: 100vh;
   background: #f8f9fa;
-  font-family: Arial, "Microsoft YaHei", sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Helvetica Neue', Helvetica, Arial, sans-serif;
 }
 
 /* 顶部横幅 */

@@ -1930,7 +1930,7 @@ export default {
   min-height: 100vh;
   background: #f8f9fa;
   padding: 20px;
-  font-family: Arial, "Microsoft YaHei", sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Helvetica Neue', Helvetica, Arial, sans-serif;
 }
 
 .forum-layout {

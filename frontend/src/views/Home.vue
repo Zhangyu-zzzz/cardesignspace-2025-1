@@ -1348,7 +1348,7 @@ export default {
 <style scoped>
 .home {
   padding: 0;
-  font-family: Arial, "Microsoft YaHei", sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Helvetica Neue', Helvetica, Arial, sans-serif;
   overflow-x: hidden;
   width: 100%;
 }
@@ -2347,7 +2347,7 @@ export default {
   color: white;
   font-size: clamp(6px, 1.2vw, 12px);
   font-weight: 600;
-  font-family: "Microsoft YaHei", "PingFang SC", "Helvetica Neue", Arial, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Helvetica Neue', Helvetica, Arial, sans-serif;
   opacity: 0;
   transition: opacity 0.3s ease;
 }
@@ -2371,7 +2371,7 @@ export default {
   margin-top: auto;
   padding: 0 clamp(1px, 0.3vw, 3px);
   min-height: clamp(16px, 2.8vw, 24px);
-  font-family: "Microsoft YaHei", "PingFang SC", "Helvetica Neue", Arial, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Helvetica Neue', Helvetica, Arial, sans-serif;
   margin-bottom: clamp(1px, 0.3vw, 3px);
 }
 
@@ -2911,7 +2911,7 @@ body, html {
   .brand-card .brand-name {
     font-size: 10px;
     color: #333333;
-    font-family: "Microsoft YaHei", "PingFang SC", "Helvetica Neue", Arial, sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Helvetica Neue', Helvetica, Arial, sans-serif;
     margin-bottom: 3px;
   }
 }
@@ -2962,7 +2962,7 @@ body, html {
     min-height: 18px;
     -webkit-line-clamp: 2;
     color: #333333;
-    font-family: "Microsoft YaHei", "PingFang SC", "Helvetica Neue", Arial, sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Helvetica Neue', Helvetica, Arial, sans-serif;
     margin-bottom: 1px;
   }
 }
@@ -3058,7 +3058,7 @@ body, html {
     -webkit-line-clamp: 2;
     word-break: break-word;
     color: #333333;
-    font-family: "Microsoft YaHei", "PingFang SC", "Helvetica Neue", Arial, sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Helvetica Neue', Helvetica, Arial, sans-serif;
     margin-bottom: 1px;
   }
   

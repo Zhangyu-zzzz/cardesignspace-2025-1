@@ -128,7 +128,7 @@ export default {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-family: Arial, "Microsoft YaHei", sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Helvetica Neue', Helvetica, Arial, sans-serif;
 }
 
 .login-card {

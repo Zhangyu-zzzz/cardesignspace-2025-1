@@ -45,8 +45,8 @@
           
           <!-- 右侧导航菜单 -->
           <div class="navbar-right">
-            <!-- 导航菜单 -->
-            <div class="navbar-menu">
+            <!-- 桌面端导航菜单 -->
+            <div class="navbar-menu desktop-menu">
               <el-menu mode="horizontal" router class="nav-menu-items">
                 <el-menu-item index="/articles" class="nav-item">
                   <span>汽车资讯</span>
@@ -67,6 +67,38 @@
                   <span>写文章</span>
                 </el-menu-item> -->
               </el-menu>
+            </div>
+
+            <!-- 移动端下拉菜单 -->
+            <div class="mobile-menu">
+              <el-dropdown @command="handleMobileMenuCommand" placement="bottom-end">
+                <div class="mobile-menu-trigger">
+                  <i class="el-icon-menu"></i>
+                  <span class="mobile-menu-text">菜单</span>
+                </div>
+                <el-dropdown-menu slot="dropdown" class="mobile-dropdown-menu">
+                  <el-dropdown-item command="/articles">
+                    <i class="el-icon-document"></i>
+                    汽车资讯
+                  </el-dropdown-item>
+                  <el-dropdown-item command="/inspiration">
+                    <i class="el-icon-picture"></i>
+                    灵感图片
+                  </el-dropdown-item>
+                  <el-dropdown-item command="/forum">
+                    <i class="el-icon-chat-dot-round"></i>
+                    用户论坛
+                  </el-dropdown-item>
+                  <el-dropdown-item command="/upload">
+                    <i class="el-icon-upload"></i>
+                    图片上传
+                  </el-dropdown-item>
+                  <el-dropdown-item command="/about">
+                    <i class="el-icon-info"></i>
+                    关于我们
+                  </el-dropdown-item>
+                </el-dropdown-menu>
+              </el-dropdown>
             </div>
 
             <!-- 用户未登录时显示登录注册 -->
@@ -372,6 +404,11 @@ export default {
         path: '/search',
         query: { keyword: this.searchKeyword.trim() }
       });
+    },
+
+    // 处理移动端菜单命令
+    handleMobileMenuCommand(command) {
+      this.$router.push(command);
     }
   }
 }
@@ -398,7 +435,7 @@ body:has(.inspiration-modal) .navbar-container {
 }
 
 #app {
-  font-family: 'Avenir', Helvetica, Arial, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Helvetica Neue', Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   color: #2c3e50;
@@ -425,6 +462,7 @@ body:has(.inspiration-modal) .navbar-container {
 .el-main {
   padding: 0 !important;
   margin: 0 !important;
+  margin-top: 60px !important; /* 为固定导航栏留出空间 */
 }
 
 /* ===== Element UI 主题色覆盖 ===== */
@@ -600,6 +638,11 @@ body:has(.inspiration-modal) .navbar-container {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3) !important;
   overflow-x: hidden !important;
   margin: 0 !important;
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  z-index: 1000 !important;
 }
 
 /* 确保导航栏完全覆盖 */
@@ -800,6 +843,72 @@ body:has(.inspiration-modal) .navbar-container {
   display: flex;
   align-items: center;
   flex-shrink: 0;
+}
+
+/* 桌面端菜单 */
+.desktop-menu {
+  display: flex;
+  align-items: center;
+}
+
+/* 移动端菜单 */
+.mobile-menu {
+  display: none;
+}
+
+.mobile-menu-trigger {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  color: #ffffff;
+}
+
+.mobile-menu-trigger:hover {
+  background: rgba(255, 255, 255, 0.2);
+  color: #e03426;
+}
+
+.mobile-menu-trigger i {
+  font-size: 16px;
+}
+
+.mobile-menu-text {
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.mobile-dropdown-menu {
+  margin-top: 8px;
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  border: 1px solid #e4e7ed;
+  overflow: hidden;
+}
+
+.mobile-dropdown-menu .el-dropdown-menu__item {
+  padding: 12px 16px;
+  font-size: 14px;
+  color: #606266;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.mobile-dropdown-menu .el-dropdown-menu__item:hover {
+  background-color: #f5f7fa;
+  color: #e03426;
+}
+
+.mobile-dropdown-menu .el-dropdown-menu__item i {
+  font-size: 16px;
+  width: 16px;
+  text-align: center;
 }
 
 /* 登录注册按钮 */
@@ -1098,20 +1207,24 @@ body:has(.inspiration-modal) .navbar-container {
 }
 
 @media (max-width: 768px) {
+  .el-main {
+    margin-top: 60px !important; /* 移动端导航栏高度 */
+  }
+  
   .navbar {
     padding: 0 8px;
     min-width: 0;
-    height: 55px !important;
+    height: 60px !important; /* 增加高度 */
   }
   
   .navbar-left {
-    min-width: 40px;
-    gap: 2px;
+    min-width: 50px;
+    gap: 4px;
     flex-shrink: 0;
   }
   
   .logo-image {
-    height: 18px; /* 进一步减小logo尺寸 */
+    height: 20px; /* 适当增加logo尺寸 */
   }
   
   /* 768px以下显示移动端logo */
@@ -1121,14 +1234,14 @@ body:has(.inspiration-modal) .navbar-container {
   
   .logo-mobile {
     display: block;
-    height: 18px !important; /* 进一步减小logo尺寸 */
+    height: 20px !important;
   }
   
   .navbar-center {
-    margin: 0 6px;
+    margin: 0 8px;
     max-width: none;
-    min-width: 120px;
-    flex: 2; /* 增加搜索框的权重 */
+    min-width: 100px;
+    flex: 1; /* 减少搜索框的权重，给其他元素更多空间 */
   }
   
   .search-input {
@@ -1136,19 +1249,19 @@ body:has(.inspiration-modal) .navbar-container {
   }
   
   .search-input .el-input__inner {
-    padding-left: 8px;
-    font-size: 12px;
-    height: 32px; /* 减小搜索框高度 */
+    padding-left: 10px;
+    font-size: 13px;
+    height: 34px; /* 适当增加搜索框高度 */
   }
   
   .search-input .el-input-group__append {
-    padding: 0 6px;
+    padding: 0 8px;
   }
   
   .search-input .el-input-group__append .el-button {
-    height: 32px; /* 减小按钮高度 */
+    height: 34px;
     padding: 0;
-    min-width: 32px;
+    min-width: 34px;
   }
   
   .search-input .el-input-group__append .el-button .el-icon-search {
@@ -1156,94 +1269,194 @@ body:has(.inspiration-modal) .navbar-container {
     font-weight: bold;
   }
   
-  .navbar-menu {
-    display: flex;
-    min-width: 0;
-    overflow: hidden;
-    flex-shrink: 2; /* 允许菜单收缩更多 */
+  /* 768px以下隐藏桌面端菜单，显示移动端菜单 */
+  .desktop-menu {
+    display: none !important;
   }
   
-  .nav-menu-items {
-    min-width: 0;
-    flex-shrink: 1;
-  }
-  
-  .nav-menu-items .el-menu-item {
-    padding: 0 2px !important;
-    margin: 0 1px !important;
-    min-width: 0;
-    white-space: nowrap;
-  }
-  
-  .nav-menu-items .el-menu-item span {
-    font-size: 9px; /* 进一步减小字体 */
+  .mobile-menu {
+    display: flex !important;
+    align-items: center;
   }
   
   .navbar-right {
-    flex-shrink: 0; /* 右侧用户区域不收缩 */
-    gap: 3px;
-    min-width: 0;
+    flex-shrink: 0;
+    gap: 8px;
+    min-width: 100px; /* 确保右侧有足够空间 */
   }
   
   .user-functions {
-    gap: 3px;
+    gap: 6px;
   }
   
   .username {
-    display: none;
+    display: none; /* 在768px以下隐藏用户名 */
   }
   
   .user-profile-trigger {
-    padding: 2px 4px;
+    padding: 4px 6px;
   }
   
   .user-avatar {
-    width: 24px !important;
-    height: 24px !important;
+    width: 28px !important;
+    height: 28px !important;
   }
   
   .auth-buttons {
-    gap: 2px;
+    gap: 4px;
   }
   
   .login-btn {
-    padding: 2px 4px;
-    font-size: 9px;
+    padding: 4px 6px;
+    font-size: 11px;
     white-space: nowrap;
   }
   
   .register-btn {
-    padding: 2px 6px;
-    font-size: 9px;
+    padding: 4px 8px;
+    font-size: 11px;
     white-space: nowrap;
   }
 }
 
 @media (max-width: 480px) {
+  .el-main {
+    margin-top: 55px !important; /* 480px以下导航栏高度 */
+  }
+  
   .navbar {
-    padding: 0 4px;
-    height: 50px !important;
+    padding: 0 6px;
+    height: 55px !important; /* 增加高度 */
   }
   
   .navbar-left {
-    min-width: 35px;
-    gap: 1px;
+    min-width: 40px;
+    gap: 3px;
   }
   
   .logo-image {
-    height: 16px; /* 进一步减小 */
+    height: 18px; /* 适当增加 */
+  }
+  
+  .navbar-center {
+    margin: 0 6px;
+    min-width: 80px;
+    flex: 1; /* 减少搜索框权重 */
+  }
+  
+  .search-input .el-input__inner {
+    padding-left: 8px;
+    font-size: 12px;
+    height: 32px; /* 适当增加高度 */
+  }
+  
+  .search-input .el-input-group__append {
+    padding: 0 6px;
+  }
+  
+  .search-input .el-input-group__append .el-button {
+    height: 32px;
+    min-width: 32px;
+    background: #e03426 !important;
+    border-color: #e03426 !important;
+  }
+  
+  .search-input .el-input-group__append .el-button .el-icon-search {
+    font-size: 13px;
+    font-weight: bold;
+    color: #ffffff !important;
+  }
+  
+  /* 480px以下继续隐藏桌面端菜单，显示移动端菜单 */
+  .desktop-menu {
+    display: none !important;
+  }
+  
+  .mobile-menu {
+    display: flex !important;
+    align-items: center;
+  }
+  
+  .mobile-menu-trigger {
+    padding: 6px 8px;
+  }
+  
+  .mobile-menu-trigger i {
+    font-size: 14px;
+  }
+  
+  .mobile-menu-text {
+    font-size: 11px;
+  }
+  
+  .navbar-right {
+    flex-shrink: 0;
+    min-width: 80px; /* 确保右侧有足够空间 */
+  }
+  
+  .user-functions {
+    gap: 5px;
+  }
+  
+  .user-avatar {
+    width: 26px !important;
+    height: 26px !important;
+  }
+  
+  .auth-buttons {
+    gap: 5px;
+  }
+  
+  .login-btn {
+    padding: 3px 5px;
+    font-size: 10px;
+  }
+  
+  .register-btn {
+    padding: 3px 6px;
+    font-size: 10px;
+  }
+}
+
+@media (max-width: 360px) {
+  .el-main {
+    margin-top: 52px !important; /* 360px以下导航栏高度 */
+  }
+  
+  .navbar {
+    padding: 0 4px;
+    height: 52px !important; /* 适当增加高度 */
+  }
+  
+  .navbar-left {
+    gap: 2px;
+    min-width: 30px;
+  }
+  
+  .logo-image {
+    height: 16px; /* 适当增加logo尺寸 */
+  }
+  
+  /* 360px以下继续显示移动端logo */
+  .logo-desktop {
+    display: none;
+  }
+  
+  .logo-mobile {
+    display: block;
+    height: 16px !important;
   }
   
   .navbar-center {
     margin: 0 4px;
-    min-width: 100px;
-    flex: 3; /* 进一步增加搜索框权重 */
+    min-width: 70px;
+    flex: 1; /* 减少搜索框权重 */
   }
   
   .search-input .el-input__inner {
     padding-left: 6px;
     font-size: 11px;
-    height: 30px; /* 进一步减小高度 */
+    height: 30px;
   }
   
   .search-input .el-input-group__append {
@@ -1258,57 +1471,35 @@ body:has(.inspiration-modal) .navbar-container {
   }
   
   .search-input .el-input-group__append .el-button .el-icon-search {
-    font-size: 13px;
+    font-size: 12px;
     font-weight: bold;
     color: #ffffff !important;
   }
   
-  .navbar-left {
-    gap: 2px;
-    flex-shrink: 0;
-    min-width: 30px;
+  /* 360px以下继续隐藏桌面端菜单，显示移动端菜单 */
+  .desktop-menu {
+    display: none !important;
   }
   
-  .navbar-logo {
-    flex-shrink: 0;
+  .mobile-menu {
+    display: flex !important;
+    align-items: center;
   }
   
-  .logo-image {
-    height: 16px; /* 与480px保持一致 */
+  .mobile-menu-trigger {
+    padding: 4px 6px;
   }
   
-  .navbar-menu {
-    flex: 1;
-    min-width: 0;
-    overflow-x: auto;
-    scrollbar-width: none;
-    -ms-overflow-style: none;
-    flex-shrink: 2;
+  .mobile-menu-trigger i {
+    font-size: 13px;
   }
   
-  .navbar-menu::-webkit-scrollbar {
-    display: none;
-  }
-  
-  .nav-menu-items {
-    flex-wrap: nowrap;
-    min-width: max-content;
-  }
-  
-  .nav-menu-items .el-menu-item {
-    padding: 0 2px;
-    margin: 0;
-    white-space: nowrap;
-    flex-shrink: 0;
-  }
-  
-  .nav-menu-items .el-menu-item span {
-    font-size: 8px; /* 进一步减小 */
+  .mobile-menu-text {
+    font-size: 10px;
   }
   
   .navbar-right {
-    flex-shrink: 0;
-    min-width: 60px;
+    min-width: 60px; /* 确保右侧有足够空间 */
   }
   
   .user-functions {
@@ -1320,98 +1511,14 @@ body:has(.inspiration-modal) .navbar-container {
     height: 24px !important;
   }
   
-  .auth-buttons {
-    gap: 4px;
-  }
-  
   .login-btn {
-    padding: 4px 6px;
-    font-size: 10px;
-  }
-  
-  .register-btn {
-    padding: 4px 8px;
-    font-size: 10px;
-  }
-}
-
-@media (max-width: 360px) {
-  .navbar {
-    padding: 0 3px;
-  }
-  
-  .navbar-left {
-    gap: 1px;
-    min-width: 25px;
-  }
-  
-  .logo-image {
-    height: 14px; /* 最小logo尺寸 */
-  }
-  
-  /* 360px以下继续显示移动端logo */
-  .logo-desktop {
-    display: none;
-  }
-  
-  .logo-mobile {
-    display: block;
-    height: 14px !important;
-  }
-  
-  .navbar-center {
-    margin: 0 3px;
-    min-width: 80px;
-    flex: 4; /* 最大化搜索框权重 */
-  }
-  
-  .search-input .el-input__inner {
-    padding-left: 4px;
-    font-size: 10px;
-    height: 28px;
-  }
-  
-  .search-input .el-input-group__append {
-    padding: 0 3px;
-  }
-  
-  .search-input .el-input-group__append .el-button {
-    height: 28px;
-    min-width: 28px;
-    background: #e03426 !important;
-    border-color: #e03426 !important;
-  }
-  
-  .search-input .el-input-group__append .el-button .el-icon-search {
-    font-size: 12px;
-    font-weight: bold;
-    color: #ffffff !important;
-  }
-  
-  .nav-menu-items .el-menu-item {
-    padding: 0 1px;
-  }
-  
-  .nav-menu-items .el-menu-item span {
-    font-size: 7px; /* 最小字体 */
-  }
-  
-  .navbar-right {
-    min-width: 50px;
-  }
-  
-  .user-functions {
-    gap: 2px;
-  }
-  
-  .login-btn {
-    padding: 2px 3px;
-    font-size: 8px;
-  }
-  
-  .register-btn {
     padding: 2px 4px;
-    font-size: 8px;
+    font-size: 9px;
+  }
+  
+  .register-btn {
+    padding: 2px 5px;
+    font-size: 9px;
   }
 }
 

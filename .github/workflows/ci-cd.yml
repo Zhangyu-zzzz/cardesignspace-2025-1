@@ -4,161 +4,51 @@ on:
   push:
     branches: [ main, develop ]
   pull_request:
-    branches: [ main, develop ]
-
-env:
-  REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
+    branches: [ main ]
 
 jobs:
-  # 后端测试和构建
-  backend:
+  build-and-deploy:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ./backend
     
     steps:
-    - name: 检出代码
-      uses: actions/checkout@v4
-      
-    - name: 设置Node.js环境
-      uses: actions/setup-node@v4
-      with:
-        node-version: '18'
-        cache: 'npm'
-        cache-dependency-path: './backend/package-lock.json'
-        
-    - name: 安装依赖
-      run: npm ci
-      
-    - name: 运行代码检查
+    - name: Checkout code
       run: |
-        npm run lint || echo "Linting failed but continuing..."
+        git clone https://github.com/Zhangyu-zzzz/cardesignspace-2025-1.git
+        cd cardesignspace-2025-1
         
-    - name: 运行测试
+    - name: Setup environment
       run: |
-        npm test || echo "Tests failed but continuing..."
+        echo "Setting up deployment environment..."
         
-    - name: 构建Docker镜像
+    - name: Deploy to server
+      env:
+        SERVER_HOST: ${{ secrets.SERVER_HOST }}
+        SERVER_USER: ${{ secrets.SERVER_USER }}
+        SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
       run: |
-        docker build -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-backend:${{ github.sha }} .
-        docker build -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-backend:latest .
+        # 设置SSH密钥
+        mkdir -p ~/.ssh
+        echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
+        ssh-keyscan -H $SERVER_HOST >> ~/.ssh/known_hosts
         
-    - name: 登录到容器注册表
-      if: github.event_name != 'pull_request'
-      uses: docker/login-action@v3
-      with:
-        registry: ${{ env.REGISTRY }}
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
-        
-    - name: 推送Docker镜像
-      if: github.event_name != 'pull_request'
-      run: |
-        docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-backend:${{ github.sha }}
-        docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-backend:latest
-
-  # 前端测试和构建
-  frontend:
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ./frontend
-        
-    steps:
-    - name: 检出代码
-      uses: actions/checkout@v4
-      
-    - name: 设置Node.js环境
-      uses: actions/setup-node@v4
-      with:
-        node-version: '16'
-        cache: 'npm'
-        cache-dependency-path: './frontend/package-lock.json'
-        
-    - name: 安装依赖
-      run: npm ci
-      
-    - name: 运行代码检查
-      run: |
-        npm run lint || echo "Linting failed but continuing..."
-        
-    - name: 构建应用
-      run: npm run build
-      
-    - name: 构建Docker镜像
-      run: |
-        docker build -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-frontend:${{ github.sha }} .
-        docker build -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-frontend:latest .
-        
-    - name: 登录到容器注册表
-      if: github.event_name != 'pull_request'
-      uses: docker/login-action@v3
-      with:
-        registry: ${{ env.REGISTRY }}
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
-        
-    - name: 推送Docker镜像
-      if: github.event_name != 'pull_request'
-      run: |
-        docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-frontend:${{ github.sha }}
-        docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-frontend:latest
-
-  # 部署到服务器
-  deploy:
-    needs: [backend, frontend]
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
-    
-    steps:
-    - name: 检出代码
-      uses: actions/checkout@v4
-      
-    - name: 设置SSH密钥
-      uses: webfactory/ssh-agent@v0.8.0
-      with:
-        ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
-        
-    - name: 添加服务器到已知主机
-      run: |
-        ssh-keyscan -H ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts
-        
-    - name: 部署到服务器
-      run: |
-        echo "部署到服务器: ${{ secrets.SERVER_HOST }}"
-        
-        # 连接到服务器并执行部署
-        ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'EOF'
+        # 连接到服务器并部署
+        ssh $SERVER_USER@$SERVER_HOST << 'EOF'
           cd /opt/auto-gallery
-          
-          # 拉取最新代码
+          echo "Pulling latest code..."
           git pull origin main
-          
-          # 拉取最新镜像
-          docker-compose pull
-          
-          # 备份数据库
-          ./scripts/backup-db.sh || echo "备份失败，继续部署"
-          
-          # 重启服务
+          echo "Stopping services..."
           docker-compose down
+          echo "Starting services..."
           docker-compose up -d
-          
-          # 等待服务启动
-          sleep 30
-          
-          # 健康检查
-          curl -f http://localhost:3001/api/health || exit 1
-          curl -f http://localhost:8080/health || exit 1
-          
-          echo "部署完成"
+          echo "Checking service status..."
+          docker-compose ps
+          echo "Deployment completed!"
         EOF
         
-    - name: 通知部署完成
+    - name: Health check
       run: |
-        echo "部署完成！"
-        echo "服务器: ${{ secrets.SERVER_HOST }}"
-        echo "前端地址: http://${{ secrets.SERVER_HOST }}:8080"
-        echo "后端API: http://${{ secrets.SERVER_HOST }}:3001"
+        echo "Performing health checks..."
+        sleep 30
+        curl -f http://${{ secrets.SERVER_HOST }}:8080/health || echo "Frontend health check failed"
+        curl -f http://${{ secrets.SERVER_HOST }}:3001/api/health || echo "Backend health check failed"

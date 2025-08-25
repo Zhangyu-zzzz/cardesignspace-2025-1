@@ -112,6 +112,18 @@ const routes = [
     path: '/about',
     name: 'About',
     component: () => import('../views/About.vue')
+  },
+  {
+    path: '/image-tagging',
+    name: 'ImageTagging',
+    component: () => import('../views/ImageTagging.vue'),
+    meta: { requiresAuth: false }
+  },
+  {
+    path: '/image-gallery',
+    name: 'ImageGallery',
+    component: () => import('../views/ImageGallery.vue'),
+    meta: { requiresAuth: false }
   }
 ]
 

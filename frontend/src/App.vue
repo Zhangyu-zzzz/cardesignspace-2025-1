@@ -48,20 +48,26 @@
             <!-- 桌面端导航菜单 -->
             <div class="navbar-menu desktop-menu">
               <el-menu mode="horizontal" router class="nav-menu-items">
+                <el-menu-item index="/" class="nav-item">
+                  <span>首页</span>
+                </el-menu-item>
+                <el-menu-item index="/image-gallery" class="nav-item">
+                  <span>图片</span>
+                </el-menu-item>
                 <el-menu-item index="/articles" class="nav-item">
-                  <span>汽车资讯</span>
+                  <span>资讯</span>
                 </el-menu-item>
                 <el-menu-item index="/inspiration" class="nav-item">
-                  <span>灵感图片</span>
+                  <span>灵感</span>
                 </el-menu-item>
                 <el-menu-item index="/forum" class="nav-item">
-                  <span>用户论坛</span>
+                  <span>论坛</span>
                 </el-menu-item>
                 <el-menu-item index="/upload" class="nav-item">
-                  <span>图片上传</span>
+                  <span>上传</span>
                 </el-menu-item>
                 <el-menu-item index="/about" class="nav-item">
-                  <span>关于我们</span>
+                  <span>关于</span>
                 </el-menu-item>
                 <!-- <el-menu-item v-if="user" index="/articles/edit" class="nav-item">
                   <span>写文章</span>
@@ -77,25 +83,33 @@
                   <span class="mobile-menu-text">菜单</span>
                 </div>
                 <el-dropdown-menu slot="dropdown" class="mobile-dropdown-menu">
+                  <el-dropdown-item command="/">
+                    <i class="el-icon-house"></i>
+                    首页
+                  </el-dropdown-item>
+                  <el-dropdown-item command="/image-gallery">
+                    <i class="el-icon-picture-outline"></i>
+                    图片
+                  </el-dropdown-item>
                   <el-dropdown-item command="/articles">
                     <i class="el-icon-document"></i>
-                    汽车资讯
+                    资讯
                   </el-dropdown-item>
                   <el-dropdown-item command="/inspiration">
                     <i class="el-icon-picture"></i>
-                    灵感图片
+                    灵感
                   </el-dropdown-item>
                   <el-dropdown-item command="/forum">
                     <i class="el-icon-chat-dot-round"></i>
-                    用户论坛
+                    论坛
                   </el-dropdown-item>
                   <el-dropdown-item command="/upload">
                     <i class="el-icon-upload"></i>
-                    图片上传
+                    上传
                   </el-dropdown-item>
                   <el-dropdown-item command="/about">
                     <i class="el-icon-info"></i>
-                    关于我们
+                    关于
                   </el-dropdown-item>
                 </el-dropdown-menu>
               </el-dropdown>
@@ -151,6 +165,14 @@
                       <el-dropdown-item command="uploads">
                         <i class="el-icon-upload"></i>
                         我的上传
+                      </el-dropdown-item>
+                      <el-dropdown-item command="image-tagging">
+                        <i class="el-icon-edit"></i>
+                        图片标签管理
+                      </el-dropdown-item>
+                      <el-dropdown-item command="image-gallery">
+                        <i class="el-icon-picture"></i>
+                        图片分类浏览
                       </el-dropdown-item>
                       <el-dropdown-item divided command="logout">
                         <i class="el-icon-switch-button"></i>
@@ -350,6 +372,12 @@ export default {
           break
         case 'uploads':
           this.goToMyUploads()
+          break
+        case 'image-tagging':
+          this.$router.push('/image-tagging')
+          break
+        case 'image-gallery':
+          this.$router.push('/image-gallery')
           break
         case 'logout':
           this.handleLogout()

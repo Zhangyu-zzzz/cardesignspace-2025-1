@@ -23,7 +23,7 @@ const Model = sequelize.define('Model', {
     }
   },
   type: {
-    type: DataTypes.ENUM('轿车', 'SUV', 'MPV', 'WAGON', 'SHOOTINGBRAKE', '皮卡', '跑车', '其他'),
+    type: DataTypes.ENUM('轿车', 'SUV', 'MPV', 'WAGON', 'SHOOTINGBRAKE', '皮卡', '跑车', 'Hatchback', '其他'),
     defaultValue: '其他'
   },
   price: {
@@ -41,6 +41,11 @@ const Model = sequelize.define('Model', {
   },
   year: {
     type: DataTypes.INTEGER
+  },
+  styleTags: {
+    type: DataTypes.JSON,
+    defaultValue: [],
+    comment: '风格标签数组，支持三层标签体系'
   }
 }, {
   tableName: 'models',

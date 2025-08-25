@@ -1,26 +1,4 @@
 services:
-  # MySQL数据库
-  mysql:
-    image: mysql:8.0
-    container_name: auto-gallery-mysql
-    restart: unless-stopped
-    environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpassword}
-      MYSQL_DATABASE: ${MYSQL_DATABASE:-auto_gallery}
-      MYSQL_USER: ${MYSQL_USER:-auto_gallery_user}
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-auto_gallery_pass}
-    ports:
-      - "3307:3306"
-    volumes:
-      - mysql_data:/var/lib/mysql
-      - ./backend/sql:/docker-entrypoint-initdb.d
-    networks:
-      - auto-gallery-network
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
-      timeout: 20s
-      retries: 10
-
   # 后端服务
   backend:
     build:
@@ -30,11 +8,11 @@ services:
     restart: unless-stopped
     environment:
       NODE_ENV: ${NODE_ENV:-production}
-      DB_HOST: mysql
-      DB_PORT: 3306
-      DB_NAME: ${MYSQL_DATABASE:-auto_gallery}
-      DB_USER: ${MYSQL_USER:-auto_gallery_user}
-      DB_PASSWORD: ${MYSQL_PASSWORD:-auto_gallery_pass}
+      DB_HOST: ${DB_HOST:-49.235.98.5}
+      DB_PORT: ${DB_PORT:-3306}
+      DB_NAME: ${DB_NAME:-cardesignspace}
+      DB_USER: ${DB_USER:-Jason}
+      DB_PASSWORD: ${DB_PASSWORD:-Jason123456!}
       JWT_SECRET: ${JWT_SECRET:-your-secret-key}
       PORT: 3000
     ports:
@@ -42,9 +20,6 @@ services:
     volumes:
       - ./backend/uploads:/app/uploads
       - ./backend/logs:/app/logs
-    depends_on:
-      mysql:
-        condition: service_healthy
     networks:
       - auto-gallery-network
     healthcheck:
@@ -73,10 +48,6 @@ services:
       timeout: 10s
       retries: 3
       start_period: 30s
-
-volumes:
-  mysql_data:
-    driver: local
 
 networks:
   auto-gallery-network:

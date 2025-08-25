@@ -13,12 +13,16 @@ jobs:
     steps:
     - name: Checkout code
       run: |
+        echo "开始检出代码..."
         git clone https://github.com/Zhangyu-zzzz/cardesignspace-2025-1.git
         cd cardesignspace-2025-1
+        echo "代码检出完成"
         
     - name: Setup environment
       run: |
-        echo "Setting up deployment environment..."
+        echo "设置部署环境..."
+        echo "服务器地址: ${{ secrets.SERVER_HOST }}"
+        echo "服务器用户: ${{ secrets.SERVER_USER }}"
         
     - name: Deploy to server
       env:
@@ -26,29 +30,46 @@ jobs:
         SERVER_USER: ${{ secrets.SERVER_USER }}
         SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
       run: |
+        echo "开始部署到服务器..."
+        
         # 设置SSH密钥
+        echo "设置SSH密钥..."
         mkdir -p ~/.ssh
         echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
         chmod 600 ~/.ssh/id_rsa
         ssh-keyscan -H $SERVER_HOST >> ~/.ssh/known_hosts
         
+        # 测试SSH连接
+        echo "测试SSH连接..."
+        ssh -o ConnectTimeout=10 $SERVER_USER@$SERVER_HOST "echo 'SSH连接成功'"
+        
         # 连接到服务器并部署
+        echo "开始执行部署命令..."
         ssh $SERVER_USER@$SERVER_HOST << 'EOF'
+          set -e  # 遇到错误立即退出
+          echo "进入项目目录..."
           cd /opt/auto-gallery
-          echo "Pulling latest code..."
+          echo "拉取最新代码..."
           git pull origin main
-          echo "Stopping services..."
+          echo "停止服务..."
           docker-compose down
-          echo "Starting services..."
+          echo "启动服务..."
           docker-compose up -d
-          echo "Checking service status..."
+          echo "等待服务启动..."
+          sleep 10
+          echo "检查服务状态..."
           docker-compose ps
-          echo "Deployment completed!"
+          echo "部署完成!"
         EOF
+        
+        echo "部署步骤完成"
         
     - name: Health check
       run: |
-        echo "Performing health checks..."
+        echo "开始健康检查..."
         sleep 30
-        curl -f http://${{ secrets.SERVER_HOST }}:8080/health || echo "Frontend health check failed"
-        curl -f http://${{ secrets.SERVER_HOST }}:3001/api/health || echo "Backend health check failed"
+        echo "检查前端健康状态..."
+        curl -f http://${{ secrets.SERVER_HOST }}:8080/health || echo "前端健康检查失败"
+        echo "检查后端健康状态..."
+        curl -f http://${{ secrets.SERVER_HOST }}:3001/api/health || echo "后端健康检查失败"
+        echo "健康检查完成"

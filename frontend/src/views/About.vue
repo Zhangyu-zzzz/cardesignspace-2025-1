@@ -8,7 +8,7 @@
           CarDesignSpace 是全球汽车设计爱好者的灵感库与创意社区，
         </p>
         <p class="main-subtitle">
-          我们因热爱而汇聚于此。
+          我们因而汇聚于此。
         </p>
       </div>
     </div>

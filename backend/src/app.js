@@ -80,6 +80,8 @@ app.use('/api/search', require('./routes/searchRoutes'));
 app.use('/api/notifications', require('./routes/notificationRoutes'));
 app.use('/api/articles', require('./routes/articleRoutes'));
 app.use('/api/inspiration', require('./routes/inspirationRoutes'));
+app.use('/api/image-tags', require('./routes/imageTagRoutes'));
+app.use('/api/image-gallery', require('./routes/imageGalleryRoutes'));
 
 console.log('所有API路由已加载完成');
 

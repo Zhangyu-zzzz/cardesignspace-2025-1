@@ -52,6 +52,11 @@ const Image = sequelize.define('Image', {
   uploadDate: {
     type: DataTypes.DATE,
     defaultValue: DataTypes.NOW
+  },
+  tags: {
+    type: DataTypes.JSON,
+    defaultValue: [],
+    comment: '图片标签数组'
   }
 }, {
   tableName: 'images',

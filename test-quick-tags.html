@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>快速标签功能预览</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .demo-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #e9ecef;
+            border-radius: 6px;
+        }
+        
+        .demo-title {
+            font-weight: bold;
+            color: #495057;
+            margin-bottom: 15px;
+            font-size: 16px;
+        }
+        
+        /* 批量操作快速标签样式 */
+        .quick-tags {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 6px;
+            border: 1px solid #e9ecef;
+        }
+        
+        .tag-category {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        .tag-category label {
+            font-weight: bold;
+            color: #495057;
+            font-size: 14px;
+        }
+        
+        .tag-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        
+        .tag-btn {
+            padding: 6px 12px;
+            border: 1px solid #dee2e6;
+            border-radius: 20px;
+            background: white;
+            color: #495057;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 12px;
+        }
+        
+        .tag-btn:hover {
+            background: #e9ecef;
+            border-color: #adb5bd;
+        }
+        
+        .tag-btn.active {
+            background: #007bff;
+            color: white;
+            border-color: #007bff;
+        }
+        
+        .quick-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .btn-primary {
+            padding: 8px 16px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        
+        .btn-secondary {
+            padding: 8px 16px;
+            background: #6c757d;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        
+        /* 单张图片快速标签样式 */
+        .quick-tag-selector {
+            margin: 8px 0;
+            padding: 8px;
+            background: #f8f9fa;
+            border-radius: 4px;
+            border: 1px solid #e9ecef;
+        }
+        
+        .quick-tag-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 6px;
+        }
+        
+        .quick-tag-row:last-child {
+            margin-bottom: 0;
+        }
+        
+        .quick-tag-label {
+            font-size: 11px;
+            color: #666;
+            min-width: 30px;
+            font-weight: bold;
+        }
+        
+        .mini-tag-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+        }
+        
+        .mini-tag-btn {
+            padding: 2px 6px;
+            border: 1px solid #dee2e6;
+            border-radius: 12px;
+            background: white;
+            color: #495057;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 10px;
+            line-height: 1.2;
+        }
+        
+        .mini-tag-btn:hover {
+            background: #007bff;
+            color: white;
+            border-color: #007bff;
+        }
+        
+        .image-card {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            background: white;
+        }
+        
+        .image-info {
+            margin-bottom: 10px;
+        }
+        
+        .model-info {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .filename {
+            font-size: 12px;
+            color: #999;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>图片标签管理 - 快速标签功能预览</h1>
+        
+        <!-- 批量操作演示 -->
+        <div class="demo-section">
+            <div class="demo-title">批量操作 - 快速标签选择</div>
+            <div class="quick-tags">
+                <div class="tag-category">
+                    <label>图片类型:</label>
+                    <div class="tag-buttons">
+                        <button class="tag-btn">外型</button>
+                        <button class="tag-btn">内饰</button>
+                        <button class="tag-btn">零部件</button>
+                        <button class="tag-btn">其他</button>
+                    </div>
+                </div>
+                
+                <div class="tag-category">
+                    <label>拍摄角度:</label>
+                    <div class="tag-buttons">
+                        <button class="tag-btn">正前</button>
+                        <button class="tag-btn">正侧</button>
+                        <button class="tag-btn">正后</button>
+                        <button class="tag-btn">前45</button>
+                        <button class="tag-btn">后45</button>
+                        <button class="tag-btn">俯侧</button>
+                        <button class="tag-btn">顶视</button>
+                    </div>
+                </div>
+                
+                <div class="quick-actions">
+                    <button class="btn-primary">应用选中标签</button>
+                    <button class="btn-secondary">清空选择</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 单张图片演示 -->
+        <div class="demo-section">
+            <div class="demo-title">单张图片 - 快速标签选择</div>
+            <div class="image-card">
+                <div class="image-info">
+                    <div class="model-info">BMW X5</div>
+                    <div class="filename">bmw_x5_front.jpg</div>
+                </div>
+                
+                <div class="quick-tag-selector">
+                    <div class="quick-tag-row">
+                        <span class="quick-tag-label">类型:</span>
+                        <div class="mini-tag-buttons">
+                            <button class="mini-tag-btn">外型</button>
+                            <button class="mini-tag-btn">内饰</button>
+                            <button class="mini-tag-btn">零部件</button>
+                            <button class="mini-tag-btn">其他</button>
+                        </div>
+                    </div>
+                    <div class="quick-tag-row">
+                        <span class="quick-tag-label">角度:</span>
+                        <div class="mini-tag-buttons">
+                            <button class="mini-tag-btn">正前</button>
+                            <button class="mini-tag-btn">正侧</button>
+                            <button class="mini-tag-btn">正后</button>
+                            <button class="mini-tag-btn">前45</button>
+                            <button class="mini-tag-btn">后45</button>
+                            <button class="mini-tag-btn">俯侧</button>
+                            <button class="mini-tag-btn">顶视</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 功能说明 -->
+        <div class="demo-section">
+            <div class="demo-title">功能说明</div>
+            <ul>
+                <li><strong>批量操作</strong>: 选择多张图片后，可以使用快速标签按钮批量添加标签</li>
+                <li><strong>单张操作</strong>: 每张图片都有快速标签选择器，可以快速添加常用标签</li>
+                <li><strong>图片类型</strong>: 外型、内饰、零部件、其他</li>
+                <li><strong>拍摄角度</strong>: 正前、正侧、正后、前45、后45、俯侧、顶视</li>
+                <li><strong>自定义标签</strong>: 除了预设标签，还可以输入自定义标签</li>
+            </ul>
+        </div>
+    </div>
+    
+    <script>
+        // 简单的交互演示
+        document.querySelectorAll('.tag-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                this.classList.toggle('active');
+            });
+        });
+        
+        document.querySelectorAll('.mini-tag-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                alert('添加标签: ' + this.textContent);
+            });
+        });
+    </script>
+</body>
+</html>

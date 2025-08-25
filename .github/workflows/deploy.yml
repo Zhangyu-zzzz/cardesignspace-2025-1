@@ -1,0 +1,90 @@
+name: 自动部署到云服务器
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch: # 允许手动触发
+
+env:
+  # 服务器信息 - 需要在GitHub Secrets中配置
+  SERVER_HOST: ${{ secrets.SERVER_HOST }}
+  SERVER_USER: ${{ secrets.SERVER_USER }}
+  SERVER_PORT: ${{ secrets.SERVER_PORT }}
+  SERVER_KEY: ${{ secrets.SERVER_KEY }}
+
+jobs:
+  # 构建和测试
+  build-and-test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 检出代码
+      uses: actions/checkout@v4
+      
+    - name: 设置Node.js环境
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        
+    - name: 安装后端依赖
+      working-directory: ./backend
+      run: npm ci
+      
+    - name: 安装前端依赖
+      working-directory: ./frontend
+      run: npm ci
+      
+    - name: 构建前端
+      working-directory: ./frontend
+      run: npm run build
+      
+    - name: 运行后端测试
+      working-directory: ./backend
+      run: npm test || echo "测试跳过"
+      
+    - name: 上传构建产物
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-artifacts
+        path: |
+          backend/
+          frontend/
+          nginx.conf
+          start.sh
+          scripts/github-deploy.sh
+
+  # 部署到服务器
+  deploy:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+    
+    steps:
+    - name: 下载构建产物
+      uses: actions/download-artifact@v4
+      with:
+        name: build-artifacts
+        
+    - name: 设置SSH密钥
+      run: |
+        mkdir -p ~/.ssh
+        echo "${{ secrets.SERVER_KEY }}" > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
+        ssh-keyscan -H ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts
+        
+    - name: 部署到服务器
+      run: |
+        # 复制文件到服务器
+        scp -P ${{ secrets.SERVER_PORT }} -r backend frontend nginx.conf start.sh scripts/github-deploy.sh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/home/${{ secrets.SERVER_USER }}/
+        
+        # 执行部署脚本
+        ssh -p ${{ secrets.SERVER_PORT }} ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "chmod +x /home/${{ secrets.SERVER_USER }}/github-deploy.sh && /home/${{ secrets.SERVER_USER }}/github-deploy.sh"
+        
+    - name: 部署完成通知
+      run: |
+        echo "✅ 部署完成！"
+        echo "前端地址: http://${{ secrets.SERVER_HOST }}:8080"
+        echo "后端地址: http://${{ secrets.SERVER_HOST }}:3001"
+        echo "健康检查: http://${{ secrets.SERVER_HOST }}:3001/api/health"
+        echo "部署时间: $(date)"

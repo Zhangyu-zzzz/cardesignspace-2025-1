@@ -6,8 +6,8 @@ WORKDIR /app
 # 复制依赖文件
 COPY package*.json ./
 
-# 安装依赖
-RUN npm ci --only=production
+# 安装所有依赖（包括开发依赖，因为构建需要vue-cli-service）
+RUN npm ci
 
 # 复制源代码和环境配置
 COPY . .

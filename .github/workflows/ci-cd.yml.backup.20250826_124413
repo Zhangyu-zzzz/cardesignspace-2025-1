@@ -1,4 +1,4 @@
-name: CI/CD Pipeline (Improved)
+name: CI/CD Pipeline
 
 on:
   push:
@@ -49,57 +49,16 @@ jobs:
           set -e  # 遇到错误立即退出
           echo "进入项目目录..."
           cd /opt/auto-gallery
-          
-          echo "备份当前状态..."
-          if [ -f frontend/public/index.html ]; then
-            cp frontend/public/index.html frontend/public/index.html.backup.$(date +%Y%m%d_%H%M%S)
-            echo "已备份 index.html"
-          fi
-          
           echo "拉取最新代码..."
-          git fetch origin
-          git reset --hard origin/main
-          git clean -fd
-          
-          echo "停止所有服务..."
+          git pull origin main
+          echo "停止服务..."
           docker-compose down
-          
-          echo "删除旧的前端镜像（如果存在）..."
-          docker rmi auto-gallery-frontend || echo "前端镜像不存在，跳过删除"
-          
-          echo "删除旧的后端镜像（如果存在）..."
-          docker rmi auto-gallery-backend || echo "后端镜像不存在，跳过删除"
-          
-          echo "重新构建前端镜像..."
-          docker-compose build --no-cache frontend
-          
-          echo "重新构建后端镜像..."
-          docker-compose build --no-cache backend
-          
-          echo "启动所有服务..."
+          echo "启动服务..."
           docker-compose up -d
-          
           echo "等待服务启动..."
-          sleep 15
-          
+          sleep 10
           echo "检查服务状态..."
           docker-compose ps
-          
-          echo "检查服务健康状态..."
-          docker-compose ps --format "table {{.Name}}\t{{.Status}}\t{{.Ports}}"
-          
-          echo "测试前端服务..."
-          curl -s -o /dev/null -w "前端HTTP状态码: %{http_code}\n" http://localhost:8080 || echo "前端服务连接失败"
-          
-          echo "测试后端服务..."
-          curl -s -o /dev/null -w "后端HTTP状态码: %{http_code}\n" http://localhost:3001 || echo "后端服务连接失败"
-          
-          echo "检查构建后的index.html..."
-          docker exec auto-gallery-frontend cat /usr/share/nginx/html/index.html | head -5
-          
-          echo "检查百度统计代码..."
-          docker exec auto-gallery-frontend cat /usr/share/nginx/html/index.html | grep -i "hm.baidu.com" || echo "未找到百度统计代码"
-          
           echo "部署完成!"
         EOF
         
@@ -113,6 +72,4 @@ jobs:
         curl -f http://${{ secrets.SERVER_HOST }}:8080/health || echo "前端健康检查失败"
         echo "检查后端健康状态..."
         curl -f http://${{ secrets.SERVER_HOST }}:3001/api/health || echo "后端健康检查失败"
-        echo "检查域名访问..."
-        curl -s -o /dev/null -w "域名HTTP状态码: %{http_code}\n" https://www.cardesignspace.com || echo "域名访问失败"
         echo "健康检查完成"

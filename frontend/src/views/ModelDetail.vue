@@ -77,11 +77,12 @@
               class="image-card"
               @click="openImageViewer(index)"
             >
-              <img 
-                :src="getImageUrl(image)" 
-                :alt="image.title || model.name"
-                class="grid-image"
-              />
+                          <img 
+              :src="getImageUrl(image)" 
+              :alt="image.title || model.name"
+              class="grid-image"
+              @contextmenu="handleImageContextMenu($event, image)"
+            />
               <!-- 添加图片信息覆盖层 -->
               <div class="image-overlay">
                 <div class="image-title" v-if="image.title">{{ image.title }}</div>
@@ -170,7 +171,8 @@
   
   <script>
   import { brandAPI, modelAPI, imageAPI } from '@/services/api';
-  import ImageViewer from '@/components/ImageViewer.vue';
+import ImageViewer from '@/components/ImageViewer.vue';
+import imageContextMenu from '@/utils/imageContextMenu';
   
   export default {
     name: 'ModelDetail',
@@ -467,6 +469,16 @@
       },
       closeImageViewer() {
         this.imageViewerVisible = false;
+      },
+      
+      // 处理图片右键菜单
+      handleImageContextMenu(event, image) {
+        const imageUrl = this.getImageUrl(image);
+        const imageTitle = image.title || this.model.name;
+        
+        imageContextMenu.show(event, imageUrl, {
+          title: imageTitle
+        });
       }
     },
     mounted() {

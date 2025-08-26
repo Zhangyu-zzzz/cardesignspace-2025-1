@@ -28,7 +28,14 @@
             <p v-if="brand.country" class="country">国家: {{ brand.country }}</p>
             <p v-if="brand.founded_year" class="year">成立年份: {{ brand.founded_year }}</p>
             <p v-if="brand.description" class="description">{{ brand.description }}</p>
-            <router-link :to="'/brands/' + brand.id" class="view-details">查看详情</router-link>
+            <a 
+              href="#" 
+              class="view-details" 
+              @click="$handleLinkClick($event, `/brand/${brand.id}`)"
+              @contextmenu="$handleLinkContextMenu($event, `/brand/${brand.id}`)"
+            >
+              查看详情
+            </a>
           </div>
         </div>
       </div>

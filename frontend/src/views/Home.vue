@@ -20,7 +20,8 @@
           :key="item.type + '-' + item.id"
           :class="{ active: currentSlide === index }"
           :style="{ transform: `translateX(${(index - currentSlide) * 100}%)` }"
-          @click="goToModel(item.id)"
+          @click="$handleLinkClick($event, `/model/${item.id}`)"
+          @contextmenu="$handleLinkContextMenu($event, `/model/${item.id}`)"
         >
           <div class="slide-image-container">
             <!-- 车型图片 -->
@@ -53,7 +54,7 @@
                 <div class="content-type-badge model-badge">最新上传</div>
                 <h2 class="slide-title">{{ item.name }}</h2>
                 <p class="slide-brand">{{ item.Brand ? item.Brand.name : '未知品牌' }}</p>
-                <button class="view-details-btn" @click.stop="goToModel(item.id)">
+                <button class="view-details-btn" @click.stop="$handleLinkClick($event, `/model/${item.id}`)">
                   查看详情
                   <i class="el-icon-arrow-right"></i>
                 </button>
@@ -164,7 +165,8 @@
               class="brand-card" 
               v-for="brand in filteredBrands" 
               :key="brand.id" 
-              @click="goToBrand(brand.id)"
+              @click="$handleLinkClick($event, `/brand/${brand.id}`)"
+              @contextmenu="$handleLinkContextMenu($event, `/brand/${brand.id}`)"
               :data-brand-id="brand.id"
             >
               <div class="brand-logo">
@@ -270,7 +272,8 @@
             v-for="model in displayModels" 
             :key="model.id"
             :data-model-id="model.id"
-            @click="goToModel(model.id)"
+            @click="$handleLinkClick($event, `/model/${model.id}`)"
+            @contextmenu="$handleLinkContextMenu($event, `/model/${model.id}`)"
           >
             <div class="model-display-image">
               <img 

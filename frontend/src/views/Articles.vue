@@ -87,7 +87,8 @@
             v-for="article in featuredArticles"
             :key="article.id"
             class="featured-article"
-            @click="goToArticle(article.id)"
+            @click="$handleLinkClick($event, `/articles/${article.id}`)"
+            @contextmenu="$handleLinkContextMenu($event, `/articles/${article.id}`)"
           >
             <div class="featured-image">
               <img :src="article.coverImage || '/default-article-cover.jpg'" :alt="article.title">
@@ -118,7 +119,8 @@
             v-for="article in articles"
             :key="article.id"
             class="article-card"
-            @click="goToArticle(article.id)"
+            @click="$handleLinkClick($event, `/articles/${article.id}`)"
+            @contextmenu="$handleLinkContextMenu($event, `/articles/${article.id}`)"
           >
             <div class="article-image">
               <img :src="article.coverImage || '/default-article-cover.jpg'" :alt="article.title">

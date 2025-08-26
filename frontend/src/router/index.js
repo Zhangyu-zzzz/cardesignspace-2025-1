@@ -124,6 +124,24 @@ const routes = [
     name: 'ImageGallery',
     component: () => import('../views/ImageGallery.vue'),
     meta: { requiresAuth: false }
+  },
+  {
+    path: '/test-links',
+    name: 'TestLinks',
+    component: () => import('../views/TestLinks.vue'),
+    meta: { requiresAuth: false }
+  },
+  {
+    path: '/image-viewer',
+    name: 'ImageViewer',
+    component: () => import('../views/ImageViewer.vue'),
+    meta: { requiresAuth: false }
+  },
+  {
+    path: '/test-image-context-menu',
+    name: 'TestImageContextMenu',
+    component: () => import('../views/TestImageContextMenu.vue'),
+    meta: { requiresAuth: false }
   }
 ]
 

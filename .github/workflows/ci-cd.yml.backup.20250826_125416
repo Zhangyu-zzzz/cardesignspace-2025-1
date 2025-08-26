@@ -1,4 +1,4 @@
-name: CI/CD Pipeline (Smart)
+name: CI/CD Pipeline (Improved)
 
 on:
   push:
@@ -44,7 +44,7 @@ jobs:
         ssh -o ConnectTimeout=10 $SERVER_USER@$SERVER_HOST "echo 'SSH连接成功'"
         
         # 连接到服务器并部署
-        echo "开始执行智能部署命令..."
+        echo "开始执行部署命令..."
         ssh $SERVER_USER@$SERVER_HOST << 'EOF'
           set -e  # 遇到错误立即退出
           echo "进入项目目录..."
@@ -61,68 +61,26 @@ jobs:
           git reset --hard origin/main
           git clean -fd
           
-          echo "检查是否需要重新构建..."
+          echo "停止所有服务..."
+          docker-compose down
           
-          # 检查前端代码是否有变化
-          FRONTEND_CHANGED=false
-          if [ -d "frontend" ]; then
-            # 检查前端源代码、配置文件等关键文件
-            if git diff --name-only HEAD~1 | grep -E "^(frontend/src|frontend/public|frontend/package.json|frontend/vue.config.js)" > /dev/null; then
-              FRONTEND_CHANGED=true
-              echo "检测到前端代码变化，需要重新构建前端"
-            fi
-          fi
+          echo "删除旧的前端镜像（如果存在）..."
+          docker rmi auto-gallery-frontend || echo "前端镜像不存在，跳过删除"
           
-          # 检查后端代码是否有变化
-          BACKEND_CHANGED=false
-          if [ -d "backend" ]; then
-            # 检查后端源代码、配置文件等关键文件
-            if git diff --name-only HEAD~1 | grep -E "^(backend/src|backend/package.json|backend/app.js)" > /dev/null; then
-              BACKEND_CHANGED=true
-              echo "检测到后端代码变化，需要重新构建后端"
-            fi
-          fi
+          echo "删除旧的后端镜像（如果存在）..."
+          docker rmi auto-gallery-backend || echo "后端镜像不存在，跳过删除"
           
-          # 如果没有检测到变化，检查Docker镜像是否存在
-          if [ "$FRONTEND_CHANGED" = false ] && [ "$BACKEND_CHANGED" = false ]; then
-            echo "代码无变化，检查是否需要首次构建..."
-            if ! docker images | grep -q "auto-gallery-frontend"; then
-              FRONTEND_CHANGED=true
-              echo "前端镜像不存在，需要构建"
-            fi
-            if ! docker images | grep -q "auto-gallery-backend"; then
-              BACKEND_CHANGED=true
-              echo "后端镜像不存在，需要构建"
-            fi
-          fi
+          echo "重新构建前端镜像..."
+          docker-compose build --no-cache frontend
           
-          if [ "$FRONTEND_CHANGED" = true ] || [ "$BACKEND_CHANGED" = true ]; then
-            echo "需要重新构建，停止服务..."
-            docker-compose down
-            
-            if [ "$FRONTEND_CHANGED" = true ]; then
-              echo "重新构建前端镜像..."
-              docker-compose build --no-cache frontend
-            else
-              echo "前端代码无变化，跳过前端构建"
-            fi
-            
-            if [ "$BACKEND_CHANGED" = true ]; then
-              echo "重新构建后端镜像..."
-              docker-compose build --no-cache backend
-            else
-              echo "后端代码无变化，跳过后端构建"
-            fi
-            
-            echo "启动服务..."
-            docker-compose up -d
-          else
-            echo "代码无变化，仅重启服务..."
-            docker-compose restart
-          fi
+          echo "重新构建后端镜像..."
+          docker-compose build --no-cache backend
+          
+          echo "启动所有服务..."
+          docker-compose up -d
           
           echo "等待服务启动..."
-          sleep 10
+          sleep 15
           
           echo "检查服务状态..."
           docker-compose ps
@@ -142,7 +100,7 @@ jobs:
           echo "检查百度统计代码..."
           docker exec auto-gallery-frontend cat /usr/share/nginx/html/index.html | grep -i "hm.baidu.com" || echo "未找到百度统计代码"
           
-          echo "智能部署完成!"
+          echo "部署完成!"
         EOF
         
         echo "部署步骤完成"

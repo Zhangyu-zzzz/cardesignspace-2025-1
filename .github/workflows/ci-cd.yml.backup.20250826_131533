@@ -1,4 +1,4 @@
-name: CI/CD Pipeline (Stable)
+name: CI/CD Pipeline (Smart)
 
 on:
   push:
@@ -9,7 +9,6 @@ on:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 30  # 设置30分钟超时
     
     steps:
     - name: Checkout code
@@ -45,8 +44,8 @@ jobs:
         ssh -o ConnectTimeout=10 $SERVER_USER@$SERVER_HOST "echo 'SSH连接成功'"
         
         # 连接到服务器并部署
-        echo "开始执行稳定部署命令..."
-        ssh -o ServerAliveInterval=60 -o ServerAliveCountMax=10 $SERVER_USER@$SERVER_HOST << 'EOF'
+        echo "开始执行智能部署命令..."
+        ssh $SERVER_USER@$SERVER_HOST << 'EOF'
           set -e  # 遇到错误立即退出
           echo "进入项目目录..."
           cd /opt/auto-gallery
@@ -101,11 +100,9 @@ jobs:
             echo "需要重新构建，停止服务..."
             docker-compose down
             
-            # 分步构建，避免同时构建导致资源不足
             if [ "$FRONTEND_CHANGED" = true ]; then
               echo "重新构建前端镜像..."
               docker-compose build --no-cache frontend
-              echo "前端镜像构建完成"
             else
               echo "前端代码无变化，跳过前端构建"
             fi
@@ -113,7 +110,6 @@ jobs:
             if [ "$BACKEND_CHANGED" = true ]; then
               echo "重新构建后端镜像..."
               docker-compose build --no-cache backend
-              echo "后端镜像构建完成"
             else
               echo "后端代码无变化，跳过后端构建"
             fi
@@ -126,7 +122,7 @@ jobs:
           fi
           
           echo "等待服务启动..."
-          sleep 15
+          sleep 10
           
           echo "检查服务状态..."
           docker-compose ps
@@ -146,7 +142,7 @@ jobs:
           echo "检查百度统计代码..."
           docker exec auto-gallery-frontend cat /usr/share/nginx/html/index.html | grep -i "hm.baidu.com" || echo "未找到百度统计代码"
           
-          echo "稳定部署完成!"
+          echo "智能部署完成!"
         EOF
         
         echo "部署步骤完成"

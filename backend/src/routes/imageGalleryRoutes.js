@@ -15,3 +15,4 @@ router.get('/popular-tags', imageGalleryController.getPopularTags);
 router.get('/images/:id', imageGalleryController.getImageDetail);
 
 module.exports = router;
+

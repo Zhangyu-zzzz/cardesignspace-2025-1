@@ -25,6 +25,7 @@
           @error="handleImageError"
           draggable="false"
           @mousedown="handleMouseDown"
+          @contextmenu="handleImageContextMenu"
         />
         
         <!-- 加载中 -->
@@ -174,6 +175,7 @@
 
 <script>
 import { apiClient } from '@/services/api';
+import imageContextMenu from '@/utils/imageContextMenu';
 
 export default {
   name: 'ImageViewer',
@@ -254,6 +256,18 @@ export default {
       this.imageLoading = false;
       this.imageError = false;
       this.autoFitImage();
+    },
+    
+    // 处理图片右键菜单
+    handleImageContextMenu(event) {
+      if (!this.currentImage) return;
+      
+      const imageUrl = this.currentImageUrl;
+      const imageTitle = this.currentImage.title || '图片';
+      
+      imageContextMenu.show(event, imageUrl, {
+        title: imageTitle
+      });
     },
     
     handleImageError() {

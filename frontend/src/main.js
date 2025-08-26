@@ -12,8 +12,14 @@ import 'quill/dist/quill.core.css'
 import 'quill/dist/quill.snow.css'
 import 'quill/dist/quill.bubble.css'
 
+// 导入链接指令和mixin
+import { installLinkDirective } from './utils/linkDirective'
+import { installLinkMixin } from './utils/linkMixin'
+
 Vue.use(ElementUI)
 Vue.use(VueQuillEditor)
+installLinkDirective(Vue)
+installLinkMixin(Vue)
 Vue.config.productionTip = false
 
 // 创建Vue实例前检查并恢复用户认证状态

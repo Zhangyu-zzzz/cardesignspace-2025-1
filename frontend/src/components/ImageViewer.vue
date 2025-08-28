@@ -16,6 +16,16 @@
 
       <!-- 图片显示区域 -->
       <div class="image-display-area" ref="imageContainer">
+        <!-- 左侧导航按钮 -->
+        <button 
+          v-if="images.length > 1"
+          class="side-nav-btn left-nav-btn"
+          :disabled="currentIndex === 0"
+          @click="prevImage"
+        >
+          <i class="el-icon-arrow-left"></i>
+        </button>
+
         <img 
           ref="imageElement"
           :src="currentImageUrl" 
@@ -27,6 +37,16 @@
           @mousedown="handleMouseDown"
           @contextmenu="handleImageContextMenu"
         />
+        
+        <!-- 右侧导航按钮 -->
+        <button 
+          v-if="images.length > 1"
+          class="side-nav-btn right-nav-btn"
+          :disabled="currentIndex === images.length - 1"
+          @click="nextImage"
+        >
+          <i class="el-icon-arrow-right"></i>
+        </button>
         
         <!-- 加载中 -->
         <div v-if="imageLoading" class="image-loading">
@@ -43,26 +63,6 @@
 
       <!-- 底部控制栏 -->
       <div class="image-controls">
-        <!-- 导航按钮 -->
-        <div class="navigation-controls">
-          <button 
-            class="control-btn"
-            :disabled="currentIndex === 0"
-            @click="prevImage"
-          >
-            <i class="el-icon-arrow-left"></i>
-            <span>上一张</span>
-          </button>
-          <button 
-            class="control-btn"
-            :disabled="currentIndex === images.length - 1"
-            @click="nextImage"
-          >
-            <i class="el-icon-arrow-right"></i>
-            <span>下一张</span>
-          </button>
-        </div>
-
         <!-- 主要控制按钮 -->
         <div class="main-controls">
           <button class="control-btn" @click="zoomOut" :disabled="scale <= 0.1">
@@ -672,6 +672,53 @@ export default {
   object-fit: contain;
 }
 
+.side-nav-btn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background-color: rgba(0, 0, 0, 0.6);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  color: white;
+  font-size: 28px;
+  cursor: pointer;
+  padding: 16px;
+  border-radius: 50%;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  width: 60px;
+  height: 60px;
+}
+
+.side-nav-btn:hover:not(:disabled) {
+  background-color: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.5);
+  transform: translateY(-50%) scale(1.1);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+}
+
+.side-nav-btn:active:not(:disabled) {
+  transform: translateY(-50%) scale(0.95);
+}
+
+.side-nav-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+  transform: translateY(-50%) scale(0.9);
+}
+
+.left-nav-btn {
+  left: 30px;
+}
+
+.right-nav-btn {
+  right: 30px;
+}
+
 .image-loading,
 .image-error {
   display: flex;
@@ -699,17 +746,23 @@ export default {
 /* 底部控制栏 */
 .image-controls {
   display: flex;
-  justify-content: space-between;
+  justify-content: center;
   align-items: center;
   padding: 16px 20px;
   background-color: rgba(0, 0, 0, 0.7);
   backdrop-filter: blur(10px);
+  position: relative;
 }
 
 .navigation-controls,
 .main-controls {
   display: flex;
   gap: 8px;
+}
+
+.main-controls {
+  justify-content: center;
+  flex-wrap: wrap;
 }
 
 .control-btn {
@@ -762,7 +815,11 @@ export default {
   color: #ccc;
   font-size: 14px;
   min-width: 50px;
-  text-align: right;
+  text-align: center;
+  position: absolute;
+  right: 20px;
+  top: 50%;
+  transform: translateY(-50%);
 }
 
 /* 抠图结果对话框 */
@@ -856,6 +913,10 @@ export default {
     gap: 12px;
   }
   
+  .zoom-info {
+    right: 12px;
+  }
+  
   .navigation-controls,
   .main-controls {
     gap: 6px;
@@ -872,6 +933,22 @@ export default {
   
   .control-btn span {
     font-size: 10px;
+  }
+  
+  /* 侧边导航按钮在平板上的样式 */
+  .side-nav-btn {
+    width: 50px;
+    height: 50px;
+    font-size: 24px;
+    padding: 12px;
+  }
+  
+  .left-nav-btn {
+    left: 20px;
+  }
+  
+  .right-nav-btn {
+    right: 20px;
   }
   
   .result-images {
@@ -893,6 +970,28 @@ export default {
   .image-controls {
     flex-direction: column;
     gap: 8px;
+  }
+  
+  .zoom-info {
+    position: static;
+    transform: none;
+    margin-top: 8px;
+  }
+  
+  /* 侧边导航按钮在手机上的样式 */
+  .side-nav-btn {
+    width: 40px;
+    height: 40px;
+    font-size: 20px;
+    padding: 8px;
+  }
+  
+  .left-nav-btn {
+    left: 10px;
+  }
+  
+  .right-nav-btn {
+    right: 10px;
   }
 }
 </style> 

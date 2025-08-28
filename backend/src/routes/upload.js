@@ -64,16 +64,16 @@ router.get('/images', optionalAuth, uploadController.getImagesList);
 
 // ==================== 品牌管理路由 ====================
 router.get('/brands', uploadController.getAllBrands);
-router.post('/brands', uploadController.createBrand);
-router.put('/brands/:id', uploadController.updateBrand);
-router.delete('/brands/:id', uploadController.deleteBrand);
+router.post('/brands', authenticateToken, uploadController.createBrand);
+router.put('/brands/:id', authenticateToken, uploadController.updateBrand);
+router.delete('/brands/:id', authenticateToken, uploadController.deleteBrand);
 // 品牌Logo上传路由 - 使用独立的multer配置
 router.post('/brands/:id/logo', logoUpload.single('logo'), uploadController.uploadBrandLogo);
 
 // ==================== 车型管理路由 ====================
 router.get('/brands/:brandId/models', uploadController.getModelsByBrand);
-router.post('/models', uploadController.createModel);
-router.put('/models/:id', uploadController.updateModel);
-router.delete('/models/:id', uploadController.deleteModel);
+router.post('/models', authenticateToken, uploadController.createModel);
+router.put('/models/:id', authenticateToken, uploadController.updateModel);
+router.delete('/models/:id', authenticateToken, uploadController.deleteModel);
 
 module.exports = router; 

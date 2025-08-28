@@ -911,26 +911,7 @@
 </template>
 
 <script>
-import axios from 'axios'
-
-// 创建带有认证的axios实例
-const apiClient = axios.create({
-  baseURL: 'http://localhost:3000/api'
-})
-
-// 添加请求拦截器
-apiClient.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem('token')
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`
-    }
-    return config
-  },
-  (error) => {
-    return Promise.reject(error)
-  }
-)
+import { apiClient } from '@/services/api'
 
 export default {
   name: 'ComprehensiveManagement',
@@ -1150,8 +1131,8 @@ export default {
       this.brandsLoading = true
       try {
         const response = await apiClient.get('/upload/brands')
-        if (response.data.status === 'success') {
-          this.brands = response.data.data
+        if (response.status === 'success') {
+          this.brands = response.data
         }
       } catch (error) {
         console.error('加载品牌列表失败:', error)
@@ -1194,24 +1175,24 @@ export default {
           const url = `/upload/brands/${this.brandDialog.form.id}`
           const response = await apiClient.put(url, this.brandDialog.form)
           
-          if (response.data.status === 'success') {
+          if (response.status === 'success') {
             // 如果有新的logo需要上传
             if (this.selectedLogoFile) {
               await this.uploadLogoForBrand(this.brandDialog.form.id)
             }
             
-            this.$message.success(response.data.message)
+            this.$message.success(response.message)
             this.brandDialog.visible = false
             this.loadBrands()
           } else {
-            this.$message.error(response.data.message)
+            this.$message.error(response.message)
           }
         } else {
           // 新建品牌 - 先创建品牌，如果有logo则立即上传
           const response = await apiClient.post('/upload/brands', this.brandDialog.form)
           
-          if (response.data.status === 'success') {
-            const newBrand = response.data.data
+          if (response.status === 'success') {
+            const newBrand = response.data
             
             // 如果用户选择了logo文件，立即上传
             if (this.selectedLogoFile) {
@@ -1229,7 +1210,7 @@ export default {
             this.brandDialog.visible = false
             this.loadBrands()
           } else {
-            this.$message.error(response.data.message)
+            this.$message.error(response.message)
           }
         }
       } catch (error) {
@@ -1257,14 +1238,14 @@ export default {
         }
       )
       
-      if (response.data.status === 'success') {
+      if (response.status === 'success') {
         // 更新品牌信息
-        this.brandDialog.form.logo = response.data.data.logo
+        this.brandDialog.form.logo = response.data.logo
         // 清理上传状态
         this.cancelLogoUpload()
-        return response.data
+        return response
       } else {
-        throw new Error(response.data.message || 'Logo上传失败')
+        throw new Error(response.message || 'Logo上传失败')
       }
     },
     
@@ -1281,11 +1262,11 @@ export default {
         )
         
         const response = await apiClient.delete(`/upload/brands/${brand.id}`)
-        if (response.data.status === 'success') {
+        if (response.status === 'success') {
           this.$message.success('品牌删除成功')
           this.loadBrands()
         } else {
-          this.$message.error(response.data.message)
+          this.$message.error(response.message)
         }
       } catch (error) {
         if (error !== 'cancel') {
@@ -1311,8 +1292,8 @@ export default {
       this.modelsLoading = true
       try {
         const response = await apiClient.get(`/upload/brands/${this.selectedBrandId}/models`)
-        if (response.data.status === 'success') {
-          this.models = response.data.data
+        if (response.status === 'success') {
+          this.models = response.data
         }
       } catch (error) {
         console.error('加载车型列表失败:', error)
@@ -1361,12 +1342,12 @@ export default {
         
         const response = await apiClient[method](url, modelData)
         
-        if (response.data.status === 'success') {
-          this.$message.success(response.data.message)
+        if (response.status === 'success') {
+          this.$message.success(response.message)
           this.modelDialog.visible = false
           this.loadModelsByBrand()
         } else {
-          this.$message.error(response.data.message)
+          this.$message.error(response.message)
         }
       } catch (error) {
         console.error('保存车型失败:', error)
@@ -1389,11 +1370,11 @@ export default {
         )
         
         const response = await apiClient.delete(`/upload/models/${model.id}`)
-        if (response.data.status === 'success') {
+        if (response.status === 'success') {
           this.$message.success('车型删除成功')
           this.loadModelsByBrand()
         } else {
-          this.$message.error(response.data.message)
+          this.$message.error(response.message)
         }
       } catch (error) {
         if (error !== 'cancel') {
@@ -1590,13 +1571,13 @@ export default {
         }
       })
       
-      if (response.data.status === 'success') {
+      if (response.status === 'success') {
         this.$message.success('图片上传成功')
         this.uploadDialog.visible = false
         this.resetUploadForm()
         this.loadImages()
       } else {
-        this.$message.error(response.data.message || '上传失败')
+        this.$message.error(response.message || '上传失败')
       }
     },
     
@@ -1644,14 +1625,14 @@ export default {
             }
           })
           
-          if (response.data.status === 'success') {
+          if (response.status === 'success') {
             this.uploadProgress.successCount++
             results.push({ success: true, filename: fileItem.name })
             console.log(`文件 ${fileItem.name} 上传成功`);
           } else {
             this.uploadProgress.errorCount++
-            results.push({ success: false, filename: fileItem.name, error: response.data.message })
-            console.log(`文件 ${fileItem.name} 上传失败:`, response.data.message);
+            results.push({ success: false, filename: fileItem.name, error: response.message })
+            console.log(`文件 ${fileItem.name} 上传失败:`, response.message);
           }
         } catch (error) {
           this.uploadProgress.errorCount++
@@ -1729,14 +1710,14 @@ export default {
             }
           })
           
-          if (response.data.status === 'success') {
+          if (response.status === 'success') {
             this.uploadProgress.successCount++
             results.push({ success: true, filename: fileItem.name })
             console.log(`文件 ${fileItem.name} 上传成功`);
           } else {
             this.uploadProgress.errorCount++
-            results.push({ success: false, filename: fileItem.name, error: response.data.message })
-            console.log(`文件 ${fileItem.name} 上传失败:`, response.data.message);
+            results.push({ success: false, filename: fileItem.name, error: response.message })
+            console.log(`文件 ${fileItem.name} 上传失败:`, response.message);
           }
         } catch (error) {
           this.uploadProgress.errorCount++
@@ -1782,9 +1763,9 @@ export default {
         }
         
         const response = await apiClient.get('/upload/images', { params })
-        if (response.data.status === 'success') {
-          this.imagesList = response.data.data.images
-          this.pagination.total = response.data.data.pagination.total
+        if (response.status === 'success') {
+          this.imagesList = response.data.images
+          this.pagination.total = response.data.pagination.total
         }
       } catch (error) {
         console.error('加载图片列表失败:', error)
@@ -1807,15 +1788,15 @@ export default {
         )
         
         const response = await apiClient.delete(`/upload/image/${image.id}`)
-        if (response.data.status === 'success') {
-          const pointsDeducted = (response.data.data && response.data.data.pointsDeducted) || 0;
+        if (response.status === 'success') {
+          const pointsDeducted = (response.data && response.data.pointsDeducted) || 0;
           const message = pointsDeducted > 0 
             ? `图片删除成功，扣除${pointsDeducted}积分` 
             : '图片删除成功';
           this.$message.success(message);
           this.loadImages()
         } else {
-          this.$message.error(response.data.message || '删除失败')
+          this.$message.error(response.message || '删除失败')
         }
       } catch (error) {
         if (error !== 'cancel') {
@@ -1968,12 +1949,12 @@ export default {
         
         const response = await apiClient.put(url, this.editImageDialog.form)
         
-        if (response.data.status === 'success') {
-          this.$message.success(response.data.message)
+        if (response.status === 'success') {
+          this.$message.success(response.message)
           this.editImageDialog.visible = false
           this.loadImages()
         } else {
-          this.$message.error(response.data.message)
+          this.$message.error(response.message)
         }
       } catch (error) {
         console.error('保存图片信息失败:', error)

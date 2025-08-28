@@ -460,17 +460,24 @@ export default {
     async downloadImage() {
       try {
         const imageUrl = this.currentImageUrl;
-        const response = await fetch(imageUrl);
-        const blob = await response.blob();
+        const filename = (this.currentImage && this.currentImage.filename) || `image_${Date.now()}.jpg`;
         
+        // 使用直接链接下载，避免CORS问题
         const link = document.createElement('a');
-        const url = URL.createObjectURL(blob);
-        link.href = url;
-        link.download = (this.currentImage && this.currentImage.filename) || `image_${Date.now()}.jpg`;
+        link.href = imageUrl;
+        link.download = filename;
+        link.target = '_blank';
+        
+        // 添加时间戳避免缓存问题
+        if (imageUrl.includes('?')) {
+          link.href += `&_t=${Date.now()}`;
+        } else {
+          link.href += `?_t=${Date.now()}`;
+        }
+        
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
-        URL.revokeObjectURL(url);
         
         this.$message.success('图片下载成功');
       } catch (error) {
@@ -520,17 +527,25 @@ export default {
       if (!this.mattingResult) return;
       
       try {
-        const response = await fetch(this.mattingResult.processedImageUrl);
-        const blob = await response.blob();
+        const processedImageUrl = this.mattingResult.processedImageUrl;
+        const filename = `matted_${(this.currentImage && this.currentImage.filename) || Date.now()}.png`;
         
+        // 使用直接链接下载，避免CORS问题
         const link = document.createElement('a');
-        const url = URL.createObjectURL(blob);
-        link.href = url;
-        link.download = `matted_${(this.currentImage && this.currentImage.filename) || Date.now()}.png`;
+        link.href = processedImageUrl;
+        link.download = filename;
+        link.target = '_blank';
+        
+        // 添加时间戳避免缓存问题
+        if (processedImageUrl.includes('?')) {
+          link.href += `&_t=${Date.now()}`;
+        } else {
+          link.href += `?_t=${Date.now()}`;
+        }
+        
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
-        URL.revokeObjectURL(url);
         
         this.$message.success('抠图结果下载成功');
       } catch (error) {

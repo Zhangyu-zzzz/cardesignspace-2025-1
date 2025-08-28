@@ -233,22 +233,30 @@ export default {
     
     async downloadImage() {
       try {
-        const response = await fetch(this.imageUrl)
-        const blob = await response.blob()
+        const imageUrl = this.imageUrl;
+        const filename = this.image.filename || `inspiration_${Date.now()}.jpg`;
         
-        const link = document.createElement('a')
-        const url = URL.createObjectURL(blob)
-        link.href = url
-        link.download = this.image.filename || `inspiration_${Date.now()}.jpg`
-        document.body.appendChild(link)
-        link.click()
-        document.body.removeChild(link)
-        URL.revokeObjectURL(url)
+        // 使用直接链接下载，避免CORS问题
+        const link = document.createElement('a');
+        link.href = imageUrl;
+        link.download = filename;
+        link.target = '_blank';
         
-        this.$message.success('图片下载成功')
+        // 添加时间戳避免缓存问题
+        if (imageUrl.includes('?')) {
+          link.href += `&_t=${Date.now()}`;
+        } else {
+          link.href += `?_t=${Date.now()}`;
+        }
+        
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        this.$message.success('图片下载成功');
       } catch (error) {
-        console.error('下载图片失败:', error)
-        this.$message.error('图片下载失败')
+        console.error('下载图片失败:', error);
+        this.$message.error('图片下载失败');
       }
     },
     

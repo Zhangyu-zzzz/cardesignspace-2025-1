@@ -69,12 +69,16 @@ app.use(cors(corsOptions));
 app.use(express.json({ limit: '10mb' })); // 增加JSON请求体大小限制到10MB
 app.use(express.urlencoded({ extended: true, limit: '10mb' })); // 增加URL编码请求体大小限制到10MB
 
-// 应用防爬虫中间件
-app.use(detectMaliciousUserAgent);
-app.use(detectMaliciousIP);
-app.use(detectAnomalousRequests);
-app.use(logRequests);
-app.use(basicLimiter);
+// 应用防爬虫中间件 - 开发环境临时禁用
+if (process.env.NODE_ENV !== 'development') {
+  app.use(detectMaliciousUserAgent);
+  app.use(detectMaliciousIP);
+  app.use(detectAnomalousRequests);
+  app.use(logRequests);
+  app.use(basicLimiter);
+} else {
+  console.log('🔧 开发环境：防爬虫中间件已禁用');
+}
 
 // 配置请求日志
 app.use(morgan('combined', { stream: { write: message => logger.info(message.trim()) } }));

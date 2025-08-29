@@ -17,6 +17,17 @@ const logger = require('./config/logger');
 // 引入数据库连接
 const { connectMySQL } = require('./config/mysql');
 
+// 引入防爬虫中间件
+const {
+  basicLimiter,
+  apiLimiter,
+  loginLimiter,
+  detectMaliciousUserAgent,
+  detectMaliciousIP,
+  detectAnomalousRequests,
+  logRequests
+} = require('./middleware/antiCrawler');
+
 // 创建Express应用实例
 const app = express();
 
@@ -58,6 +69,13 @@ app.use(cors(corsOptions));
 app.use(express.json({ limit: '10mb' })); // 增加JSON请求体大小限制到10MB
 app.use(express.urlencoded({ extended: true, limit: '10mb' })); // 增加URL编码请求体大小限制到10MB
 
+// 应用防爬虫中间件
+app.use(detectMaliciousUserAgent);
+app.use(detectMaliciousIP);
+app.use(detectAnomalousRequests);
+app.use(logRequests);
+app.use(basicLimiter);
+
 // 配置请求日志
 app.use(morgan('combined', { stream: { write: message => logger.info(message.trim()) } }));
 
@@ -69,19 +87,19 @@ app.get('/api/health', (req, res) => {
   res.status(200).json({ status: 'OK', message: '服务运行正常' });
 });
 
-// API路由
-app.use('/api/brands', require('./routes/brandRoutes'));
-app.use('/api/models', require('./routes/modelRoutes'));
-app.use('/api/series', require('./routes/seriesRoutes'));
-app.use('/api/upload', require('./routes/upload'));
-app.use('/api/auth', require('./routes/auth'));
-app.use('/api/forum', require('./routes/forumRoutes'));
-app.use('/api/search', require('./routes/searchRoutes'));
-app.use('/api/notifications', require('./routes/notificationRoutes'));
-app.use('/api/articles', require('./routes/articleRoutes'));
-app.use('/api/inspiration', require('./routes/inspirationRoutes'));
-app.use('/api/image-tags', require('./routes/imageTagRoutes'));
-app.use('/api/image-gallery', require('./routes/imageGalleryRoutes'));
+// API路由（应用频率限制）
+app.use('/api/brands', apiLimiter, require('./routes/brandRoutes'));
+app.use('/api/models', apiLimiter, require('./routes/modelRoutes'));
+app.use('/api/series', apiLimiter, require('./routes/seriesRoutes'));
+app.use('/api/upload', apiLimiter, require('./routes/upload'));
+app.use('/api/auth', loginLimiter, require('./routes/auth'));
+app.use('/api/forum', apiLimiter, require('./routes/forumRoutes'));
+app.use('/api/search', apiLimiter, require('./routes/searchRoutes'));
+app.use('/api/notifications', apiLimiter, require('./routes/notificationRoutes'));
+app.use('/api/articles', apiLimiter, require('./routes/articleRoutes'));
+app.use('/api/inspiration', apiLimiter, require('./routes/inspirationRoutes'));
+app.use('/api/image-tags', apiLimiter, require('./routes/imageTagRoutes'));
+app.use('/api/image-gallery', apiLimiter, require('./routes/imageGalleryRoutes'));
 
 console.log('所有API路由已加载完成');
 

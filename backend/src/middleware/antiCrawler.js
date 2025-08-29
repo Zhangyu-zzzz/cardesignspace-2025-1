@@ -12,16 +12,45 @@ try {
 // 内存存储（备用方案）
 const memoryStore = new Map();
 
-// 检测恶意User-Agent
+// 正常浏览器User-Agent白名单
+const trustedUserAgents = [
+  /mozilla/i, /chrome/i, /safari/i, /firefox/i, /edge/i, /opera/i,
+  /webkit/i, /gecko/i, /trident/i, /msie/i, /chromium/i
+];
+
+// 检测恶意User-Agent - 更精确的匹配
 const maliciousUserAgents = [
-  /bot/i, /crawler/i, /spider/i, /scraper/i, /scanner/i, /probe/i,
-  /wget/i, /curl/i, /python/i, /java/i, /perl/i, /ruby/i, /php/i,
-  /asp/i, /jsp/i, /semrush/i, /ahrefs/i, /mj12bot/i, /dotbot/i,
-  /blexbot/i, /rogerbot/i, /exabot/i, /ia_archiver/i
+  // 明确的爬虫标识
+  /^bot$/i, /^crawler$/i, /^spider$/i, /^scraper$/i, /^scanner$/i, /^probe$/i,
+  // 命令行工具
+  /^wget\//i, /^curl\//i, /^python-requests\//i, /^java\//i, /^perl\//i, /^ruby\//i, /^php\//i,
+  // 恶意爬虫
+  /semrushbot/i, /ahrefsbot/i, /mj12bot/i, /dotbot/i, /blexbot/i, /rogerbot/i, /exabot/i, /ia_archiver/i,
+  // 自动化工具
+  /^python-requests\//i, /^requests\//i, /^urllib\//i, /^mechanize\//i,
+  // 扫描工具
+  /^nmap/i, /^sqlmap/i, /^nikto/i, /^dirb/i, /^gobuster/i,
+  // 其他恶意工具
+  /^masscan/i, /^zmap/i, /^hydra/i, /^medusa/i
 ];
 
 // 检测恶意IP
 const maliciousIPs = new Set();
+
+// 标准化IP地址
+const normalizeIP = (ip) => {
+  // 将IPv6的localhost转换为IPv4格式
+  if (ip === '::1' || ip === '::ffff:127.0.0.1') {
+    return '127.0.0.1';
+  }
+  return ip;
+};
+
+// 开发环境清空黑名单
+if (process.env.NODE_ENV === 'development') {
+  console.log('🔧 开发环境：清空IP黑名单');
+  maliciousIPs.clear();
+}
 
 // 基础频率限制
 const basicLimiter = rateLimit({
@@ -63,6 +92,15 @@ const loginLimiter = rateLimit({
 // 检测恶意User-Agent
 const detectMaliciousUserAgent = (req, res, next) => {
   const userAgent = req.get('User-Agent') || '';
+  const normalizedIP = normalizeIP(req.ip);
+  
+  // 首先检查是否是可信的浏览器User-Agent
+  const isTrusted = trustedUserAgents.some(pattern => pattern.test(userAgent));
+  
+  if (isTrusted) {
+    // 可信浏览器，直接通过
+    return next();
+  }
   
   // 检查是否包含恶意标识
   const isMalicious = maliciousUserAgents.some(pattern => pattern.test(userAgent));
@@ -70,17 +108,27 @@ const detectMaliciousUserAgent = (req, res, next) => {
   if (isMalicious) {
     console.log('🚫 检测到恶意User-Agent:', {
       userAgent: userAgent.substring(0, 100),
-      ip: req.ip,
+      ip: normalizedIP,
       url: req.originalUrl,
       timestamp: new Date().toISOString()
     });
     
     // 将IP加入黑名单
-    maliciousIPs.add(req.ip);
+    maliciousIPs.add(normalizedIP);
     
     return res.status(403).json({
       error: '访问被拒绝',
       code: 'MALICIOUS_USER_AGENT'
+    });
+  }
+  
+  // 既不是可信浏览器，也不是明显的恶意工具，记录但不阻止
+  if (userAgent && !isTrusted && !isMalicious) {
+    console.log('⚠️ 未知User-Agent:', {
+      userAgent: userAgent.substring(0, 100),
+      ip: normalizedIP,
+      url: req.originalUrl,
+      timestamp: new Date().toISOString()
     });
   }
   
@@ -89,9 +137,11 @@ const detectMaliciousUserAgent = (req, res, next) => {
 
 // 检测恶意IP
 const detectMaliciousIP = (req, res, next) => {
-  if (maliciousIPs.has(req.ip)) {
+  const normalizedIP = normalizeIP(req.ip);
+  
+  if (maliciousIPs.has(normalizedIP)) {
     console.log('🚫 阻止恶意IP访问:', {
-      ip: req.ip,
+      ip: normalizedIP,
       url: req.originalUrl,
       timestamp: new Date().toISOString()
     });
@@ -107,25 +157,33 @@ const detectMaliciousIP = (req, res, next) => {
 
 // 检测异常请求模式
 const detectAnomalousRequests = (req, res, next) => {
+  const url = req.originalUrl;
+  
+  // 跳过正常的API请求
+  if (url.startsWith('/api/')) {
+    return next();
+  }
+  
+  // 只检测非API路径的可疑模式
   const suspiciousPatterns = [
     /wp-admin/i, /wp-login/i, /wp-signup/i, /admin/i, /administrator/i,
     /phpmyadmin/i, /mysql/i, /database/i, /db/i, /config/i, /setup/i,
     /install/i, /test/i, /debug/i, /api-docs/i, /swagger/i
   ];
   
-  const url = req.originalUrl;
   const isSuspicious = suspiciousPatterns.some(pattern => pattern.test(url));
   
   if (isSuspicious) {
+    const normalizedIP = normalizeIP(req.ip);
     console.log('🚫 检测到可疑请求:', {
       url: url,
-      ip: req.ip,
+      ip: normalizedIP,
       userAgent: req.get('User-Agent'),
       timestamp: new Date().toISOString()
     });
     
     // 将IP加入黑名单
-    maliciousIPs.add(req.ip);
+    maliciousIPs.add(normalizedIP);
     
     return res.status(403).json({
       error: '访问被拒绝',

@@ -28,6 +28,9 @@ const {
   logRequests
 } = require('./middleware/antiCrawler');
 
+// 引入rate-limit
+const rateLimit = require('express-rate-limit');
+
 // 创建Express应用实例
 const app = express();
 
@@ -69,14 +72,27 @@ app.use(cors(corsOptions));
 app.use(express.json({ limit: '10mb' })); // 增加JSON请求体大小限制到10MB
 app.use(express.urlencoded({ extended: true, limit: '10mb' })); // 增加URL编码请求体大小限制到10MB
 
-// 应用防爬虫中间件 - 开发环境临时禁用
-if (process.env.NODE_ENV !== 'development') {
+// 应用防爬虫中间件 - 根据环境配置
+if (process.env.NODE_ENV === 'production') {
+  // 生产环境：启用优化的防爬虫保护
   app.use(detectMaliciousUserAgent);
   app.use(detectMaliciousIP);
   app.use(detectAnomalousRequests);
   app.use(logRequests);
-  app.use(basicLimiter);
+  // 生产环境使用更宽松的频率限制
+  app.use(rateLimit({
+    windowMs: 15 * 60 * 1000, // 15分钟
+    max: 200, // 每个IP 15分钟内最多200个请求
+    message: {
+      error: '请求过于频繁，请稍后再试',
+      code: 'RATE_LIMIT_EXCEEDED'
+    },
+    standardHeaders: true,
+    legacyHeaders: false
+  }));
+  console.log('🛡️ 生产环境：防爬虫中间件已启用（优化配置）');
 } else {
+  // 开发环境：禁用防爬虫
   console.log('🔧 开发环境：防爬虫中间件已禁用');
 }
 

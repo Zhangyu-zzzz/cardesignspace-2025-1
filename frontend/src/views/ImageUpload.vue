@@ -442,7 +442,7 @@
             type="textarea"
             :rows="3"
             placeholder="请输入车型描述"
-            maxlength="500"
+            maxlength="1500"
             show-word-limit
           />
         </el-form-item>

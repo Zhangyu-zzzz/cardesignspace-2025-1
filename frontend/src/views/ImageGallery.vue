@@ -88,6 +88,25 @@
               @input="debounceSearch"
               class="tag-search-input"
             >
+            
+            <!-- 热门标签 -->
+            <div class="popular-tags">
+              <div class="popular-tags-label">热门标签 ({{ popularTags.length }}):</div>
+              <div v-if="popularTags.length > 0" class="popular-tags-list">
+                <span 
+                  v-for="tag in popularTags" 
+                  :key="tag.tag" 
+                  class="popular-tag"
+                  @click="selectPopularTag(tag.tag)"
+                  :title="`使用次数: ${tag.count}`"
+                >
+                  {{ tag.tag }}
+                </span>
+              </div>
+              <div v-else class="popular-tags-loading">
+                正在加载热门标签...
+              </div>
+            </div>
           </div>
 
           <!-- 清除筛选 -->
@@ -271,6 +290,9 @@ export default {
       // 内饰风格标签
       interiorStyleTags: [],
       
+      // 热门标签
+      popularTags: [],
+      
       // 模态框
       showImageModal: false,
       selectedImage: null,
@@ -283,6 +305,7 @@ export default {
   async mounted() {
     await this.loadBrands()
     await this.loadStyleTags()
+    await this.loadPopularTags()
     await this.loadImages()
     
     // 添加滚动监听
@@ -313,6 +336,20 @@ export default {
         this.interiorStyleTags = styleOptions['内饰风格'] || []
       } catch (error) {
         console.error('加载风格标签失败:', error)
+      }
+    },
+    
+    async loadPopularTags() {
+      try {
+        console.log('开始加载热门标签...')
+        const response = await apiClient.get('/image-gallery/popular-tags', {
+          params: { limit: 15 }
+        })
+        console.log('热门标签API响应:', response)
+        this.popularTags = response.data || []
+        console.log('设置的热门标签:', this.popularTags)
+      } catch (error) {
+        console.error('加载热门标签失败:', error)
       }
     },
     
@@ -403,6 +440,11 @@ export default {
       this.searchTimeout = setTimeout(() => {
         this.loadImages()
       }, 500)
+    },
+    
+    selectPopularTag(tag) {
+      this.filters.tagSearch = tag
+      this.loadImages()
     },
     
     openImageModal(image) {
@@ -530,6 +572,49 @@ export default {
   outline: none;
   border-color: #dc3545;
   box-shadow: 0 0 0 2px rgba(220, 53, 69, 0.25);
+}
+
+.popular-tags {
+  margin-top: 10px;
+}
+
+.popular-tags-label {
+  font-size: 12px;
+  color: #666;
+  margin-bottom: 8px;
+  font-weight: 500;
+}
+
+.popular-tags-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.popular-tag {
+  padding: 4px 8px;
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 12px;
+  font-size: 12px;
+  color: #495057;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.popular-tag:hover {
+  background: #dc3545;
+  color: white;
+  border-color: #dc3545;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(220, 53, 69, 0.2);
+}
+
+.popular-tags-loading {
+  font-size: 12px;
+  color: #999;
+  font-style: italic;
 }
 
 .filter-actions {

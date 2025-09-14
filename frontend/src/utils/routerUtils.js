@@ -1,4 +1,5 @@
 import contextMenu from './contextMenu';
+import scrollPositionManager from './scrollPositionManager';
 
 /**
  * 路由工具函数
@@ -12,9 +13,10 @@ import contextMenu from './contextMenu';
  * @param {boolean} options.forceNewTab - 强制在新标签中打开
  * @param {Object} options.query - 查询参数
  * @param {Object} options.params - 路由参数
+ * @param {string} options.modelId - 车型ID（用于保存车型位置）
  */
 export function handleLinkClick(path, options = {}) {
-  const { forceNewTab = false, query = {}, params = {} } = options;
+  const { forceNewTab = false, query = {}, params = {}, modelId = null } = options;
   
   // 构建完整的URL
   let fullPath = path;
@@ -32,7 +34,19 @@ export function handleLinkClick(path, options = {}) {
     // 在新标签中打开
     window.open(fullPath, '_blank');
   } else {
-    // 在当前标签中打开
+    // 在当前标签中打开前，保存当前页面的滚动位置
+    const currentRoute = window.location.pathname;
+    const currentPosition = window.pageYOffset || document.documentElement.scrollTop;
+    console.log(`路由跳转前保存位置: ${currentRoute} -> ${currentPosition}px`);
+    
+    // 如果提供了车型ID，保存车型位置信息
+    if (modelId) {
+      console.log(`保存车型位置: ${currentRoute} -> 车型${modelId} -> ${currentPosition}px`);
+      scrollPositionManager.saveModelPosition(currentRoute, modelId, currentPosition);
+    }
+    
+    scrollPositionManager.savePosition(currentRoute, currentPosition);
+    
     // 尝试从Vue实例获取router
     const app = document.querySelector('#app').__vue__;
     if (app && app.$router) {

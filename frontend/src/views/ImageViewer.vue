@@ -34,6 +34,7 @@
           draggable="false"
           @mousedown="handleMouseDown"
           @wheel="handleWheel"
+          @contextmenu="handleImageContextMenu"
         />
         
         <!-- 加载中 -->
@@ -95,6 +96,8 @@
 </template>
 
 <script>
+import imageContextMenu from '@/utils/imageContextMenu';
+
 export default {
   name: 'ImageViewer',
   data() {
@@ -146,6 +149,14 @@ export default {
     handleImageError() {
       this.imageLoading = false;
       this.imageError = true;
+    },
+
+    handleImageContextMenu(event) {
+      // 使用浏览器默认菜单
+      imageContextMenu.show(event, this.imageUrl, {
+        title: this.imageTitle,
+        useBrowserMenu: true
+      });
     },
 
     retryLoad() {

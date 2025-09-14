@@ -20,8 +20,8 @@
           :key="item.type + '-' + item.id"
           :class="{ active: currentSlide === index }"
           :style="{ transform: `translateX(${(index - currentSlide) * 100}%)` }"
-          @click="$handleLinkClick($event, `/model/${item.id}`)"
-          @contextmenu="$handleLinkContextMenu($event, `/model/${item.id}`)"
+          @click="$handleLinkClick($event, `/model/${item.id}`, { modelId: item.id })"
+          @contextmenu="$handleLinkContextMenu($event, `/model/${item.id}`, { modelId: item.id })"
         >
           <div class="slide-image-container">
             <!-- 车型图片 -->
@@ -54,7 +54,7 @@
                 <div class="content-type-badge model-badge">最新上传</div>
                 <h2 class="slide-title">{{ item.name }}</h2>
                 <p class="slide-brand">{{ item.Brand ? item.Brand.name : '未知品牌' }}</p>
-                <button class="view-details-btn" @click.stop="$handleLinkClick($event, `/model/${item.id}`)">
+                <button class="view-details-btn" @click.stop="$handleLinkClick($event, `/model/${item.id}`, { modelId: item.id })">
                   查看详情
                   <i class="el-icon-arrow-right"></i>
                 </button>
@@ -272,8 +272,8 @@
             v-for="model in displayModels" 
             :key="model.id"
             :data-model-id="model.id"
-            @click="$handleLinkClick($event, `/model/${model.id}`)"
-            @contextmenu="$handleLinkContextMenu($event, `/model/${model.id}`)"
+            @click="$handleLinkClick($event, `/model/${model.id}`, { modelId: model.id })"
+            @contextmenu="$handleLinkContextMenu($event, `/model/${model.id}`, { modelId: model.id })"
           >
             <div class="model-display-image">
               <img 
@@ -311,16 +311,15 @@
           </div>
         </div>
         
-        <!-- 加载更多按钮 -->
-        <div v-if="hasMoreDisplayModels" class="load-more-container">
-          <button 
-            class="load-more-btn" 
-            @click="loadMoreModels"
-            :disabled="displayModelsLoading"
-          >
-            <span v-if="!displayModelsLoading">加载更多</span>
-            <i v-else class="el-icon-loading"></i>
-          </button>
+        <!-- 加载状态指示器 -->
+        <div v-if="displayModelsLoading" class="loading-indicator">
+          <i class="el-icon-loading"></i>
+          <span>正在加载更多车型...</span>
+        </div>
+        
+        <!-- 没有更多数据提示 -->
+        <div v-else-if="!hasMoreDisplayModels && displayModels.length > 0" class="no-more-data">
+          <span>已加载全部车型</span>
         </div>
       </div>
       </div>
@@ -332,9 +331,12 @@
 import { brandAPI, modelAPI, imageAPI } from '@/services/api';
 // 恢复使用chinese-to-pinyin库
 import chineseToPinyin from 'chinese-to-pinyin'
+import scrollPositionMixin from '@/utils/scrollPositionMixin';
+import scrollPositionManager from '@/utils/scrollPositionManager';
 
 export default {
   name: 'Home',
+  mixins: [scrollPositionMixin],
   data() {
     return {
       carouselItems: [
@@ -435,7 +437,7 @@ export default {
       displayModelsError: null,
       sortOrder: 'desc', // 'desc' 为最新优先，'asc' 为最老优先
       currentDisplayPage: 1,
-      displayPageSize: 24,
+      displayPageSize: 36, // 修改为36个车型
       hasMoreDisplayModels: true,
       
       // 年代筛选相关
@@ -653,7 +655,197 @@ export default {
     },
     // 导航到车型详情页
     goToModel(modelId) {
+      // 保存当前滚动位置和车型ID
+      const currentPosition = window.pageYOffset || document.documentElement.scrollTop;
+      console.log(`🚀 跳转到车型详情页前，当前滚动位置: ${currentPosition}px`);
+      
+      // 保存车型位置信息
+      scrollPositionManager.saveModelPosition(this.$route.path, modelId, currentPosition);
+      this.saveScrollPosition();
+      
       this.$router.push(`/model/${modelId}`);
+    },
+
+    // 调试方法：手动测试滚动位置功能
+    debugScrollPosition() {
+      const route = this.$route.path;
+      const currentPosition = window.pageYOffset || document.documentElement.scrollTop;
+      const savedPosition = scrollPositionManager.getPosition(route);
+      
+      console.log('=== 滚动位置调试信息 ===');
+      console.log(`当前路由: ${route}`);
+      console.log(`当前滚动位置: ${currentPosition}px`);
+      console.log(`保存的滚动位置: ${savedPosition}px`);
+      console.log(`页面高度: ${document.documentElement.scrollHeight}px`);
+      console.log(`窗口高度: ${window.innerHeight}px`);
+      console.log(`所有保存的位置:`, scrollPositionManager.positions);
+      console.log('========================');
+    },
+
+    // 预加载数据以支持滚动位置恢复
+    async preloadDataForScrollRestore() {
+      const modelPosition = scrollPositionManager.getModelPosition(this.$route.path);
+      const targetPosition = modelPosition ? modelPosition.position : scrollPositionManager.getPosition(this.$route.path);
+      
+      if (targetPosition <= 0) {
+        console.log('没有需要恢复的滚动位置，跳过预加载');
+        return;
+      }
+
+      if (modelPosition) {
+        console.log(`🎯 需要恢复到车型 ${modelPosition.modelId} 的位置: ${targetPosition}px`);
+      } else {
+        console.log(`🎯 需要恢复到滚动位置: ${targetPosition}px`);
+      }
+      
+      console.log(`🎯 开始预加载数据以支持滚动位置恢复: ${targetPosition}px`);
+      
+      // 估算需要加载多少页数据
+      // 更保守的估算：考虑轮播图、品牌区域、间距等
+      const carouselHeight = 600; // 轮播图高度（增加）
+      const brandsHeight = 300; // 品牌区域高度（增加）
+      const headerHeight = 150; // 头部高度（增加）
+      const paddingHeight = 200; // 各种间距（增加）
+      const itemHeight = 280; // 每个车型卡片的高度（更保守的估算）
+      
+      const fixedHeight = carouselHeight + brandsHeight + headerHeight + paddingHeight;
+      const availableHeight = targetPosition - fixedHeight;
+      const estimatedItemsNeeded = Math.ceil(availableHeight / itemHeight);
+      const estimatedPages = Math.ceil(estimatedItemsNeeded / this.displayPageSize);
+      
+      // 更保守的策略：至少加载估算页数的3倍，确保有足够的内容
+      const conservativePages = Math.max(estimatedPages * 3, 5);
+      
+      console.log(`📏 高度分析:`);
+      console.log(`  - 目标位置: ${targetPosition}px`);
+      console.log(`  - 固定高度: ${fixedHeight}px (轮播图+品牌+头部+间距)`);
+      console.log(`  - 可用高度: ${availableHeight}px`);
+      console.log(`  - 需要车型: ${estimatedItemsNeeded}个`);
+      console.log(`  - 基础页数: ${estimatedPages}页`);
+      console.log(`  - 保守页数: ${conservativePages}页 (3倍安全系数)`);
+      
+      console.log(`📊 估算需要: ${conservativePages}页数据 (约${conservativePages * this.displayPageSize}个车型)`);
+      
+      // 如果当前数据不够，继续加载
+      let currentItems = this.displayModels.length;
+      let currentPage = this.currentDisplayPage;
+      let maxPages = Math.max(conservativePages, 5); // 至少加载5页，最多加载20页
+      let loadedPages = 0;
+      
+      while (this.hasMoreDisplayModels && !this.displayModelsLoading && loadedPages < maxPages) {
+        console.log(`📥 预加载第 ${currentPage + 1} 页数据...`);
+        
+        try {
+          this.currentDisplayPage = currentPage + 1;
+          await this.fetchDisplayModels();
+          
+          currentItems = this.displayModels.length;
+          currentPage = this.currentDisplayPage;
+          loadedPages++;
+          
+          console.log(`✅ 已加载 ${currentItems} 个车型，还需要约 ${estimatedItemsNeeded - currentItems} 个`);
+          
+          // 给页面一些时间渲染
+          await new Promise(resolve => setTimeout(resolve, 100));
+          
+          // 检查当前页面高度是否足够
+          const currentHeight = document.documentElement.scrollHeight;
+          if (currentHeight >= targetPosition + window.innerHeight) {
+            console.log(`🎉 页面高度已足够 (${currentHeight}px >= ${targetPosition + window.innerHeight}px)，停止预加载`);
+            break;
+          }
+          
+        } catch (error) {
+          console.error('预加载数据失败:', error);
+          break;
+        }
+      }
+      
+      console.log(`🎉 预加载完成，共加载 ${currentItems} 个车型`);
+      
+      // 预加载完成后，恢复滚动位置
+      this.$nextTick(() => {
+        console.log('开始恢复滚动位置...');
+        if (modelPosition) {
+          this.restoreToModelPosition(modelPosition.modelId, targetPosition);
+        } else {
+          this.waitForContentAndRestore(3000, 100);
+        }
+      });
+    },
+
+    // 根据车型ID恢复位置
+    async restoreToModelPosition(modelId, fallbackPosition) {
+      console.log(`🔍 开始查找车型 ${modelId} 的位置...`);
+      
+      const findModelElement = () => {
+        // 查找车型卡片元素
+        const modelCard = document.querySelector(`[data-model-id="${modelId}"]`);
+        if (modelCard) {
+          const rect = modelCard.getBoundingClientRect();
+          const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+          const elementTop = rect.top + scrollTop;
+          
+          console.log(`✅ 找到车型 ${modelId}，位置: ${elementTop}px`);
+          return elementTop;
+        }
+        return null;
+      };
+
+      // 尝试查找车型元素
+      let modelPosition = findModelElement();
+      
+      if (modelPosition === null) {
+        console.log(`⚠️ 未找到车型 ${modelId}，等待数据加载...`);
+        
+        // 如果没找到，等待数据加载后再试
+        let attempts = 0;
+        const maxAttempts = 10;
+        
+        while (modelPosition === null && attempts < maxAttempts) {
+          await new Promise(resolve => setTimeout(resolve, 200));
+          modelPosition = findModelElement();
+          attempts++;
+          
+          if (modelPosition === null) {
+            console.log(`⏳ 等待车型 ${modelId} 加载... (尝试 ${attempts}/${maxAttempts})`);
+          }
+        }
+      }
+
+      // 确定最终滚动位置
+      const finalPosition = modelPosition !== null ? modelPosition : fallbackPosition;
+      
+      if (modelPosition !== null) {
+        console.log(`🎯 滚动到车型 ${modelId} 的位置: ${finalPosition}px`);
+      } else {
+        console.log(`⚠️ 未找到车型 ${modelId}，使用备用位置: ${finalPosition}px`);
+      }
+
+      // 滚动到目标位置
+      this.scrollToPosition(finalPosition);
+      
+      // 高亮显示目标车型（可选）
+      if (modelPosition !== null) {
+        this.highlightModel(modelId);
+      }
+    },
+
+    // 高亮显示车型
+    highlightModel(modelId) {
+      const modelCard = document.querySelector(`[data-model-id="${modelId}"]`);
+      if (modelCard) {
+        // 添加高亮效果
+        modelCard.style.transition = 'all 0.3s ease';
+        modelCard.style.transform = 'scale(1.05)';
+        modelCard.style.boxShadow = '0 0 20px rgba(255, 193, 7, 0.5)';
+        
+        // 3秒后移除高亮效果
+        setTimeout(() => {
+          modelCard.style.transform = '';
+          modelCard.style.boxShadow = '';
+        }, 3000);
+      }
     },
 
     // 获取品牌列表
@@ -1117,6 +1309,33 @@ export default {
         console.log('排序参数:', this.sortOrder);
         console.log('年代筛选:', this.selectedDecade);
         
+        // 检查是否需要恢复滚动位置，如果是，需要加载更多数据
+        const targetPosition = scrollPositionManager.getPosition(this.$route.path);
+        let needMoreData = false;
+        let estimatedPages = 1;
+        
+        if (targetPosition > 0 && this.currentDisplayPage === 1) {
+          // 更保守的估算：考虑轮播图、品牌区域、间距等
+          const carouselHeight = 600; // 轮播图高度（增加）
+          const brandsHeight = 300; // 品牌区域高度（增加）
+          const headerHeight = 150; // 头部高度（增加）
+          const paddingHeight = 200; // 各种间距（增加）
+          const itemHeight = 250; // 每个车型卡片的高度（减少，更保守）
+          
+          const fixedHeight = carouselHeight + brandsHeight + headerHeight + paddingHeight;
+          const availableHeight = targetPosition - fixedHeight;
+          const estimatedItemsNeeded = Math.ceil(availableHeight / itemHeight);
+          estimatedPages = Math.ceil(estimatedItemsNeeded / this.displayPageSize);
+          
+          // 保守策略：至少加载估算页数的2倍
+          const conservativePages = Math.max(estimatedPages * 2, 3);
+          needMoreData = conservativePages > 1;
+          
+          console.log(`🎯 需要恢复位置: ${targetPosition}px`);
+          console.log(`📏 高度分析: 固定高度${fixedHeight}px, 可用高度${availableHeight}px`);
+          console.log(`📊 估算需要加载: ${conservativePages}页数据 (约${estimatedItemsNeeded * 2}个车型)`);
+        }
+        
         // 构建API请求参数
         const params = {
           limit: this.displayPageSize,
@@ -1315,6 +1534,59 @@ export default {
         logo.classList.remove('loaded');
         logo.style.display = '';
       });
+    },
+
+    // 添加滚动监听
+    addScrollListener() {
+      this.handleScroll = this.throttle(this.checkScrollPosition, 200);
+      window.addEventListener('scroll', this.handleScroll, { passive: true });
+    },
+
+    // 移除滚动监听
+    removeScrollListener() {
+      if (this.handleScroll) {
+        window.removeEventListener('scroll', this.handleScroll);
+      }
+    },
+
+    // 检查滚动位置
+    checkScrollPosition() {
+      // 如果正在加载或没有更多数据，则不执行
+      if (this.displayModelsLoading || !this.hasMoreDisplayModels) {
+        return;
+      }
+
+      // 获取页面滚动信息
+      const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+      const windowHeight = window.innerHeight;
+      const documentHeight = document.documentElement.scrollHeight;
+
+      // 当滚动到距离底部200px时触发加载
+      const threshold = 200;
+      if (scrollTop + windowHeight >= documentHeight - threshold) {
+        console.log('触发自动加载更多车型');
+        this.loadMoreModels();
+      }
+    },
+
+    // 节流函数
+    throttle(func, delay) {
+      let timeoutId;
+      let lastExecTime = 0;
+      return function (...args) {
+        const currentTime = Date.now();
+        
+        if (currentTime - lastExecTime > delay) {
+          func.apply(this, args);
+          lastExecTime = currentTime;
+        } else {
+          clearTimeout(timeoutId);
+          timeoutId = setTimeout(() => {
+            func.apply(this, args);
+            lastExecTime = Date.now();
+          }, delay - (currentTime - lastExecTime));
+        }
+      };
     }
   },
   mounted() {
@@ -1325,11 +1597,19 @@ export default {
       this.initLazyLoading();
       // 观察初始加载的图片
       this.observeLazyImages();
+      
+      // 数据加载完成后，检查是否需要预加载更多数据以支持滚动位置恢复
+      this.$nextTick(() => {
+        this.preloadDataForScrollRestore();
+      });
     }).catch(error => {
       console.error('初始化车型展示数据失败:', error);
       // 即使失败也要初始化懒加载
       this.initLazyLoading();
     });
+    
+    // 添加滚动监听
+    this.addScrollListener();
   },
   beforeDestroy() {
     // 清理懒加载观察器
@@ -1338,6 +1618,8 @@ export default {
     }
     // 停止自动播放
     this.stopAutoPlay();
+    // 移除滚动监听
+    this.removeScrollListener();
   },
   watch: {
     // 监听路由变化，重置logo加载状态
@@ -3347,5 +3629,33 @@ body, html {
 @keyframes rotating {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
+}
+
+/* 加载状态指示器样式 */
+.loading-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  color: #666;
+  font-size: 16px;
+  gap: 12px;
+}
+
+.loading-indicator i {
+  font-size: 20px;
+  animation: rotating 1s linear infinite;
+}
+
+/* 没有更多数据提示样式 */
+.no-more-data {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  color: #999;
+  font-size: 14px;
+  border-top: 1px solid #f0f0f0;
+  margin-top: 20px;
 }
 </style> 

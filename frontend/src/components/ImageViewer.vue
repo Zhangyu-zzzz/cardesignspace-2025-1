@@ -265,8 +265,10 @@ export default {
       const imageUrl = this.currentImageUrl;
       const imageTitle = this.currentImage.title || '图片';
       
+      // 使用浏览器默认菜单
       imageContextMenu.show(event, imageUrl, {
-        title: imageTitle
+        title: imageTitle,
+        useBrowserMenu: true
       });
     },
     

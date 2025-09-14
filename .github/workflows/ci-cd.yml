@@ -90,15 +90,26 @@ jobs:
           echo '重新构建前端镜像...'
           docker-compose build --no-cache frontend || {
             echo '前端镜像构建失败，尝试重试...'
+            sleep 10
             docker-compose build --no-cache frontend
           }
           echo '前端镜像构建完成'
           
           echo '重新构建后端镜像...'
-          docker-compose build --no-cache backend || {
-            echo '后端镜像构建失败，尝试重试...'
-            docker-compose build --no-cache backend
-          }
+          # 使用优化的Dockerfile
+          if [ -f backend/Dockerfile.optimized ]; then
+            echo '使用优化的Dockerfile构建后端...'
+            docker build -f backend/Dockerfile.optimized -t auto-gallery-backend backend/ || {
+              echo '优化Dockerfile构建失败，使用默认Dockerfile重试...'
+              docker-compose build --no-cache backend
+            }
+          else
+            docker-compose build --no-cache backend || {
+              echo '后端镜像构建失败，尝试重试...'
+              sleep 10
+              docker-compose build --no-cache backend
+            }
+          fi
           echo '后端镜像构建完成'
           
           echo '启动服务...'

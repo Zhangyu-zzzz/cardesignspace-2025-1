@@ -1,33 +1,32 @@
-# 使用官方Node.js 18运行时作为基础镜像
+# 优化的Dockerfile，解决GitHub Actions构建超时问题
 FROM node:18-alpine
 
 # 设置Alpine镜像源为国内镜像，提高下载速度
 RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.aliyun.com/g' /etc/apk/repositories
 
-# 安装必要的系统工具，添加超时和重试机制
-RUN apk add --no-cache --timeout=300 curl mysql-client || \
-    (echo "Retrying package installation..." && \
-     apk update && \
-     apk add --no-cache curl mysql-client)
+# 分步安装系统工具，避免超时
+RUN apk update && \
+    apk add --no-cache curl && \
+    apk add --no-cache mysql-client
 
 # 设置工作目录
 WORKDIR /app
 
-# 设置npm国内镜像源
+# 设置npm国内镜像源和超时配置
 RUN npm config set registry https://registry.npmmirror.com && \
-    npm config set fetch-timeout 300000 && \
+    npm config set fetch-timeout 600000 && \
     npm config set fetch-retry-mintimeout 20000 && \
-    npm config set fetch-retry-maxtimeout 120000
+    npm config set fetch-retry-maxtimeout 120000 && \
+    npm config set fetch-retries 5
 
 # 复制package.json和package-lock.json
 COPY package*.json ./
 
-# 安装依赖，添加重试机制
-RUN npm ci --only=production --timeout=300000 || \
-    (echo "Retrying npm install..." && \
-     npm cache clean --force && \
-     npm ci --only=production --timeout=300000) && \
-    npm cache clean --force
+# 分步安装依赖，避免超时
+RUN npm ci --only=production --timeout=600000 --prefer-offline --no-audit --no-fund
+
+# 清理npm缓存
+RUN npm cache clean --force
 
 # 复制应用代码
 COPY . .
@@ -50,4 +49,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
   CMD curl -f http://localhost:3000/api/health || exit 1
 
 # 启动应用
-CMD ["npm", "start"] 
+CMD ["npm", "start"]

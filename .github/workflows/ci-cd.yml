@@ -9,7 +9,7 @@ on:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 60
     
     steps:
     - name: Checkout code
@@ -88,11 +88,17 @@ jobs:
           docker-compose down
           
           echo '重新构建前端镜像...'
-          docker-compose build --no-cache frontend
+          docker-compose build --no-cache frontend || {
+            echo '前端镜像构建失败，尝试重试...'
+            docker-compose build --no-cache frontend
+          }
           echo '前端镜像构建完成'
           
           echo '重新构建后端镜像...'
-          docker-compose build --no-cache backend
+          docker-compose build --no-cache backend || {
+            echo '后端镜像构建失败，尝试重试...'
+            docker-compose build --no-cache backend
+          }
           echo '后端镜像构建完成'
           
           echo '启动服务...'

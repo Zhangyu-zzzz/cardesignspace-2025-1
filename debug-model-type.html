@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>车型类型更新调试工具</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #e03426;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .debug-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background-color: #f9f9f9;
+        }
+        .debug-section h2 {
+            color: #333;
+            margin-top: 0;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input, select, button {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+        button {
+            background-color: #e03426;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        button:hover {
+            background-color: #c12e21;
+        }
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        .result {
+            margin-top: 15px;
+            padding: 10px;
+            border-radius: 4px;
+            font-weight: bold;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        .warning {
+            background-color: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        .step {
+            margin-bottom: 20px;
+            padding: 15px;
+            border-left: 4px solid #e03426;
+            background-color: #fff;
+        }
+        .step h3 {
+            margin-top: 0;
+            color: #e03426;
+        }
+        .code {
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            margin: 10px 0;
+            border: 1px solid #e9ecef;
+            white-space: pre-wrap;
+        }
+        .status {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .status.online {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .status.offline {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 车型类型更新调试工具</h1>
+        
+        <div class="debug-section">
+            <h2>1. 服务器状态检查</h2>
+            <button onclick="checkServers()">检查服务器状态</button>
+            <div id="serverStatus"></div>
+        </div>
+
+        <div class="debug-section">
+            <h2>2. 车型数据测试</h2>
+            <div class="form-group">
+                <label>车型ID:</label>
+                <input type="number" id="modelId" value="1375" placeholder="输入车型ID">
+            </div>
+            <button onclick="getModelData()">获取车型数据</button>
+            <div id="modelData"></div>
+        </div>
+
+        <div class="debug-section">
+            <h2>3. 更新测试</h2>
+            <div class="form-group">
+                <label>新车型类型:</label>
+                <select id="newType">
+                    <option value="">请选择新类型</option>
+                    <option value="轿车">轿车</option>
+                    <option value="SUV">SUV</option>
+                    <option value="MPV">MPV</option>
+                    <option value="WAGON">WAGON</option>
+                    <option value="SHOOTINGBRAKE">SHOOTINGBRAKE</option>
+                    <option value="皮卡">皮卡</option>
+                    <option value="跑车">跑车</option>
+                    <option value="Hatchback">Hatchback</option>
+                    <option value="其他">其他</option>
+                </select>
+            </div>
+            <button onclick="updateModelType()">更新车型类型</button>
+            <div id="updateResult"></div>
+        </div>
+
+        <div class="debug-section">
+            <h2>4. 前端页面测试</h2>
+            <div class="step">
+                <h3>测试步骤:</h3>
+                <ol>
+                    <li>确保后端服务器运行在 <code>http://localhost:3000</code></li>
+                    <li>确保前端服务器运行在 <code>http://localhost:8080</code></li>
+                    <li>访问车型详情页面: <a href="http://localhost:8080/model/1375" target="_blank">http://localhost:8080/model/1375</a></li>
+                    <li>打开浏览器开发者工具 (F12)</li>
+                    <li>查看 Console 标签页的日志输出</li>
+                    <li>尝试更改车型类型并观察日志</li>
+                </ol>
+            </div>
+            <div class="code">
+// 预期的控制台日志:
+🔄 开始更新车型类型: {modelId: 1375, modelName: "2027 Rivian R2", oldType: "轿车", newType: "SUV"}
+📡 发送API请求...
+📡 API响应: {status: "success", message: "车型分类更新成功！该车型共有 22 张图片..."}
+✅ 更新成功，更新本地数据
+📝 本地数据已更新: {oldType: "轿车", newType: "SUV", originalType: "SUV"}
+🖼️ 刷新图片数据...
+✅ 更新完成，当前车型类型: SUV
+🏁 更新流程结束
+            </div>
+        </div>
+
+        <div class="debug-section">
+            <h2>5. 常见问题排查</h2>
+            <div class="warning">
+                <p><strong>如果更新后刷新页面又变回原值，可能的原因:</strong></p>
+                <ul>
+                    <li>❌ 前端代码没有正确保存</li>
+                    <li>❌ 浏览器缓存问题</li>
+                    <li>❌ 前端服务器没有重启</li>
+                    <li>❌ API调用失败但没有显示错误</li>
+                    <li>❌ 数据库更新失败</li>
+                </ul>
+            </div>
+            <div class="info">
+                <p><strong>解决方案:</strong></p>
+                <ul>
+                    <li>✅ 硬刷新浏览器 (Ctrl+F5 或 Cmd+Shift+R)</li>
+                    <li>✅ 清除浏览器缓存</li>
+                    <li>✅ 重启前端服务器</li>
+                    <li>✅ 检查浏览器控制台错误</li>
+                    <li>✅ 使用此调试工具验证API</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:3000/api';
+
+        async function checkServers() {
+            const statusDiv = document.getElementById('serverStatus');
+            statusDiv.innerHTML = '正在检查服务器状态...';
+            
+            let backendStatus = 'offline';
+            let frontendStatus = 'offline';
+            
+            try {
+                const backendResponse = await fetch(`${API_BASE}/models?limit=1`);
+                if (backendResponse.ok) {
+                    backendStatus = 'online';
+                }
+            } catch (error) {
+                console.log('后端服务器检查失败:', error);
+            }
+            
+            try {
+                const frontendResponse = await fetch('http://localhost:8080');
+                if (frontendResponse.ok) {
+                    frontendStatus = 'online';
+                }
+            } catch (error) {
+                console.log('前端服务器检查失败:', error);
+            }
+            
+            statusDiv.innerHTML = `
+                <div>
+                    <span class="status ${backendStatus}">后端服务器 (3000)</span>
+                    <span class="status ${frontendStatus}">前端服务器 (8080)</span>
+                </div>
+                <div class="code">
+后端API: ${backendStatus === 'online' ? '✅ 正常' : '❌ 无法访问'}
+前端页面: ${frontendStatus === 'online' ? '✅ 正常' : '❌ 无法访问'}
+                </div>
+            `;
+        }
+
+        async function getModelData() {
+            const modelId = document.getElementById('modelId').value;
+            const resultDiv = document.getElementById('modelData');
+            
+            if (!modelId) {
+                resultDiv.innerHTML = '请输入车型ID';
+                resultDiv.className = 'result error';
+                return;
+            }
+            
+            try {
+                resultDiv.innerHTML = '正在获取车型数据...';
+                resultDiv.className = 'result info';
+                
+                const response = await fetch(`${API_BASE}/models/${modelId}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    const model = data.data;
+                    resultDiv.innerHTML = `
+车型ID: ${model.id}
+车型名称: ${model.name}
+当前类型: ${model.type}
+品牌: ${model.Brand ? model.Brand.name : '未知'}
+更新时间: ${new Date(model.updatedAt).toLocaleString()}
+图片数量: ${model.Images ? model.Images.length : 0}
+                    `;
+                    resultDiv.className = 'result success';
+                } else {
+                    resultDiv.innerHTML = `获取失败: ${data.message}`;
+                    resultDiv.className = 'result error';
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `网络错误: ${error.message}`;
+                resultDiv.className = 'result error';
+            }
+        }
+
+        async function updateModelType() {
+            const modelId = document.getElementById('modelId').value;
+            const newType = document.getElementById('newType').value;
+            const resultDiv = document.getElementById('updateResult');
+            
+            if (!modelId || !newType) {
+                resultDiv.innerHTML = '请输入车型ID并选择新类型';
+                resultDiv.className = 'result error';
+                return;
+            }
+            
+            try {
+                resultDiv.innerHTML = '正在更新车型类型...';
+                resultDiv.className = 'result info';
+                
+                const response = await fetch(`${API_BASE}/image-tags/models/${modelId}/type`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ type: newType })
+                });
+                
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    resultDiv.innerHTML = `✅ 更新成功！
+${data.message}
+
+更新后数据:
+- 车型ID: ${data.data.model.id}
+- 车型名称: ${data.data.model.name}
+- 新类型: ${data.data.model.type}
+- 图片数量: ${data.data.imageCount}
+- 更新时间: ${new Date(data.data.model.updatedAt).toLocaleString()}
+                    `;
+                    resultDiv.className = 'result success';
+                } else {
+                    resultDiv.innerHTML = `❌ 更新失败: ${data.message}`;
+                    resultDiv.className = 'result error';
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `❌ 网络错误: ${error.message}`;
+                resultDiv.className = 'result error';
+            }
+        }
+
+        // 页面加载时自动检查服务器状态
+        window.onload = function() {
+            checkServers();
+        };
+    </script>
+</body>
+</html>

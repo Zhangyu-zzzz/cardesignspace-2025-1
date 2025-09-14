@@ -11,7 +11,21 @@
         <div class="model-header">
           <div class="model-title">
             <h1>{{ model.name }}</h1>
-            <el-tag size="medium" effect="dark" class="model-type-tag">{{ model.type }}</el-tag>
+            <el-select 
+              v-model="model.type" 
+              placeholder="选择车型类型"
+              size="medium"
+              @change="updateModelType"
+              class="model-type-select"
+              :loading="typeUpdating"
+            >
+              <el-option
+                v-for="type in modelTypeOptions"
+                :key="type"
+                :label="type"
+                :value="type"
+              />
+            </el-select>
             <!-- <el-tag v-if="model.year" size="medium" type="info" class="year-tag">{{ model.year }}年</el-tag> -->
           </div>
           <div class="model-brand">
@@ -170,7 +184,7 @@
   </template>
   
   <script>
-  import { brandAPI, modelAPI, imageAPI } from '@/services/api';
+  import { brandAPI, modelAPI, imageAPI, apiClient } from '@/services/api';
 import ImageViewer from '@/components/ImageViewer.vue';
 import imageContextMenu from '@/utils/imageContextMenu';
   
@@ -189,6 +203,9 @@ import imageContextMenu from '@/utils/imageContextMenu';
         activeTab: 'all',
         imageViewerVisible: false,
         selectedImageIndex: 0,
+        typeUpdating: false,
+        originalType: null,
+        modelTypeOptions: ['轿车', 'SUV', 'MPV', 'WAGON', 'SHOOTINGBRAKE', '皮卡', '跑车', 'Hatchback', '其他']
       };
     },
     computed: {
@@ -376,19 +393,32 @@ import imageContextMenu from '@/utils/imageContextMenu';
         this.error = null;
         
         const modelId = this.$route.params.id;
-        console.log('正在加载车型详情，ID:', modelId);
+        console.log('🔄 正在加载车型详情，ID:', modelId);
         
         try {
           // 使用API服务获取车型数据
           const modelResponse = await modelAPI.getById(modelId);
-          console.log('获取到的模型数据:', modelResponse);
+          console.log('📡 获取到的模型数据:', modelResponse);
           
           if (!modelResponse.success) {
             throw new Error(modelResponse.message || '获取模型数据失败');
           }
           
+          console.log('📝 更新本地车型数据:', {
+            oldType: this.model.type,
+            newType: modelResponse.data.type,
+            modelName: modelResponse.data.name
+          });
+          
           this.model = modelResponse.data;
           this.brand = modelResponse.data.Brand || {};
+          // 保存原始类型用于回滚
+          this.originalType = this.model.type;
+          
+          console.log('✅ 车型数据加载完成:', {
+            modelType: this.model.type,
+            originalType: this.originalType
+          });
           
           // 获取图片数据
           try {
@@ -476,9 +506,103 @@ import imageContextMenu from '@/utils/imageContextMenu';
         const imageUrl = this.getImageUrl(image);
         const imageTitle = image.title || this.model.name;
         
+        // 使用浏览器默认菜单
         imageContextMenu.show(event, imageUrl, {
-          title: imageTitle
+          title: imageTitle,
+          useBrowserMenu: true
         });
+      },
+      
+      // 只获取图片数据
+      async fetchImages() {
+        try {
+          const modelId = this.$route.params.id;
+          const imagesResponse = await imageAPI.getByModelId(modelId);
+          if (imagesResponse.success && imagesResponse.data) {
+            this.images = imagesResponse.data;
+            console.log('获取到图片数量:', this.images.length);
+          }
+        } catch (imageError) {
+          console.warn('获取图片失败:', imageError);
+          // 如果模型中包含图片，使用模型中的图片
+          if (this.model.Images) {
+            this.images = this.model.Images;
+            console.log('从模型数据中获取到图片:', this.images.length);
+          }
+        }
+      },
+      
+      // 更新车型类型
+      async updateModelType(newType) {
+        console.log('🔄 开始更新车型类型:', {
+          modelId: this.model.id,
+          modelName: this.model.name,
+          oldType: this.model.type,
+          newType: newType
+        });
+        
+        if (!newType) {
+          console.log('❌ 无需更新: 新类型为空');
+          return;
+        }
+        
+        if (newType === this.model.type) {
+          console.log('⚠️ 前端显示类型与选择类型相同，但可能存在数据不一致');
+          console.log('🔄 强制从服务器获取最新数据...');
+          // 强制从服务器获取最新数据
+          await this.fetchModelDetails();
+          // 如果获取后还是相同，则提示用户
+          if (newType === this.model.type) {
+            this.$message.info('当前车型类型已经是 ' + newType + '，无需更新');
+            return;
+          }
+        }
+        
+        this.typeUpdating = true;
+        
+        try {
+          console.log('📡 发送API请求...');
+          const response = await apiClient.put(`/image-tags/models/${this.model.id}/type`, {
+            type: newType
+          });
+          
+          console.log('📡 API响应:', response);
+          
+          if (response.status === 'success') {
+            console.log('✅ 更新成功，更新本地数据');
+            this.$message.success(response.message);
+            
+            // 更新本地数据
+            const oldType = this.model.type;
+            this.model.type = newType;
+            this.originalType = newType;
+            
+            console.log('📝 本地数据已更新:', {
+              oldType: oldType,
+              newType: this.model.type,
+              originalType: this.originalType
+            });
+            
+            // 只刷新图片数据，不重新获取车型数据
+            console.log('🖼️ 刷新图片数据...');
+            await this.fetchImages();
+            
+            console.log('✅ 更新完成，当前车型类型:', this.model.type);
+          } else {
+            console.log('❌ API返回失败:', response.message);
+            this.$message.error(response.message || '更新失败');
+            // 恢复原值
+            this.model.type = this.originalType;
+          }
+        } catch (error) {
+          console.error('❌ 更新车型类型失败:', error);
+          this.$message.error('更新车型类型失败，请重试');
+          // 恢复原值
+          this.model.type = this.originalType;
+        } finally {
+          this.typeUpdating = false;
+          console.log('🏁 更新流程结束');
+        }
       }
     },
     mounted() {
@@ -517,16 +641,30 @@ import imageContextMenu from '@/utils/imageContextMenu';
     padding: 0 10px;
   }
 
-  /* 车型类型标签样式 - 使用主题色 */
-  .model-type-tag {
+  /* 车型类型选择框样式 */
+  .model-type-select {
+    margin-left: 15px;
+    min-width: 120px;
+  }
+
+  .model-type-select .el-input__inner {
     background-color: #e03426 !important;
     border-color: #e03426 !important;
     color: white !important;
+    font-weight: 500;
   }
 
-  .model-type-tag:hover {
+  .model-type-select .el-input__inner:focus {
     background-color: #c12e21 !important;
     border-color: #c12e21 !important;
+  }
+
+  .model-type-select .el-input__suffix {
+    color: white !important;
+  }
+
+  .model-type-select .el-input__suffix .el-input__icon {
+    color: white !important;
   }
   
   .model-title {

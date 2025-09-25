@@ -1,4 +1,5 @@
-const { Model, Series, Brand, Image, User } = require('../models/mysql');
+const { Model, Series, Brand, Image, User, ImageAsset, ImageCuration } = require('../models/mysql');
+const { chooseBestUrl } = require('../services/assetService');
 const { Op } = require('sequelize');
 const { sequelize } = require('../config/mysql');
 const logger = require('../config/logger');
@@ -362,16 +363,49 @@ exports.getModelImages = async (req, res) => {
         {
           model: User,
           attributes: ['id', 'username', 'avatar'],
-          required: false // 允许没有关联用户的图片
+          required: false
+        },
+        {
+          model: ImageAsset,
+          as: 'Assets',
+          attributes: ['variant', 'url', 'width', 'height', 'size'],
+          required: false
+        },
+        {
+          model: ImageCuration,
+          as: 'Curation',
+          required: false,
+          where: {
+            isCurated: true,
+            [Op.or]: [
+              { validUntil: null },
+              { validUntil: { [Op.gt]: new Date() } }
+            ]
+          }
         }
       ],
-      order: [['uploadDate', 'DESC']]
+      order: [
+        [{ model: ImageCuration, as: 'Curation' }, 'isCurated', 'DESC'],
+        [{ model: ImageCuration, as: 'Curation' }, 'curationScore', 'DESC'],
+        ['uploadDate', 'DESC']
+      ]
     });
-    
+
+    const items = images.map((img) => {
+      const data = img.toJSON();
+      const assetsMap = Array.isArray(data.Assets)
+        ? data.Assets.reduce((acc, a) => {
+            acc[a.variant] = a.url;
+            return acc;
+          }, {})
+        : {};
+      return { ...data, bestUrl: chooseBestUrl(assetsMap, true) || data.url };
+    });
+
     res.status(200).json({
       success: true,
-      count: images.length,
-      data: images
+      count: items.length,
+      data: items
     });
   } catch (error) {
     logger.error(`获取车型图片失败: ${error.message}`);

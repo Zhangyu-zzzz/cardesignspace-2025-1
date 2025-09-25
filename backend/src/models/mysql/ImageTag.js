@@ -9,11 +9,13 @@ const ImageTag = sequelize.define(
       type: DataTypes.INTEGER,
       allowNull: false,
       primaryKey: true,
+      field: 'image_id',
     },
     tagId: {
       type: DataTypes.INTEGER,
       allowNull: false,
       primaryKey: true,
+      field: 'tag_id',
     },
     confidence: {
       type: DataTypes.FLOAT,
@@ -31,12 +33,13 @@ const ImageTag = sequelize.define(
     addedBy: {
       type: DataTypes.INTEGER,
       allowNull: true,
+      field: 'added_by',
     },
     createdAt: {
       type: DataTypes.DATE,
       allowNull: false,
       defaultValue: DataTypes.NOW,
-      field: 'createdAt',
+      field: 'created_at',
     },
   },
   {

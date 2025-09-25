@@ -83,6 +83,3 @@ exports.removeTagFromImage = async (req, res) => {
     res.status(500).json({ success: false, message: err.message });
   }
 };
-
-
->>>>>>> a691490 (chore(backend): unify image/tag/curation routing and controllers; remove duplicates and fix ImageTag model\n\n- routes: cleanup  and , drop duplicate definitions\n- controllers: de-duplicate , simplify  to CRUD only, fix duplicate import in \n- models: ensure single  definition (composite PK)\n- app: remove redundant  tag routes mount\n- docs: no change)

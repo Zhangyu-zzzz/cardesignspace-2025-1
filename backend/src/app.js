@@ -129,6 +129,8 @@ app.use('/api/articles', require('./routes/articleRoutes'));
 app.use('/api/inspiration', require('./routes/inspirationRoutes'));
 app.use('/api/image-tags', require('./routes/imageTagRoutes'));
 app.use('/api/image-gallery', require('./routes/imageGalleryRoutes'));
+// 摄取路由（特性开关控制，默认 404）
+app.use('/api/ingest', require('./routes/ingestRoutes'));
 
 console.log('所有API路由已加载完成');
 
@@ -174,6 +176,13 @@ app.use((req, res) => {
 connectMySQL().then(() => {
   // 启动服务器
   const PORT = process.env.PORT || 3000;
+  // 启动队列 Worker（受特性开关控制）
+  try {
+    const { bootIngestWorkers } = require('./workers/ingestWorkers');
+    bootIngestWorkers();
+  } catch (err) {
+    console.warn('启动 ingest workers 失败（可能是未启用队列或依赖缺失）:', err && err.message);
+  }
   app.listen(PORT, () => {
     logger.info(`服务器运行在端口 ${PORT}`);
     console.log(`服务器运行在端口 ${PORT}`);

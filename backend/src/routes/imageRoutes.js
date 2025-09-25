@@ -1,7 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const imageController = require('../controllers/imageController');
+const imagesQueryController = require('../controllers/imagesQueryController');
 const authMiddleware = require('../middleware/authMiddleware');
+const { authenticateToken } = require('../middleware/auth');
+const imageTagController = require('../controllers/imageTagController');
 
 // 获取车型的图片
 router.get('/car/:carId', imageController.getImagesByCarId);
@@ -20,5 +23,13 @@ router.delete('/:id/favorite', authMiddleware.protect, imageController.unfavorit
 
 // 获取热门图片
 router.get('/popular', imageController.getPopularImages);
+
+// 通用图片列表（支持排序：curated/latest/default）
+router.get('/', imagesQueryController.listImages);
+
+// === 标签相关（图片打标签/去标签） ===
+router.get('/:id/tags', imageTagController.getImageTags);
+router.post('/:id/tags', authenticateToken, imageTagController.addTagsToImage);
+router.delete('/:id/tags/:tagId', authenticateToken, imageTagController.removeTagFromImage);
 
 module.exports = router; 

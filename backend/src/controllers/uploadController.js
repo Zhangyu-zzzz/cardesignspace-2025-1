@@ -3,9 +3,11 @@ const { Op } = require('sequelize');
 const { uploadToCOS, generateUploadPath, deleteFromCOS } = require('../config/cos');
 const authController = require('./authController');
 const activityService = require('../services/activityService');
+const { generateAndSaveAssets, chooseBestUrl } = require('../services/assetService');
 
 // 导入模型并确保关联关系
 const { Brand, Model, Image, ArticleImage } = require('../models/mysql');
+const { analyzeBufferAndUpsert } = require('../services/analysisService');
 const User = require('../models/mysql/User');
 
 /**
@@ -100,6 +102,37 @@ exports.uploadSingleImage = async (req, res) => {
 
       const savedImage = await Image.create(imageData);
 
+      // 生成图片变体并落库
+      let assets = {};
+      try {
+        assets = await generateAndSaveAssets({
+          imageId: savedImage.id,
+          originalBuffer: req.file.buffer,
+          originalKey: cosKey,
+          originalContentType: req.file.mimetype,
+        });
+      } catch (assetErr) {
+        console.error('生成图片变体失败:', assetErr);
+      }
+
+      // 异步触发结构化分析（不阻塞响应）
+      (async () => {
+        try {
+          // 从变体中估算宽高（若有）
+          // 此处直接用 sharp 从原图读元数据
+          const meta = await (await import('sharp')).then((m) => m.default(req.file.buffer).metadata());
+          await analyzeBufferAndUpsert({
+            imageId: savedImage.id,
+            buffer: req.file.buffer,
+            width: meta.width,
+            height: meta.height,
+            extractorVersion: 'v1',
+          });
+        } catch (e) {
+          console.error('结构化分析失败(单图):', e);
+        }
+      })();
+
       // 上传成功后给用户增加积分
       const pointsToAdd = 10; // 每张图片10积分
       const newPoints = await authController.updateUserPoints(req.user.id, pointsToAdd);
@@ -117,6 +150,8 @@ exports.uploadSingleImage = async (req, res) => {
         data: {
           id: savedImage.id,
           url: cosResult.url,
+          bestUrl: chooseBestUrl(assets, true) || cosResult.url,
+          assets,
           title: savedImage.title,
           category: savedImage.category,
           modelId: savedImage.modelId,
@@ -215,11 +250,42 @@ exports.uploadMultipleImages = async (req, res) => {
 
         const savedImage = await Image.create(imageData);
 
+        // 生成图片变体并落库（批量不因变体失败而中断）
+        let assets = {};
+        try {
+          assets = await generateAndSaveAssets({
+            imageId: savedImage.id,
+            originalBuffer: file.buffer,
+            originalKey: cosKey,
+            originalContentType: file.mimetype,
+          });
+        } catch (assetErr) {
+          console.error(`生成变体失败(${file.originalname}):`, assetErr);
+        }
+
+        // 异步触发结构化分析
+        (async () => {
+          try {
+            const meta = await (await import('sharp')).then((m) => m.default(file.buffer).metadata());
+            await analyzeBufferAndUpsert({
+              imageId: savedImage.id,
+              buffer: file.buffer,
+              width: meta.width,
+              height: meta.height,
+              extractorVersion: 'v1',
+            });
+          } catch (e) {
+            console.error(`结构化分析失败(${file.originalname}):`, e);
+          }
+        })();
+
         uploadResults.push({
           success: true,
           filename: file.originalname,
           id: savedImage.id,
           url: cosResult.url,
+          bestUrl: chooseBestUrl(assets, true) || cosResult.url,
+          assets,
           title: savedImage.title
         });
 

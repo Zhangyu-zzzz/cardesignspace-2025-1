@@ -23,29 +23,52 @@ async function runMigration() {
     await sequelize.authenticate();
     console.log('✅ 数据库连接成功');
 
-    // 读取迁移文件
-    const migrationPath = path.join(__dirname, '../migrations/create-notifications-table.sql');
-    const migrationSQL = fs.readFileSync(migrationPath, 'utf8');
-    
-    console.log('📄 开始执行迁移...');
-    console.log('迁移内容:', migrationSQL.substring(0, 200) + '...');
+    // 组装迁移 SQL：优先执行 image_assets（若文件存在），并追加 image_curation 表 DDL
+    const migrations = [];
+    const imageAssetsPath = path.join(__dirname, './create-image-assets-table.sql');
+    if (fs.existsSync(imageAssetsPath)) {
+      const migrationSQL = fs.readFileSync(imageAssetsPath, 'utf8');
+      migrations.push(migrationSQL);
+    }
 
-    // 执行迁移
-    await sequelize.query(migrationSQL);
-    
-    console.log('✅ 通知表创建成功！');
-    
-    // 检查表是否存在
+    // image_curation DDL（幂等）
+    migrations.push(`
+CREATE TABLE IF NOT EXISTS image_curation (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  imageId INT NOT NULL UNIQUE,
+  isCurated TINYINT(1) DEFAULT 0,
+  curationScore FLOAT DEFAULT 0,
+  curator VARCHAR(255) NULL,
+  reason TEXT NULL,
+  validUntil DATETIME NULL,
+  createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_image_curation_imageId (imageId),
+  INDEX idx_image_curation_isCurated (isCurated),
+  INDEX idx_image_curation_score (curationScore),
+  INDEX idx_image_curation_validUntil (validUntil)
+);
+    `.trim());
+
+    console.log('📄 开始执行迁移...');
+    for (const sql of migrations) {
+      console.log('执行SQL片段:', sql.substring(0, 120) + '...');
+      await sequelize.query(sql);
+    }
+
+    console.log('✅ 迁移执行完成！');
+
+    // 检查 image_assets 表是否存在
     const [tables] = await sequelize.query(
-      "SHOW TABLES LIKE 'notifications'"
+      "SHOW TABLES LIKE 'image_assets'"
     );
     
     if (tables.length > 0) {
-      console.log('✅ 通知表确认存在');
+      console.log('✅ image_assets 表确认存在');
       
       // 查看表结构
       const [columns] = await sequelize.query(
-        "DESCRIBE notifications"
+        "DESCRIBE image_assets"
       );
       
       console.log('📋 表结构:');
@@ -53,7 +76,24 @@ async function runMigration() {
         console.log(`  ${col.Field}: ${col.Type} ${col.Null === 'NO' ? 'NOT NULL' : 'NULL'} ${col.Key ? `KEY(${col.Key})` : ''}`);
       });
     } else {
-      console.log('❌ 通知表不存在，迁移可能失败');
+      console.log('❌ image_assets 表不存在，迁移可能失败');
+    }
+
+    // 检查 image_curation 表
+    const [ic] = await sequelize.query(
+      "SHOW TABLES LIKE 'image_curation'"
+    );
+    if (ic.length > 0) {
+      console.log('✅ image_curation 表确认存在');
+      const [columns2] = await sequelize.query(
+        "DESCRIBE image_curation"
+      );
+      console.log('📋 image_curation 表结构:');
+      columns2.forEach(col => {
+        console.log(`  ${col.Field}: ${col.Type} ${col.Null === 'NO' ? 'NOT NULL' : 'NULL'} ${col.Key ? `KEY(${col.Key})` : ''}`);
+      });
+    } else {
+      console.log('❌ image_curation 表不存在，迁移可能失败');
     }
 
   } catch (error) {

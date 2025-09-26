@@ -2,6 +2,7 @@ const { Op } = require('sequelize');
 const Image = require('../models/mysql/Image');
 const Tag = require('../models/mysql/Tag');
 const ImageTag = require('../models/mysql/ImageTag');
+const Model = require('../models/mysql/Model');
 
 // GET /api/images/:id/tags
 exports.getImageTags = async (req, res) => {
@@ -80,6 +81,134 @@ exports.removeTagFromImage = async (req, res) => {
     if (!deleted) return res.status(404).json({ success: false, message: '未找到关联' });
     res.json({ success: true });
   } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// GET /api/image-tags/images - 获取图片列表
+exports.getImages = async (req, res) => {
+  try {
+    const { page = 1, limit = 20, hasTags, modelId, search } = req.query;
+    const offset = (page - 1) * limit;
+    
+    const whereClause = {};
+    
+    // 根据是否有标签过滤
+    if (hasTags !== undefined && hasTags !== '') {
+      if (hasTags === 'true') {
+        whereClause[Op.and] = [
+          { '$Tags.id$': { [Op.ne]: null } }
+        ];
+      } else if (hasTags === 'false') {
+        whereClause[Op.and] = [
+          { '$Tags.id$': { [Op.is]: null } }
+        ];
+      }
+    }
+    
+    // 根据车型ID过滤
+    if (modelId) {
+      whereClause.modelId = modelId;
+    }
+    
+    // 根据搜索关键词过滤
+    if (search) {
+      whereClause[Op.or] = [
+        { filename: { [Op.like]: `%${search}%` } },
+        { '$Tags.name$': { [Op.like]: `%${search}%` } }
+      ];
+    }
+    
+    const { count, rows } = await Image.findAndCountAll({
+      where: whereClause,
+      include: [
+        {
+          model: Tag,
+          as: 'Tags',
+          through: { attributes: [] },
+          required: hasTags === 'true' ? true : false
+        },
+        {
+          model: Model,
+          as: 'Model',
+          attributes: ['id', 'name', 'brandId']
+        }
+      ],
+      limit: parseInt(limit),
+      offset: parseInt(offset),
+      order: [['createdAt', 'DESC']]
+    });
+    
+    res.json({
+      success: true,
+      data: {
+        images: rows,
+        pagination: {
+          page: parseInt(page),
+          limit: parseInt(limit),
+          total: count,
+          pages: Math.ceil(count / limit)
+        }
+      }
+    });
+  } catch (err) {
+    console.error('获取图片列表失败:', err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// GET /api/image-tags/stats/tags - 获取标签统计
+exports.getTagStats = async (req, res) => {
+  try {
+    const stats = await Tag.findAll({
+      attributes: [
+        'id',
+        'name',
+        'type',
+        'popularity',
+        [ImageTag.sequelize.fn('COUNT', ImageTag.sequelize.col('ImageTags.id')), 'usageCount']
+      ],
+      include: [
+        {
+          model: ImageTag,
+          as: 'ImageTags',
+          attributes: [],
+          required: false
+        }
+      ],
+      group: ['Tag.id'],
+      order: [['popularity', 'DESC']],
+      limit: 50
+    });
+    
+    res.json({
+      success: true,
+      data: stats
+    });
+  } catch (err) {
+    console.error('获取标签统计失败:', err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// GET /api/image-tags/style-tag-options - 获取风格标签选项
+exports.getStyleTagOptions = async (req, res) => {
+  try {
+    const styleTags = await Tag.findAll({
+      where: {
+        type: 'style',
+        status: 'active'
+      },
+      attributes: ['id', 'name', 'description'],
+      order: [['popularity', 'DESC']]
+    });
+    
+    res.json({
+      success: true,
+      data: styleTags
+    });
+  } catch (err) {
+    console.error('获取风格标签选项失败:', err);
     res.status(500).json({ success: false, message: err.message });
   }
 };

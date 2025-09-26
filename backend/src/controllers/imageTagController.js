@@ -93,19 +93,6 @@ exports.getImages = async (req, res) => {
     
     const whereClause = {};
     
-    // 根据是否有标签过滤
-    if (hasTags !== undefined && hasTags !== '') {
-      if (hasTags === 'true') {
-        whereClause[Op.and] = [
-          { '$Tags.id$': { [Op.ne]: null } }
-        ];
-      } else if (hasTags === 'false') {
-        whereClause[Op.and] = [
-          { '$Tags.id$': { [Op.is]: null } }
-        ];
-      }
-    }
-    
     // 根据车型ID过滤
     if (modelId) {
       whereClause.modelId = modelId;
@@ -115,7 +102,7 @@ exports.getImages = async (req, res) => {
     if (search) {
       whereClause[Op.or] = [
         { filename: { [Op.like]: `%${search}%` } },
-        { '$Tags.name$': { [Op.like]: `%${search}%` } }
+        { title: { [Op.like]: `%${search}%` } }
       ];
     }
     
@@ -126,7 +113,7 @@ exports.getImages = async (req, res) => {
           model: Tag,
           as: 'Tags',
           through: { attributes: [] },
-          required: hasTags === 'true' ? true : false
+          required: false
         },
         {
           model: Model,
@@ -136,13 +123,24 @@ exports.getImages = async (req, res) => {
       ],
       limit: parseInt(limit),
       offset: parseInt(offset),
-      order: [['createdAt', 'DESC']]
+      order: [['createdAt', 'DESC']],
+      distinct: true
     });
+    
+    // 如果有标签过滤要求，在应用层进行过滤
+    let filteredRows = rows;
+    if (hasTags !== undefined && hasTags !== '') {
+      if (hasTags === 'true') {
+        filteredRows = rows.filter(image => image.Tags && image.Tags.length > 0);
+      } else if (hasTags === 'false') {
+        filteredRows = rows.filter(image => !image.Tags || image.Tags.length === 0);
+      }
+    }
     
     res.json({
       success: true,
       data: {
-        images: rows,
+        images: filteredRows,
         pagination: {
           page: parseInt(page),
           limit: parseInt(limit),
@@ -161,29 +159,27 @@ exports.getImages = async (req, res) => {
 exports.getTagStats = async (req, res) => {
   try {
     const stats = await Tag.findAll({
-      attributes: [
-        'id',
-        'name',
-        'type',
-        'popularity',
-        [ImageTag.sequelize.fn('COUNT', ImageTag.sequelize.col('ImageTags.id')), 'usageCount']
-      ],
-      include: [
-        {
-          model: ImageTag,
-          as: 'ImageTags',
-          attributes: [],
-          required: false
-        }
-      ],
-      group: ['Tag.id'],
+      attributes: ['id', 'name', 'type', 'popularity'],
       order: [['popularity', 'DESC']],
       limit: 50
     });
     
+    // 为每个标签添加使用次数
+    const statsWithCount = await Promise.all(
+      stats.map(async (tag) => {
+        const usageCount = await ImageTag.count({
+          where: { tagId: tag.id }
+        });
+        return {
+          ...tag.toJSON(),
+          usageCount
+        };
+      })
+    );
+    
     res.json({
       success: true,
-      data: stats
+      data: statsWithCount
     });
   } catch (err) {
     console.error('获取标签统计失败:', err);

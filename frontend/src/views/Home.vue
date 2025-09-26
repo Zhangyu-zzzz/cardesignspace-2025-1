@@ -27,7 +27,7 @@
             <!-- 车型图片 -->
             <img 
               v-if="item.type === 'model' && item.Images && item.Images.length > 0" 
-              :src="item.Images[0].url"
+              :src="getOptimizedImageUrl(item.Images[0], 1600, 900, 'fullscreen')"
               :alt="item.name"
               @load="handleModelImageLoad"
               @error="handleModelImageError"

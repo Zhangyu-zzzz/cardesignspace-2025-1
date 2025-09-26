@@ -2,5 +2,34 @@
   "dependencies": {
     "axios": "^1.11.0",
     "mysql2": "^3.14.3"
+  },
+  "name": "cardesignspace-2025-1",
+  "version": "1.0.0",
+  "description": "这是一个全栈汽车设计展示平台，包含前端和后端服务。",
+  "main": "create-test-user.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "playwright:install": "playwright install",
+    "mcp:playwright": "mcp-server-playwright --headless --allowed-hosts=localhost,127.0.0.1 --output-dir ./.mcp/output",
+    "mcp:playwright:http": "mcp-server-playwright --headless --host 127.0.0.1 --port 3929 --allowed-hosts=localhost,127.0.0.1 --output-dir ./.mcp/output"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Zhangyu-zzzz/cardesignspace-2025-1.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/Zhangyu-zzzz/cardesignspace-2025-1/issues"
+  },
+  "homepage": "https://github.com/Zhangyu-zzzz/cardesignspace-2025-1#readme",
+  "devDependencies": {
+    "@playwright/test": "^1.55.1",
+    "@playwright/mcp": "^0.0.40"
   }
 }

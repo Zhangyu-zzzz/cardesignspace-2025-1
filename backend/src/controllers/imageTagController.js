@@ -118,7 +118,7 @@ exports.getImages = async (req, res) => {
         {
           model: Model,
           as: 'Model',
-          attributes: ['id', 'name', 'brandId']
+          attributes: ['id', 'name', 'brandId', 'styleTags']
         }
       ],
       limit: parseInt(limit),
@@ -202,31 +202,39 @@ exports.getTagStats = async (req, res) => {
 // GET /api/image-tags/style-tag-options - 获取风格标签选项
 exports.getStyleTagOptions = async (req, res) => {
   try {
-    // 首先尝试查找style类型的标签
-    let styleTags = await Tag.findAll({
+    // 从models表中获取所有不重复的styleTags
+    const models = await Model.findAll({
       where: {
-        type: 'style',
-        status: 'active'
+        isActive: true,
+        styleTags: {
+          [Op.ne]: null
+        }
       },
-      attributes: ['id', 'name', 'description'],
-      order: [['popularity', 'DESC']]
+      attributes: ['styleTags']
     });
     
-    // 如果没有style类型的标签，返回所有活跃标签作为备选
-    if (styleTags.length === 0) {
-      styleTags = await Tag.findAll({
-        where: {
-          status: 'active'
-        },
-        attributes: ['id', 'name', 'description'],
-        order: [['popularity', 'DESC']],
-        limit: 20
-      });
-    }
+    // 提取所有styleTags并去重
+    const allStyleTags = new Set();
+    models.forEach(model => {
+      if (model.styleTags && Array.isArray(model.styleTags)) {
+        model.styleTags.forEach(tag => {
+          if (typeof tag === 'string' && tag.trim()) {
+            allStyleTags.add(tag.trim());
+          }
+        });
+      }
+    });
+    
+    // 转换为数组格式
+    const styleTagsArray = Array.from(allStyleTags).map((tag, index) => ({
+      id: index + 1,
+      name: tag,
+      description: tag
+    }));
     
     res.json({
       success: true,
-      data: styleTags
+      data: styleTagsArray
     });
   } catch (err) {
     console.error('获取风格标签选项失败:', err);

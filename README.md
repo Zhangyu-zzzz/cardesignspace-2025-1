@@ -52,7 +52,7 @@ start.bat
 - 阅读 `AGENTS.md` 获取提交流程、命名约定、测试要求等贡献指南。
 - 功能设计与修复记录集中在 `docs/features/` 与 `docs/fixes/`，运维手册位于 `docs/operations/`。
 - 手动调试 HTML 页面已归档到 `docs/manual-tools/`，方便离线验证。
-- 部署与排障脚本位于仓库根目录，更多运维说明见 `docs/`。
+- 部署与排障脚本位于仓库根目录，更多运维说明见 `docs/`（索引详见 `docs/README.md`）。
 
 ## 许可证
 MIT License

@@ -209,9 +209,10 @@ exports.getBestImageUrl = async (req, res) => {
     const cacheKey = getCacheKey(imageId);
     const cached = cache.get(cacheKey);
 
+    // 使用缓存数据（如果存在且未过期）
     if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
       logger.info(`使用缓存数据 (imageId: ${imageId})`);
-
+      
       const {
         assets: normalizedAssets,
         bestUrl,
@@ -239,7 +240,8 @@ exports.getBestImageUrl = async (req, res) => {
           availableVariants: Object.keys(flatAssets),
           assets: flatAssets,
           assetDetails: cached.assets,
-          selectedVariant
+          selectedVariant,
+          cached: true
         }
       });
     }
@@ -552,7 +554,10 @@ exports.getVariantStats = async (req, res) => {
 async function checkAndRegenerateMissingAssets(assets, imageId, originalUrl) {
   const missingVariants = [];
   
+  logger.info(`检查图片 ${imageId} 的变体文件存在性...`);
+  
   if (!assets || Object.keys(assets).length === 0) {
+    logger.info(`图片 ${imageId} 没有变体记录，需要生成所有变体`);
     return ['thumb', 'small', 'medium', 'large', 'webp']; // 所有变体都需要生成
   }
   
@@ -561,10 +566,13 @@ async function checkAndRegenerateMissingAssets(assets, imageId, originalUrl) {
     const url = getAssetUrl(asset);
     if (url) {
       try {
+        logger.info(`检查变体文件: ${variant} - ${url}`);
         const response = await axios.head(url, { timeout: 5000 });
         if (response.status !== 200) {
-          logger.warn(`变体文件不存在: ${variant} - ${url}`);
+          logger.warn(`变体文件不存在: ${variant} - ${url} (状态码: ${response.status})`);
           missingVariants.push(variant);
+        } else {
+          logger.info(`变体文件存在: ${variant}`);
         }
       } catch (error) {
         logger.warn(`检查变体文件失败: ${variant} - ${url}`, error.message);
@@ -573,6 +581,7 @@ async function checkAndRegenerateMissingAssets(assets, imageId, originalUrl) {
     }
   }
   
+  logger.info(`图片 ${imageId} 缺失的变体: ${missingVariants.join(', ')}`);
   return missingVariants;
 }
 

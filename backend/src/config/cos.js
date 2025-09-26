@@ -38,8 +38,9 @@ const uploadToCOS = (fileBuffer, key, contentType) => {
         reject(err);
       } else {
         console.log('COS上传成功:', data);
-        // 构建完整的访问URL
-        const url = `${cosConfig.BucketDomain}/${key}`;
+        // 构建完整的访问URL，确保正确的URL编码
+        const encodedKey = encodeURIComponent(key).replace(/%2F/g, '/');
+        const url = `${cosConfig.BucketDomain}/${encodedKey}`;
         resolve({
           url,
           location: data.Location,

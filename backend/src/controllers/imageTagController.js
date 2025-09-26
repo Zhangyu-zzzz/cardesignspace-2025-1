@@ -130,11 +130,23 @@ exports.getImages = async (req, res) => {
     // 如果有标签过滤要求，在应用层进行过滤
     let filteredRows = rows;
     if (hasTags !== undefined && hasTags !== '') {
+      console.log(`标签筛选参数: hasTags=${hasTags}, 原始图片数量: ${rows.length}`);
+      
       if (hasTags === 'true') {
-        filteredRows = rows.filter(image => image.Tags && image.Tags.length > 0);
+        filteredRows = rows.filter(image => {
+          const hasTagsResult = image.Tags && Array.isArray(image.Tags) && image.Tags.length > 0;
+          console.log(`图片 ${image.id}: Tags=${image.Tags ? image.Tags.length : 0}, 筛选结果: ${hasTagsResult}`);
+          return hasTagsResult;
+        });
       } else if (hasTags === 'false') {
-        filteredRows = rows.filter(image => !image.Tags || image.Tags.length === 0);
+        filteredRows = rows.filter(image => {
+          const hasNoTagsResult = !image.Tags || !Array.isArray(image.Tags) || image.Tags.length === 0;
+          console.log(`图片 ${image.id}: Tags=${image.Tags ? image.Tags.length : 0}, 筛选结果: ${hasNoTagsResult}`);
+          return hasNoTagsResult;
+        });
       }
+      
+      console.log(`筛选后图片数量: ${filteredRows.length}`);
     }
     
     res.json({
@@ -190,7 +202,8 @@ exports.getTagStats = async (req, res) => {
 // GET /api/image-tags/style-tag-options - 获取风格标签选项
 exports.getStyleTagOptions = async (req, res) => {
   try {
-    const styleTags = await Tag.findAll({
+    // 首先尝试查找style类型的标签
+    let styleTags = await Tag.findAll({
       where: {
         type: 'style',
         status: 'active'
@@ -198,6 +211,18 @@ exports.getStyleTagOptions = async (req, res) => {
       attributes: ['id', 'name', 'description'],
       order: [['popularity', 'DESC']]
     });
+    
+    // 如果没有style类型的标签，返回所有活跃标签作为备选
+    if (styleTags.length === 0) {
+      styleTags = await Tag.findAll({
+        where: {
+          status: 'active'
+        },
+        attributes: ['id', 'name', 'description'],
+        order: [['popularity', 'DESC']],
+        limit: 20
+      });
+    }
     
     res.json({
       success: true,

@@ -40,6 +40,7 @@ const corsOptions = {
     // 默认允许的源列表（包含生产环境域名）
     const defaultOrigins = [
       'http://localhost:8080',
+      'http://localhost:8081',
       'http://localhost:3000',
       'http://www.cardesignspace.com',
       'https://www.cardesignspace.com'

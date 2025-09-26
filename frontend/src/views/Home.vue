@@ -328,7 +328,7 @@
 </template>
 
 <script>
-import { brandAPI, modelAPI, imageAPI } from '@/services/api';
+import { brandAPI, modelAPI, imageAPI, apiClient } from '@/services/api';
 // 恢复使用chinese-to-pinyin库
 import chineseToPinyin from 'chinese-to-pinyin'
 import scrollPositionMixin from '@/utils/scrollPositionMixin';
@@ -1084,30 +1084,19 @@ export default {
       });
     },
     
-    // 优化图片URL（使用变体系统）
+    // 优化图片URL（暂时禁用变体系统，直接使用原图）
     async getOptimizedImageUrl(url, width = 300, height = 200, context = 'card') {
       if (!url) return '';
       
-      // 尝试从URL中提取图片ID
-      const imageIdMatch = url.match(/\/(\d+)\.(jpg|jpeg|png|webp)$/);
-      if (imageIdMatch) {
-        try {
-          // 直接调用变体API
-          const response = await this.$http.get(`/api/image-variants/best/${imageIdMatch[1]}`, {
-            params: {
-              variant: this.getVariantForContext(context),
-              width,
-              height,
-              preferWebp: true
-            }
-          });
-          
-          if (response.data.success) {
-            return response.data.data.bestUrl;
-          }
-        } catch (error) {
-          console.warn('获取图片变体失败，使用原图:', error);
-        }
+      // 暂时禁用变体系统，直接返回原图URL
+      // TODO: 修复图片变体系统后重新启用
+      console.log('使用原图URL:', url);
+      
+      // 如果是腾讯云COS的图片，可以考虑添加一些优化参数
+      if (url.includes('cardesignspace-cos-1-1259492452.cos.ap-shanghai.myqcloud.com')) {
+        // 腾讯云COS支持图片处理参数
+        const separator = url.includes('?') ? '&' : '?';
+        return `${url}${separator}imageMogr2/thumbnail/${width}x${height}/quality/80`;
       }
       
       // 如果是本地图片URL，添加压缩参数（兼容旧逻辑）

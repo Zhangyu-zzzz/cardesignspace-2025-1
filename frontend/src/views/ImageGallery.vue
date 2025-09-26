@@ -141,7 +141,7 @@
       >
         <div class="image-container">
           <img 
-            :src="image.url" 
+            :src="image.displayUrl || image.url" 
             :alt="image.title || image.filename"
             @load="onImageLoad"
             @error="onImageError"
@@ -204,7 +204,7 @@
         
         <div class="modal-content">
           <div class="modal-image">
-            <img :src="selectedImage?.url" :alt="selectedImage?.filename">
+            <img :src="(selectedImage && (selectedImage.displayUrl || selectedImage.url)) || ''" :alt="selectedImage?.filename">
           </div>
           
           <div class="modal-info">
@@ -389,16 +389,23 @@ export default {
         }
         
         const response = await apiClient.get('/image-gallery/images', { params })
-        
+
+        const batch = (response && response.data && response.data.images) ? response.data.images : []
+        // 先设置占位 displayUrl，避免首屏空白
+        batch.forEach(img => { if (!img.displayUrl) img.displayUrl = img.url })
+
         if (reset) {
-          this.images = response.data.images
+          this.images = batch
           this.totalImages = response.data.pagination.total
           this.filteredCount = response.data.pagination.filteredCount
         } else {
-          this.images.push(...response.data.images)
+          this.images.push(...batch)
         }
-        
-        this.hasMore = response.data.images.length === this.limit
+
+        // 异步按需获取最佳变体URL（若无变体将触发生成）
+        this.hydrateBestUrls(batch)
+
+        this.hasMore = batch.length === this.limit
         this.page++
         
       } catch (error) {
@@ -407,6 +414,31 @@ export default {
       } finally {
         this.loading = false
       }
+    },
+
+    async hydrateBestUrls(images) {
+      try { console.log('hydrateBestUrls:start', images && images.length) } catch (e) {}
+      const concurrency = 6
+      let idx = 0
+
+      const run = async () => {
+        if (idx >= images.length) return
+        const img = images[idx++]
+        try {
+          try { console.log('hydrateBestUrls:request', img && img.id) } catch (e) {}
+          const res = await apiClient.get(`/image-variants/best/${img.id}`, { params: { variant: 'small', preferWebp: true } })
+          if (res && res.success && res.data && res.data.bestUrl) {
+            this.$set(img, 'displayUrl', res.data.bestUrl)
+            try { console.log('hydrateBestUrls:bestUrl', img && img.id, res.data.bestUrl) } catch (e) {}
+          }
+        } catch (e) {
+          // 保持原图，不中断批处理
+        } finally {
+          await run()
+        }
+      }
+
+      await Promise.all(Array.from({ length: Math.min(concurrency, images.length) }, run))
     },
     
     handleScroll() {

@@ -1,5 +1,5 @@
 const { Image, ImageAsset } = require('../models/mysql');
-const { chooseBestUrl, generateAndSaveAssets } = require('../services/assetService');
+const { generateAndSaveAssets, selectBestVariant } = require('../services/assetService');
 const { sequelize } = require('../config/mysql');
 const logger = require('../config/logger');
 const axios = require('axios');
@@ -22,6 +22,163 @@ function cleanExpiredCache() {
 // 定期清理缓存（每10分钟）
 setInterval(cleanExpiredCache, 10 * 60 * 1000);
 
+function getCacheKey(imageId) {
+  return `image_${imageId}`;
+}
+
+function normalizeVariantInput(variant) {
+  if (!variant || typeof variant !== 'string') {
+    return '';
+  }
+  return variant.trim().toLowerCase();
+}
+
+function parseBoolean(value, defaultValue = false) {
+  if (value === undefined || value === null) {
+    return defaultValue;
+  }
+  if (typeof value === 'boolean') {
+    return value;
+  }
+
+  const normalized = String(value).trim().toLowerCase();
+  if (['true', '1', 'yes', 'y'].includes(normalized)) {
+    return true;
+  }
+  if (['false', '0', 'no', 'n'].includes(normalized)) {
+    return false;
+  }
+
+  return defaultValue;
+}
+
+function parseInteger(value) {
+  if (value === undefined || value === null || value === '') {
+    return null;
+  }
+  const numeric = typeof value === 'number' ? value : parseInt(value, 10);
+  return Number.isNaN(numeric) ? null : numeric;
+}
+
+function normalizeAssets(rawAssets) {
+  if (!rawAssets) {
+    return {};
+  }
+
+  if (Array.isArray(rawAssets)) {
+    return rawAssets.reduce((acc, asset) => {
+      if (!asset) return acc;
+      const plain = typeof asset.get === 'function' ? asset.get({ plain: true }) : asset;
+      if (!plain.variant) return acc;
+      acc[plain.variant] = {
+        url: plain.url,
+        width: plain.width,
+        height: plain.height,
+        size: plain.size
+      };
+      return acc;
+    }, {});
+  }
+
+  return Object.entries(rawAssets).reduce((acc, [variantKey, value]) => {
+    if (!variantKey || !value) return acc;
+    acc[variantKey] = typeof value === 'string'
+      ? { url: value, width: null, height: null, size: null }
+      : {
+          url: value.url,
+          width: value.width ?? null,
+          height: value.height ?? null,
+          size: value.size ?? null
+        };
+    return acc;
+  }, {});
+}
+
+function getAssetUrl(entry) {
+  if (!entry) return null;
+  return typeof entry === 'string' ? entry : entry.url;
+}
+
+function flattenAssetsForResponse(assets) {
+  if (!assets) {
+    return {};
+  }
+
+  return Object.entries(assets).reduce((acc, [variant, entry]) => {
+    const url = getAssetUrl(entry);
+    if (url) {
+      acc[variant] = url;
+    }
+    return acc;
+  }, {});
+}
+
+function getVariantOrder(preferWebp, width) {
+  let sizedOrder;
+
+  if (width === null) {
+    sizedOrder = ['medium', 'large', 'small', 'thumb'];
+  } else if (width <= 360) {
+    sizedOrder = ['thumb', 'small', 'medium', 'large'];
+  } else if (width <= 900) {
+    sizedOrder = ['small', 'medium', 'large', 'thumb'];
+  } else if (width <= 1600) {
+    sizedOrder = ['medium', 'large', 'small', 'thumb'];
+  } else {
+    sizedOrder = ['large', 'medium', 'small', 'thumb'];
+  }
+
+  return preferWebp ? ['webp', ...sizedOrder] : [...sizedOrder, 'webp'];
+}
+
+function resolveBestVariantSelection(assets, requestedVariant, preferWebp, fallbackUrl, targetWidth) {
+  const normalizedAssets = normalizeAssets(assets);
+
+  if (Object.keys(normalizedAssets).length === 0) {
+    return {
+      bestUrl: fallbackUrl,
+      selectedVariant: 'original',
+      assets: normalizedAssets
+    };
+  }
+
+  if (requestedVariant && normalizedAssets[requestedVariant]) {
+    return {
+      bestUrl: getAssetUrl(normalizedAssets[requestedVariant]) || fallbackUrl,
+      selectedVariant: requestedVariant,
+      assets: normalizedAssets
+    };
+  }
+
+  const order = getVariantOrder(preferWebp, targetWidth);
+  for (const variant of order) {
+    const entry = normalizedAssets[variant];
+    const url = getAssetUrl(entry);
+    if (url) {
+      return {
+        bestUrl: url,
+        selectedVariant: variant,
+        assets: normalizedAssets
+      };
+    }
+  }
+
+  const { variant, url } = selectBestVariant(normalizedAssets, preferWebp);
+  if (variant && url) {
+    return {
+      bestUrl: url,
+      selectedVariant: variant,
+      assets: normalizedAssets
+    };
+  }
+
+  return {
+    bestUrl: fallbackUrl,
+    selectedVariant: 'original',
+    assets: normalizedAssets
+  };
+}
+
 /**
  * 获取图片的最佳变体URL
  * @param {Object} req - 请求对象
@@ -30,11 +187,11 @@ setInterval(cleanExpiredCache, 10 * 60 * 1000);
 exports.getBestImageUrl = async (req, res) => {
   try {
     const { imageId } = req.params;
-    const { 
-      variant = 'webp', 
-      width = 600, 
+    const {
+      variant = 'webp',
+      width = 600,
       height = 400,
-      preferWebp = true 
+      preferWebp = true
     } = req.query;
 
     if (!imageId) {
@@ -44,15 +201,49 @@ exports.getBestImageUrl = async (req, res) => {
       });
     }
 
-    // 检查缓存
-    const cacheKey = `image_${imageId}`;
+    const normalizedVariant = normalizeVariantInput(variant);
+    const preferWebpFlag = parseBoolean(preferWebp, true);
+    const requestedWidth = parseInteger(width);
+    const requestedHeight = parseInteger(height);
+    const targetWidth = requestedWidth ?? requestedHeight;
+    const cacheKey = getCacheKey(imageId);
     const cached = cache.get(cacheKey);
+
     if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
       logger.info(`使用缓存数据 (imageId: ${imageId})`);
-      return res.json(cached.data);
+
+      const {
+        assets: normalizedAssets,
+        bestUrl,
+        selectedVariant
+      } = resolveBestVariantSelection(
+        cached.assets,
+        normalizedVariant,
+        preferWebpFlag,
+        cached.originalUrl,
+        targetWidth
+      );
+
+      if (normalizedAssets !== cached.assets) {
+        cached.assets = normalizedAssets;
+      }
+
+      const flatAssets = flattenAssetsForResponse(cached.assets);
+
+      return res.json({
+        success: true,
+        data: {
+          imageId: cached.imageId,
+          originalUrl: cached.originalUrl,
+          bestUrl,
+          availableVariants: Object.keys(flatAssets),
+          assets: flatAssets,
+          assetDetails: cached.assets,
+          selectedVariant
+        }
+      });
     }
 
-    // 查询图片信息
     const image = await Image.findByPk(imageId, {
       include: [{
         model: ImageAsset,
@@ -68,31 +259,27 @@ exports.getBestImageUrl = async (req, res) => {
       });
     }
 
-    // 构建变体URL映射（优化：使用reduce提高性能）
-    const assets = image.Assets?.reduce((acc, asset) => {
-      acc[asset.variant] = asset.url;
-      return acc;
-    }, {}) || {};
+    let {
+      assets,
+      bestUrl,
+      selectedVariant
+    } = resolveBestVariantSelection(
+      image.Assets,
+      normalizedVariant,
+      preferWebpFlag,
+      image.url,
+      targetWidth
+    );
 
-    // 选择最佳URL
-    let bestUrl = image.url; // 默认使用原图
+    // 检查变体文件是否存在，如果不存在则重新生成
+    const assetsToRegenerate = await checkAndRegenerateMissingAssets(assets, imageId, image.url);
     
-    if (Object.keys(assets).length > 0) {
-      // 根据请求参数选择变体
-      if (variant && assets[variant]) {
-        bestUrl = assets[variant];
-      } else {
-        // 使用智能选择逻辑
-        bestUrl = chooseBestUrl(assets, preferWebp === 'true');
-      }
-    } else {
-      // 如果没有变体，尝试按需生成
+    if (Object.keys(assets).length === 0 || assetsToRegenerate.length > 0) {
       try {
-        logger.info(`图片 ${imageId} 没有变体，尝试按需生成...`);
+        logger.info(`图片 ${imageId} 没有变体或存在缺失变体，尝试按需生成...`);
         const generatedAssets = await generateVariantsOnDemand(imageId, image.url);
-        
+
         if (generatedAssets && Object.keys(generatedAssets).length > 0) {
-          // 重新查询变体信息
           const updatedImage = await Image.findByPk(imageId, {
             include: [{
               model: ImageAsset,
@@ -100,49 +287,47 @@ exports.getBestImageUrl = async (req, res) => {
               attributes: ['variant', 'url', 'width', 'height', 'size']
             }]
           });
-          
-          // 重新构建变体URL映射（优化：使用reduce提高性能）
-          const updatedAssets = updatedImage.Assets?.reduce((acc, asset) => {
-            acc[asset.variant] = asset.url;
-            return acc;
-          }, {}) || {};
-          
-          // 选择最佳URL
-          if (variant && updatedAssets[variant]) {
-            bestUrl = updatedAssets[variant];
-          } else {
-            bestUrl = chooseBestUrl(updatedAssets, preferWebp === 'true') || image.url;
-          }
-          
-          assets = updatedAssets;
+
+          ({ assets, bestUrl, selectedVariant } = resolveBestVariantSelection(
+            updatedImage.Assets,
+            normalizedVariant,
+            preferWebpFlag,
+            image.url,
+            targetWidth
+          ));
         }
       } catch (error) {
         logger.error(`按需生成变体失败 (imageId: ${imageId}):`, error);
-        // 继续使用原图
       }
     }
+
+    const numericImageId = parseInt(imageId, 10);
+    const flatAssets = flattenAssetsForResponse(assets);
+    const availableVariants = Object.keys(flatAssets);
 
     const responseData = {
       success: true,
       data: {
-        imageId: parseInt(imageId),
+        imageId: Number.isNaN(numericImageId) ? imageId : numericImageId,
         originalUrl: image.url,
-        bestUrl: bestUrl,
-        availableVariants: Object.keys(assets),
-        assets: assets,
-        selectedVariant: variant
+        bestUrl,
+        availableVariants,
+        assets: flatAssets,
+        assetDetails: assets,
+        selectedVariant
       }
     };
 
-    // 缓存结果（只有在有变体时才缓存，避免缓存按需生成的结果）
     if (Object.keys(assets).length > 0) {
       cache.set(cacheKey, {
-        data: responseData,
+        imageId: responseData.data.imageId,
+        originalUrl: image.url,
+        assets,
         timestamp: Date.now()
       });
     }
 
-    res.json(responseData);
+    return res.json(responseData);
 
   } catch (error) {
     logger.error('获取最佳图片URL失败:', error);
@@ -186,16 +371,7 @@ exports.getImageVariants = async (req, res) => {
       });
     }
 
-    // 格式化变体信息（优化：使用reduce提高性能）
-    const variants = image.Assets?.reduce((acc, asset) => {
-      acc[asset.variant] = {
-        url: asset.url,
-        width: asset.width,
-        height: asset.height,
-        size: asset.size
-      };
-      return acc;
-    }, {}) || {};
+    const variants = normalizeAssets(image.Assets);
 
     res.json({
       success: true,
@@ -225,10 +401,18 @@ exports.getImageVariants = async (req, res) => {
 exports.getBatchImageUrls = async (req, res) => {
   try {
     const { imageIds } = req.body;
-    const { 
-      variant = 'webp', 
-      preferWebp = true 
+    const {
+      variant = 'webp',
+      preferWebp = true,
+      width,
+      height
     } = req.query;
+
+    const normalizedVariant = normalizeVariantInput(variant);
+    const preferWebpFlag = parseBoolean(preferWebp, true);
+    const requestedWidth = parseInteger(width);
+    const requestedHeight = parseInteger(height);
+    const targetWidth = requestedWidth ?? requestedHeight;
 
     if (!imageIds || !Array.isArray(imageIds) || imageIds.length === 0) {
       return res.status(400).json({
@@ -258,25 +442,27 @@ exports.getBatchImageUrls = async (req, res) => {
 
     // 构建结果（优化：使用reduce提高性能）
     const results = images.reduce((acc, image) => {
-      const assets = image.Assets?.reduce((assetAcc, asset) => {
-        assetAcc[asset.variant] = asset.url;
-        return assetAcc;
-      }, {}) || {};
+      const {
+        assets,
+        bestUrl,
+        selectedVariant
+      } = resolveBestVariantSelection(
+        image.Assets,
+        normalizedVariant,
+        preferWebpFlag,
+        image.url,
+        targetWidth
+      );
 
-      let bestUrl = image.url; // 默认使用原图
-      if (Object.keys(assets).length > 0) {
-        if (variant && assets[variant]) {
-          bestUrl = assets[variant];
-        } else {
-          bestUrl = chooseBestUrl(assets, preferWebp === 'true');
-        }
-      }
+      const flatAssets = flattenAssetsForResponse(assets);
 
       acc[image.id] = {
         originalUrl: image.url,
-        bestUrl: bestUrl,
-        availableVariants: Object.keys(assets),
-        assets: assets
+        bestUrl,
+        availableVariants: Object.keys(flatAssets),
+        assets: flatAssets,
+        assetDetails: assets,
+        selectedVariant
       };
       return acc;
     }, {});
@@ -355,6 +541,40 @@ exports.getVariantStats = async (req, res) => {
     });
   }
 };
+
+/**
+ * 检查变体文件是否存在，返回需要重新生成的变体列表
+ * @param {Object} assets - 变体资产对象
+ * @param {number} imageId - 图片ID
+ * @param {string} originalUrl - 原始图片URL
+ * @returns {Promise<Array>} 需要重新生成的变体列表
+ */
+async function checkAndRegenerateMissingAssets(assets, imageId, originalUrl) {
+  const missingVariants = [];
+  
+  if (!assets || Object.keys(assets).length === 0) {
+    return ['thumb', 'small', 'medium', 'large', 'webp']; // 所有变体都需要生成
+  }
+  
+  // 检查每个变体文件是否存在
+  for (const [variant, asset] of Object.entries(assets)) {
+    const url = getAssetUrl(asset);
+    if (url) {
+      try {
+        const response = await axios.head(url, { timeout: 5000 });
+        if (response.status !== 200) {
+          logger.warn(`变体文件不存在: ${variant} - ${url}`);
+          missingVariants.push(variant);
+        }
+      } catch (error) {
+        logger.warn(`检查变体文件失败: ${variant} - ${url}`, error.message);
+        missingVariants.push(variant);
+      }
+    }
+  }
+  
+  return missingVariants;
+}
 
 /**
  * 按需生成图片变体

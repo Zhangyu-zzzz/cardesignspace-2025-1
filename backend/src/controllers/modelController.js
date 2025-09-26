@@ -106,44 +106,40 @@ exports.getAllModels = async (req, res) => {
     let finalCount;
     
     if (latest === 'true') {
-      // 获取所有启用的车型进行排序
       const sortField = sortBy === 'createdAt' ? 'createdAt' : 'year';
       console.log(`轮播图排序字段: ${sortField}, 排序方式: ${sortOrder.toUpperCase()}`);
-      
-      const allModels = await Model.findAll({
+
+      const { count, rows: models } = await Model.findAndCountAll({
         where: whereCondition,
         include: [
-          { 
-            model: Brand, 
+          {
+            model: Brand,
             as: 'Brand',
             attributes: ['id', 'name', 'logo', 'country']
           }
         ],
-        order: [[sortField, sortOrder.toUpperCase()], ['name', 'ASC']] // 根据sortBy参数决定排序字段
+        order: [
+          [sortField, sortOrder.toUpperCase()],
+          ['name', 'ASC']
+        ],
+        limit: parseInt(limit),
+        offset,
+        distinct: true
       });
-      
-      // 手动分页
-      finalCount = allModels.length;
-      const paginatedModels = allModels.slice(offset, offset + parseInt(limit));
-      
-      console.log(`最新车型查询: 总计 ${finalCount} 个，排序方式: ${sortOrder.toUpperCase()}`);
-      
-      // 为每个车型添加第一张图片
-      finalModels = await Promise.all(paginatedModels.map(async (model) => {
+
+      finalModels = await Promise.all(models.map(async (model) => {
+        const data = model.toJSON();
         const firstImage = await Image.findOne({
           where: { modelId: model.id },
           attributes: ['id', 'url', 'filename', 'title'],
           order: [['createdAt', 'ASC']]
         });
-        
-        // 转换为普通对象并添加图片
-        const modelData = model.toJSON();
-        modelData.Images = firstImage ? [firstImage] : [];
-        
-        return modelData;
+        data.Images = firstImage ? [firstImage.toJSON ? firstImage.toJSON() : firstImage] : [];
+        return data;
       }));
-      
-      console.log(`最新车型排序完成: 总计 ${finalCount} 个，当前页 ${finalModels.length} 个`);
+      finalCount = count;
+
+      console.log(`最新车型分页查询: 本页 ${finalModels.length} 条 / 总计 ${finalCount} 条`);
     } else {
       // 常规查询（包括按品牌筛选）
       const sortField = sortBy === 'createdAt' ? 'createdAt' : 'year';

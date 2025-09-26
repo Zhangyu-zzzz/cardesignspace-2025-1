@@ -18,18 +18,37 @@ const apiClient = axios.create({
   }
 });
 
+const isVerboseLoggingEnabled = process.env.NODE_ENV !== 'production';
+
+const summarizePayload = (data) => {
+  if (Array.isArray(data)) {
+    return { type: 'array', length: data.length };
+  }
+  if (data && typeof data === 'object') {
+    const keys = Object.keys(data);
+    const summary = { type: 'object', keys: keys.slice(0, 5) };
+    if (Array.isArray(data.data)) {
+      summary.dataLength = data.data.length;
+    }
+    return summary;
+  }
+  return data;
+};
+
 // 请求拦截器
 apiClient.interceptors.request.use(
   (config) => {
-    console.log(`发送请求 [${config.method.toUpperCase()} ${config.url}]:`, {
-      headers: config.headers,
-      params: config.params,
-      data: config.data ? (
-        config.url.includes('login') || config.url.includes('register')
-          ? { ...config.data, password: '******' }  // 不记录密码
-          : config.data
-      ) : undefined
-    });
+    if (isVerboseLoggingEnabled) {
+      const method = config.method ? config.method.toUpperCase() : 'UNKNOWN';
+      console.log(
+        `[API Request] ${method} ${config.url}`,
+        {
+          params: config.params,
+          hasData: !!config.data,
+          dataSummary: summarizePayload(config.data)
+        }
+      );
+    }
     
     const token = localStorage.getItem('token');
     if (token) {
@@ -46,23 +65,29 @@ apiClient.interceptors.request.use(
 // 响应拦截器
 apiClient.interceptors.response.use(
   (response) => {
-    console.log(`收到响应 [${response.config.method.toUpperCase()} ${response.config.url}]:`, {
-      status: response.status,
-      headers: response.headers,
-      data: response.data
-    });
+    if (isVerboseLoggingEnabled) {
+      const method = response.config?.method ? response.config.method.toUpperCase() : 'UNKNOWN';
+      console.log(
+        `[API Response] ${method} ${response.config.url}`,
+        {
+          status: response.status,
+          dataSummary: summarizePayload(response.data)
+        }
+      );
+    }
     return response.data;
   },
   (error) => {
-    console.error('API请求错误:', error);
+    console.error('API请求错误:', error.message || error);
     
-    // 记录错误响应详情
-    if (error.response) {
-      console.log('API错误响应 [${error.config.method.toUpperCase()} ${error.config.url}]:', {
-        status: error.response.status,
-        headers: error.response.headers,
-        data: error.response.data
-      });
+    if (isVerboseLoggingEnabled && error.response) {
+      console.log(
+        `[API Error Response] ${error.config?.method?.toUpperCase() || 'UNKNOWN'} ${error.config?.url || ''}`,
+        {
+          status: error.response.status,
+          dataSummary: summarizePayload(error.response.data)
+        }
+      );
     }
     
     return Promise.reject(error);

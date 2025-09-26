@@ -92,7 +92,7 @@
               @click="openImageViewer(index)"
             >
                           <img 
-              :src="getImageUrl(image)" 
+              :src="getOptimizedImageUrlSync(image)" 
               :alt="image.title || model.name"
               class="grid-image"
               @contextmenu="handleImageContextMenu($event, image)"
@@ -235,7 +235,7 @@ import imageContextMenu from '@/utils/imageContextMenu';
         // 首先过滤掉.txt文件
         let imageFiles = this.images.filter(image => {
           // 检查图片URL是否包含.txt扩展名
-          const imageUrl = this.getImageUrl(image);
+          const imageUrl = this.getOptimizedImageUrlSync(image);
           return !imageUrl.toLowerCase().includes('.txt');
         });
         
@@ -251,7 +251,7 @@ import imageContextMenu from '@/utils/imageContextMenu';
       },
       // 获取所有图片URL列表用于预览
       allImageUrls() {
-        return this.filteredImages.map(img => this.getImageUrl(img));
+        return this.filteredImages.map(img => this.getOptimizedImageUrlSync(img));
       },
       // 获取车型参数
       orderedSpecs() {
@@ -368,16 +368,94 @@ import imageContextMenu from '@/utils/imageContextMenu';
           day: 'numeric'
         })
       },
-      // 获取图片URL的辅助方法
-      getImageUrl(image) {
+      // 获取图片URL的辅助方法（同步版本，用于模板）
+      getOptimizedImageUrlSync(image, width = 400, height = 300, context = 'detail') {
         // 检查图片对象的不同URL属性
-        if (image.url) return image.url;
-        if (image.originalUrl) return image.originalUrl;
-        if (image.mediumUrl) return image.mediumUrl;
-        if (image.thumbnailUrl) return image.thumbnailUrl;
-        if (image.largeUrl) return image.largeUrl;
-        // 如果没有找到任何URL，返回默认图片
-        return '/images/default-car.jpg';
+        let originalUrl = '';
+        if (image.url) originalUrl = image.url;
+        else if (image.originalUrl) originalUrl = image.originalUrl;
+        else if (image.mediumUrl) originalUrl = image.mediumUrl;
+        else if (image.thumbnailUrl) originalUrl = image.thumbnailUrl;
+        else if (image.largeUrl) originalUrl = image.largeUrl;
+        else return '/images/default-car.jpg';
+        
+        // 直接使用腾讯云COS优化参数，避免异步调用
+        if (originalUrl.includes('cardesignspace-cos-1-1259492452.cos.ap-shanghai.myqcloud.com')) {
+          const separator = originalUrl.includes('?') ? '&' : '?';
+          return `${originalUrl}${separator}imageMogr2/thumbnail/${width}x${height}/quality/80`;
+        }
+        
+        return originalUrl;
+      },
+      
+      // 获取图片URL的辅助方法（异步版本，使用变体系统）
+      async getImageUrl(image, width = 400, height = 300, context = 'detail') {
+        // 检查图片对象的不同URL属性
+        let originalUrl = '';
+        if (image.url) originalUrl = image.url;
+        else if (image.originalUrl) originalUrl = image.originalUrl;
+        else if (image.mediumUrl) originalUrl = image.mediumUrl;
+        else if (image.thumbnailUrl) originalUrl = image.thumbnailUrl;
+        else if (image.largeUrl) originalUrl = image.largeUrl;
+        else return '/images/default-car.jpg';
+        
+        // 使用变体系统优化图片URL
+        return await this.getOptimizedImageUrl(originalUrl, width, height, context);
+      },
+      
+      // 优化图片URL（使用变体系统）
+      async getOptimizedImageUrl(url, width = 400, height = 300, context = 'detail') {
+        if (!url) return '';
+        
+        // 尝试从URL中提取图片ID
+        const imageIdMatch = url.match(/\/(\d+)\.(jpg|jpeg|png|webp)$/) || 
+                            url.match(/\/(\d+)\/(\d+)\.(jpg|jpeg|png|webp)$/) ||
+                            url.match(/\/(\d+)\/([^\/]+)\.(jpg|jpeg|png|webp)$/);
+        
+        if (imageIdMatch) {
+          try {
+            // 调用变体API获取最佳变体
+            const response = await apiClient.get(`/image-variants/best/${imageIdMatch[1]}`, {
+              params: {
+                variant: this.getVariantForContext(context),
+                width,
+                height,
+                preferWebp: true
+              }
+            });
+            
+            if (response.data.success && response.data.data.bestUrl) {
+              console.log('使用变体URL:', response.data.data.bestUrl);
+              return response.data.data.bestUrl;
+            }
+          } catch (error) {
+            console.warn('获取图片变体失败，使用原图:', error.message);
+          }
+        }
+        
+        // 回退到原始URL，添加腾讯云COS优化参数
+        if (url.includes('cardesignspace-cos-1-1259492452.cos.ap-shanghai.myqcloud.com')) {
+          const separator = url.includes('?') ? '&' : '?';
+          return `${url}${separator}imageMogr2/thumbnail/${width}x${height}/quality/80`;
+        }
+        
+        return url;
+      },
+      
+      // 根据上下文获取变体类型
+      getVariantForContext(context) {
+        switch (context) {
+          case 'detail':
+            return 'medium';
+          case 'card':
+            return 'small';
+          case 'thumbnail':
+            return 'thumb';
+          case 'gallery':
+            return 'large';
+          default:
+            return 'medium';
+        }
       },
       // 跳转到品牌详情页
       goToBrand(brandId) {
@@ -503,7 +581,7 @@ import imageContextMenu from '@/utils/imageContextMenu';
       
       // 处理图片右键菜单
       handleImageContextMenu(event, image) {
-        const imageUrl = this.getImageUrl(image);
+        const imageUrl = this.getOptimizedImageUrlSync(image);
         const imageTitle = image.title || this.model.name;
         
         // 使用浏览器默认菜单

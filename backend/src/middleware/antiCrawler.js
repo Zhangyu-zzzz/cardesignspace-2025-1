@@ -1,12 +1,18 @@
 const rateLimit = require('express-rate-limit');
 const Redis = require('ioredis');
 
-// 创建Redis客户端（如果可用）
+// 创建Redis客户端（如果可用且队列启用）
 let redis = null;
-try {
-  redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
-} catch (error) {
-  console.log('Redis连接失败，使用内存存储');
+const isQueueEnabled = process.env.QUEUE_ENABLED === 'true';
+
+if (isQueueEnabled) {
+  try {
+    redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
+  } catch (error) {
+    console.log('Redis连接失败，使用内存存储');
+  }
+} else {
+  console.log('🔧 开发环境：队列功能已禁用，使用内存存储');
 }
 
 // 内存存储（备用方案）

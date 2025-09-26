@@ -80,16 +80,35 @@ async function generateAndSaveAssets({ imageId, originalBuffer, originalKey, ori
   }, {});
 }
 
+function selectBestVariant(assets, preferWebp = true) {
+  if (!assets) {
+    return { variant: null, url: null };
+  }
+
+  const order = preferWebp
+    ? ['webp', 'medium', 'large', 'small', 'thumb']
+    : ['medium', 'large', 'small', 'thumb', 'webp'];
+
+  for (const variant of order) {
+    const entry = assets[variant];
+    if (!entry) continue;
+    const url = typeof entry === 'string' ? entry : entry.url;
+    if (url) {
+      return { variant, url };
+    }
+  }
+
+  return { variant: null, url: null };
+}
+
 function chooseBestUrl(assets, preferWebp = true) {
-  if (!assets) return null;
-  if (preferWebp && assets.webp) return assets.webp;
-  return assets.medium || assets.large || assets.small || assets.thumb || null;
+  const { url } = selectBestVariant(assets, preferWebp);
+  return url;
 }
 
 module.exports = {
   VARIANTS,
   generateAndSaveAssets,
+  selectBestVariant,
   chooseBestUrl,
 };
-
-

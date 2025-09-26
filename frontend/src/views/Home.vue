@@ -1935,6 +1935,12 @@ export default {
   margin: 0;
   padding: 0 80px 0 80px; /* 为文字内容添加左右边距，避免被导航按钮遮挡 */
   box-sizing: border-box;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: flex-start !important; /* 强制所有子元素左对齐 */
+  text-align: left !important; /* 确保文本左对齐 */
+  justify-content: flex-start !important; /* 强制内容靠左 */
+  width: 100% !important; /* 确保容器宽度 */
 }
 
 .content-type-badge {
@@ -1947,6 +1953,14 @@ export default {
   text-transform: uppercase;
   letter-spacing: 0.5px;
   margin-bottom: 20px;
+  margin-left: 0 !important; /* 强制与车型名左对齐 */
+  margin-right: auto !important; /* 确保按钮靠左 */
+  align-self: flex-start !important; /* 确保按钮左对齐 */
+  text-align: left !important; /* 强制左对齐 */
+  width: fit-content !important; /* 让按钮宽度适应内容 */
+  position: relative !important; /* 使用相对定位 */
+  left: 0 !important; /* 强制左对齐 */
+  float: left !important; /* 强制左浮动 */
 }
 
 .model-badge {
@@ -1960,6 +1974,7 @@ export default {
   font-weight: 700;
   margin: 0 0 12px 0;
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+  text-align: left; /* 确保车型名左对齐 */
 }
 
 .slide-brand {
@@ -1967,6 +1982,7 @@ export default {
   margin: 0 0 20px 0;
   opacity: 0.9;
   font-weight: 300;
+  text-align: left; /* 确保品牌名左对齐 */
 }
 
 .view-details-btn {
@@ -3136,10 +3152,12 @@ body, html {
   
   .slide-title {
     font-size: 36px;
+    text-align: left; /* 移动端也保持左对齐 */
   }
   
   .slide-brand {
     font-size: 20px;
+    text-align: left; /* 移动端也保持左对齐 */
   }
   
   .slide-info-overlay {
@@ -3148,6 +3166,9 @@ body, html {
   
   .slide-content {
     padding: 0 60px 0 60px; /* 为文字内容添加左右边距 */
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start; /* 移动端也强制左对齐 */
   }
   
   .carousel-nav {
@@ -3423,6 +3444,14 @@ body, html {
   
   .slide-content {
     padding: 0 40px 0 40px; /* 为文字内容添加左右边距 */
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start; /* 最小屏幕也强制左对齐 */
+  }
+  
+  .slide-title,
+  .slide-brand {
+    text-align: left; /* 最小屏幕也保持左对齐 */
   }
   
   .brand-section,

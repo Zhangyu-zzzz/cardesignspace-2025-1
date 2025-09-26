@@ -129,6 +129,8 @@ app.use('/api/articles', require('./routes/articleRoutes'));
 app.use('/api/inspiration', require('./routes/inspirationRoutes'));
 app.use('/api/image-tags', require('./routes/imageTagRoutes'));
 app.use('/api/image-gallery', require('./routes/imageGalleryRoutes'));
+// 图片变体路由
+app.use('/api/image-variants', require('./routes/imageVariantRoutes'));
 // 摄取路由（特性开关控制，默认 404）
 app.use('/api/ingest', require('./routes/ingestRoutes'));
 

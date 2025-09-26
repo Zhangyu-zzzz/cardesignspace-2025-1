@@ -278,7 +278,7 @@
             <div class="model-display-image">
               <img 
                 v-if="model.Images && model.Images.length > 0" 
-                :data-src="getOptimizedImageUrl(model.Images[0].url, 300, 200)"
+                :data-src="getOptimizedImageUrl(model.Images[0], 300, 200)"
                 :alt="model.name"
                 @load="handleModelImageLoad"
                 @error="handleModelImageError"
@@ -457,6 +457,10 @@ export default {
         { label: '10s', value: '1910s' },
         { label: '00s', value: '1900s' }
       ],
+
+      // 图片变体缓存，避免重复请求
+      imageVariantCache: {},
+      pendingVariantRequests: new Set(),
     }
   },
   computed: {
@@ -1084,28 +1088,39 @@ export default {
       });
     },
     
-    // 优化图片URL（暂时禁用变体系统，直接使用原图）
-    async getOptimizedImageUrl(url, width = 300, height = 200, context = 'card') {
+    // 根据上下文返回最佳图片URL（优先使用变体）
+    getOptimizedImageUrl(imageInput, width = 300, height = 200, context = 'card') {
+      const { imageId, url, image } = this.normalizeImageInput(imageInput);
       if (!url) return '';
-      
-      // 暂时禁用变体系统，直接返回原图URL
-      // TODO: 修复图片变体系统后重新启用
-      console.log('使用原图URL:', url);
-      
-      // 如果是腾讯云COS的图片，可以考虑添加一些优化参数
-      if (url.includes('cardesignspace-cos-1-1259492452.cos.ap-shanghai.myqcloud.com')) {
-        // 腾讯云COS支持图片处理参数
-        const separator = url.includes('?') ? '&' : '?';
-        return `${url}${separator}imageMogr2/thumbnail/${width}x${height}/quality/80`;
+
+      if (image && image.optimizedUrl) {
+        return image.optimizedUrl;
       }
-      
-      // 如果是本地图片URL，添加压缩参数（兼容旧逻辑）
-      if (url.includes('/api/') || url.startsWith('/')) {
-        const separator = url.includes('?') ? '&' : '?';
-        return `${url}${separator}w=${width}&h=${height}&q=80&f=webp`;
+
+      const cacheKey = imageId ? this.buildVariantCacheKey(imageId, context, width, height) : null;
+      if (cacheKey && this.imageVariantCache[cacheKey]) {
+        const cachedUrl = this.imageVariantCache[cacheKey];
+        if (image && image.optimizedUrl !== cachedUrl) {
+          this.$set(image, 'optimizedUrl', cachedUrl);
+          this.$set(image, 'displayUrl', cachedUrl);
+        }
+        return cachedUrl;
       }
-      
-      return url;
+
+      if (imageId && cacheKey && !this.pendingVariantRequests.has(cacheKey)) {
+        this.pendingVariantRequests.add(cacheKey);
+        this.fetchVariantUrl({
+          imageId,
+          cacheKey,
+          width,
+          height,
+          context,
+          fallbackUrl: url,
+          imageRef: image
+        });
+      }
+
+      return this.buildFallbackImageUrl(url, width, height);
     },
     
     // 根据使用场景获取合适的变体类型
@@ -1122,6 +1137,125 @@ export default {
         default:
           return 'webp';
       }
+    },
+
+    buildVariantCacheKey(imageId, context, width, height) {
+      return `${imageId}|${context}|${width || ''}|${height || ''}`;
+    },
+
+    buildFallbackImageUrl(url, width, height) {
+      if (!url) return '';
+
+      const safeWidth = width || 600;
+      const safeHeight = height || 400;
+
+      if (url.includes('cardesignspace-cos-1-1259492452.cos.ap-shanghai.myqcloud.com')) {
+        const separator = url.includes('?') ? '&' : '?';
+        return `${url}${separator}imageMogr2/thumbnail/${safeWidth}x${safeHeight}/quality/80`;
+      }
+
+      if (url.includes('/api/') || url.startsWith('/')) {
+        const separator = url.includes('?') ? '&' : '?';
+        return `${url}${separator}w=${safeWidth}&h=${safeHeight}&q=80&f=webp`;
+      }
+
+      return url;
+    },
+
+    normalizeImageInput(imageInput) {
+      if (!imageInput) {
+        return { imageId: null, url: '', image: null };
+      }
+
+      if (typeof imageInput === 'string') {
+        return {
+          imageId: this.extractImageIdFromUrl(imageInput),
+          url: imageInput,
+          image: null
+        };
+      }
+
+      const candidateUrl = imageInput.optimizedUrl || imageInput.displayUrl || imageInput.url || '';
+      const imageId = imageInput.id || imageInput.imageId || this.extractImageIdFromUrl(candidateUrl);
+
+      return {
+        imageId: imageId || null,
+        url: candidateUrl,
+        image: imageInput
+      };
+    },
+
+    extractImageIdFromUrl(url) {
+      if (!url || typeof url !== 'string') return null;
+      const cleanUrl = url.split('?')[0];
+      const match = cleanUrl.match(/(?:\b|\/)(\d+)(?=\.[a-z]+$)/i);
+      return match ? parseInt(match[1], 10) : null;
+    },
+
+    async fetchVariantUrl({ imageId, cacheKey, width, height, context, fallbackUrl, imageRef }) {
+      if (!imageId) {
+        if (cacheKey) {
+          this.pendingVariantRequests.delete(cacheKey);
+        }
+        return;
+      }
+
+      try {
+        const response = await apiClient.get(`/image-variants/best/${imageId}`, {
+          params: {
+            variant: this.getVariantForContext(context),
+            width,
+            height,
+            preferWebp: true
+          }
+        });
+
+        if (response && response.success && response.data && response.data.bestUrl) {
+          const bestUrl = response.data.bestUrl;
+          this.$set(this.imageVariantCache, cacheKey, bestUrl);
+          this.applyOptimizedUrlToImage(imageId, bestUrl, imageRef);
+          return;
+        }
+      } catch (error) {
+        const message = error && error.message ? error.message : error;
+        console.warn(`获取图片 ${imageId} 变体失败，使用原图`, message);
+      } finally {
+        this.pendingVariantRequests.delete(cacheKey);
+      }
+
+      if (cacheKey && !this.imageVariantCache[cacheKey]) {
+        const fallback = this.buildFallbackImageUrl(fallbackUrl, width, height);
+        this.$set(this.imageVariantCache, cacheKey, fallback);
+        this.applyOptimizedUrlToImage(imageId, fallback, imageRef);
+      }
+    },
+
+    applyOptimizedUrlToImage(imageId, optimizedUrl, imageRef) {
+      if (!optimizedUrl || !imageId) return;
+
+      const updateImage = (img) => {
+        if (!img) return;
+        const candidateId = img.id || img.imageId;
+        if (candidateId && Number(candidateId) === Number(imageId)) {
+          if (img.optimizedUrl !== optimizedUrl) {
+            this.$set(img, 'optimizedUrl', optimizedUrl);
+          }
+          if (img.displayUrl !== optimizedUrl) {
+            this.$set(img, 'displayUrl', optimizedUrl);
+          }
+        }
+      };
+
+      updateImage(imageRef);
+
+      const collections = [this.displayModels, this.latestModels, this.allModelsData];
+      collections.forEach(models => {
+        if (!Array.isArray(models)) return;
+        models.forEach(model => {
+          if (!model || !Array.isArray(model.Images)) return;
+          model.Images.forEach(updateImage);
+        });
+      });
     },
     
     // 预加载品牌logo
@@ -1486,7 +1620,7 @@ export default {
             // 显示图片元素
             img.style.display = 'block';
             // 重新加载图片
-            img.src = this.getOptimizedImageUrl(model.Images[0].url, 300, 200);
+            img.src = this.getOptimizedImageUrl(model.Images[0], 300, 200);
           }
         });
       }

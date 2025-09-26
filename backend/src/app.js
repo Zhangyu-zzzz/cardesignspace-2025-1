@@ -132,6 +132,8 @@ app.use('/api/image-tags', require('./routes/imageTagRoutes'));
 app.use('/api/image-gallery', require('./routes/imageGalleryRoutes'));
 // 图片变体路由
 app.use('/api/image-variants', require('./routes/imageVariantRoutes'));
+// 变体后台处理器路由
+app.use('/api/variant-processor', require('./routes/variantProcessorRoutes'));
 // 摄取路由（特性开关控制，默认 404）
 app.use('/api/ingest', require('./routes/ingestRoutes'));
 
@@ -185,6 +187,14 @@ connectMySQL().then(() => {
     bootIngestWorkers();
   } catch (err) {
     console.warn('启动 ingest workers 失败（可能是未启用队列或依赖缺失）:', err && err.message);
+  }
+
+  // 启动变体后台处理器
+  try {
+    const variantProcessor = require('./services/variantBackgroundProcessor');
+    logger.info('变体后台处理器已启动');
+  } catch (err) {
+    logger.error('启动变体后台处理器失败:', err);
   }
   app.listen(PORT, () => {
     logger.info(`服务器运行在端口 ${PORT}`);

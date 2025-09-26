@@ -11,7 +11,10 @@ module.exports = {
       }
     },
     port: process.env.VUE_APP_PORT || 8080,
-    host: '0.0.0.0'
+    host: '0.0.0.0',
+    historyApiFallback: {
+      index: '/index.html'
+    }
   },
   lintOnSave: false,
   

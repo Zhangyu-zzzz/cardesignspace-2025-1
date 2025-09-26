@@ -1084,18 +1084,55 @@ export default {
       });
     },
     
-    // 优化图片URL（添加压缩参数）
-    getOptimizedImageUrl(url, width = 300, height = 200) {
+    // 优化图片URL（使用变体系统）
+    async getOptimizedImageUrl(url, width = 300, height = 200, context = 'card') {
       if (!url) return '';
       
-      // 如果是本地图片URL，添加压缩参数
+      // 尝试从URL中提取图片ID
+      const imageIdMatch = url.match(/\/(\d+)\.(jpg|jpeg|png|webp)$/);
+      if (imageIdMatch) {
+        try {
+          // 直接调用变体API
+          const response = await this.$http.get(`/api/image-variants/best/${imageIdMatch[1]}`, {
+            params: {
+              variant: this.getVariantForContext(context),
+              width,
+              height,
+              preferWebp: true
+            }
+          });
+          
+          if (response.data.success) {
+            return response.data.data.bestUrl;
+          }
+        } catch (error) {
+          console.warn('获取图片变体失败，使用原图:', error);
+        }
+      }
+      
+      // 如果是本地图片URL，添加压缩参数（兼容旧逻辑）
       if (url.includes('/api/') || url.startsWith('/')) {
-        // 假设后端支持图片压缩参数
         const separator = url.includes('?') ? '&' : '?';
         return `${url}${separator}w=${width}&h=${height}&q=80&f=webp`;
       }
       
       return url;
+    },
+    
+    // 根据使用场景获取合适的变体类型
+    getVariantForContext(context) {
+      switch (context) {
+        case 'thumbnail':
+          return 'thumb';
+        case 'card':
+          return 'small';
+        case 'detail':
+          return 'medium';
+        case 'fullscreen':
+          return 'large';
+        default:
+          return 'webp';
+      }
     },
     
     // 预加载品牌logo

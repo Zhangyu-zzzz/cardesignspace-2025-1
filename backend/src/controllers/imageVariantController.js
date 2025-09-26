@@ -273,8 +273,11 @@ exports.getBestImageUrl = async (req, res) => {
       targetWidth
     );
 
-    // 检查变体文件是否存在，如果不存在则重新生成
-    const assetsToRegenerate = await checkAndRegenerateMissingAssets(assets, imageId, image.url);
+    // 只有在没有缓存时才检查变体文件是否存在
+    let assetsToRegenerate = [];
+    if (!cached) {
+      assetsToRegenerate = await checkAndRegenerateMissingAssets(assets, imageId, image.url);
+    }
     
     if (Object.keys(assets).length === 0 || assetsToRegenerate.length > 0) {
       try {

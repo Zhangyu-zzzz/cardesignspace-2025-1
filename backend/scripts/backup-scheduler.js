@@ -19,7 +19,7 @@
  * --max-duration=3h 最大运行时长
  */
 
-require('dotenv').config({ path: '/Users/birdmanoutman/PycharmProjects/cardesignspace-2025-1/.env' });
+require('dotenv').config();
 const cron = require('node-cron');
 const { spawn } = require('child_process');
 const fs = require('fs').promises;

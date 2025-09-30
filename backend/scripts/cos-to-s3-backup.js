@@ -22,7 +22,7 @@
  * --original-only     仅备份原图
  */
 
-require('dotenv').config({ path: '/Users/birdmanoutman/PycharmProjects/cardesignspace-2025-1/.env' });
+require('dotenv').config();
 const fs = require('fs').promises;
 const path = require('path');
 const { Sequelize } = require('sequelize');

@@ -20,7 +20,7 @@
  * --stats         显示统计信息
  */
 
-require('dotenv').config({ path: '/Users/birdmanoutman/PycharmProjects/cardesignspace-2025-1/.env' });
+require('dotenv').config();
 const express = require('express');
 const fs = require('fs').promises;
 const path = require('path');

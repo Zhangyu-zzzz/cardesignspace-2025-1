@@ -20,7 +20,7 @@
  * --all              执行所有配置
  */
 
-require('dotenv').config({ path: '/Users/birdmanoutman/PycharmProjects/cardesignspace-2025-1/.env' });
+require('dotenv').config();
 const { S3Client, CreateBucketCommand, PutBucketPolicyCommand, PutBucketCorsCommand, HeadBucketCommand, GetBucketPolicyCommand, GetBucketCorsCommand } = require('@aws-sdk/client-s3');
 
 // 配置

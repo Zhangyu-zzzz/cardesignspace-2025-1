@@ -146,9 +146,11 @@ export default {
     }
   },
   mounted() {
-    // 如果用户已登录，初始化通知系统
+    // 延迟初始化通知系统，避免阻塞主要页面加载
     if (this.isAuthenticated) {
-      this.initialize()
+      setTimeout(() => {
+        this.initialize()
+      }, 2000); // 延迟2秒初始化
     }
   },
   beforeDestroy() {
@@ -394,6 +396,12 @@ export default {
       
       if (!this.isAuthenticated) {
         console.log('🔔 用户未登录，跳过通知初始化')
+        return
+      }
+      
+      // 检查是否在品牌详情页面，如果是则跳过初始化
+      if (this.$route.path.startsWith('/brand/')) {
+        console.log('🔔 在品牌详情页面，跳过通知初始化')
         return
       }
       

@@ -129,10 +129,32 @@
             <span class="stats-label">已加载:</span>
             <span class="stats-value">{{ images.length }}</span>
           </div>
+          <div class="stats-item" v-if="optimizingImages">
+            <span class="stats-label">优化中:</span>
+            <span class="stats-value">🔄</span>
+          </div>
+        </div>
+
+        <!-- 加载状态 -->
+        <div v-if="initialLoading || (loading && images.length === 0)" class="loading-container">
+          <div class="loading-spinner">
+            <div class="spinner"></div>
+            <p v-if="initialLoading">正在初始化图片库...</p>
+            <p v-else>正在加载图片...</p>
+            <p class="loading-subtitle">请稍候，我们正在为您准备精美的图片</p>
+          </div>
+        </div>
+
+        <!-- 空状态提示 -->
+        <div v-else-if="!loading && images.length === 0" class="empty-state">
+          <div class="empty-icon">📷</div>
+          <h3>暂无图片</h3>
+          <p>当前筛选条件下没有找到图片，请尝试调整筛选条件</p>
+          <button @click="clearFilters" class="btn-primary">清除筛选</button>
         </div>
 
         <!-- 图片网格 -->
-        <div class="image-grid" ref="imageGrid" @scroll="handleScroll">
+        <div v-else class="image-grid" ref="imageGrid" @scroll="handleScroll">
       <div 
         v-for="image in images" 
         :key="image.id" 
@@ -268,6 +290,8 @@ export default {
       limit: 20,
       totalImages: 0,
       filteredCount: 0,
+      optimizingImages: false, // 图片优化状态
+      initialLoading: true, // 初始加载状态
       
       // 筛选条件
       filters: {
@@ -303,10 +327,27 @@ export default {
   },
   
   async mounted() {
-    await this.loadBrands()
-    await this.loadStyleTags()
-    await this.loadPopularTags()
-    await this.loadImages()
+    try {
+      // 并行执行初始化API请求，提高加载速度
+      const initPromises = [
+        this.loadBrands(),
+        this.loadStyleTags(),
+        this.loadPopularTags()
+      ]
+      
+      // 等待所有初始化请求完成
+      await Promise.all(initPromises)
+      
+      // 最后加载图片列表
+      await this.loadImages()
+      
+      // 初始加载完成
+      this.initialLoading = false
+      
+    } catch (error) {
+      console.error('初始化加载失败:', error)
+      this.initialLoading = false
+    }
     
     // 添加滚动监听
     window.addEventListener('scroll', this.handleScroll)
@@ -403,7 +444,8 @@ export default {
         }
 
         // 异步按需获取最佳变体URL（若无变体将触发生成）
-        this.hydrateBestUrls(batch)
+        // 优先处理前几张图片，提高首屏加载速度
+        this.hydrateBestUrlsOptimized(batch)
 
         this.hasMore = batch.length === this.limit
         this.page++
@@ -418,7 +460,7 @@ export default {
 
     async hydrateBestUrls(images) {
       try { console.log('hydrateBestUrls:start', images && images.length) } catch (e) {}
-      const concurrency = 6
+      const concurrency = 12 // 增加并发数从6到12
       let idx = 0
 
       const run = async () => {
@@ -426,19 +468,52 @@ export default {
         const img = images[idx++]
         try {
           try { console.log('hydrateBestUrls:request', img && img.id) } catch (e) {}
-          const res = await apiClient.get(`/image-variants/best/${img.id}`, { params: { variant: 'small', preferWebp: true } })
+          const res = await apiClient.get(`/image-variants/best/${img.id}`, { 
+            params: { variant: 'small', preferWebp: true },
+            timeout: 5000 // 添加超时控制
+          })
           if (res && res.success && res.data && res.data.bestUrl) {
             this.$set(img, 'displayUrl', res.data.bestUrl)
             try { console.log('hydrateBestUrls:bestUrl', img && img.id, res.data.bestUrl) } catch (e) {}
           }
         } catch (e) {
           // 保持原图，不中断批处理
+          console.warn('获取图片变体失败:', img?.id, e.message)
         } finally {
           await run()
         }
       }
 
-      await Promise.all(Array.from({ length: Math.min(concurrency, images.length) }, run))
+      // 使用Promise.allSettled确保所有请求都能完成，即使部分失败
+      await Promise.allSettled(Array.from({ length: Math.min(concurrency, images.length) }, run))
+    },
+
+    // 优化后的图片变体加载方法
+    async hydrateBestUrlsOptimized(images) {
+      if (!images || images.length === 0) return
+      
+      this.optimizingImages = true
+      
+      try { console.log('hydrateBestUrlsOptimized:start', images.length) } catch (e) {}
+      
+      // 优先处理前6张图片（首屏可见）
+      const priorityImages = images.slice(0, 6)
+      const remainingImages = images.slice(6)
+      
+      // 立即处理优先图片
+      if (priorityImages.length > 0) {
+        await this.hydrateBestUrls(priorityImages)
+      }
+      
+      // 延迟处理剩余图片，避免阻塞UI
+      if (remainingImages.length > 0) {
+        setTimeout(async () => {
+          await this.hydrateBestUrls(remainingImages)
+          this.optimizingImages = false
+        }, 100) // 100ms延迟，让UI先渲染
+      } else {
+        this.optimizingImages = false
+      }
     },
     
     handleScroll() {
@@ -690,6 +765,82 @@ export default {
   padding: 15px;
   background: #f8f9fa;
   border-radius: 6px;
+}
+
+/* 加载状态样式 */
+.loading-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 400px;
+  background: #f8f9fa;
+  border-radius: 12px;
+  margin: 20px 0;
+}
+
+.loading-spinner {
+  text-align: center;
+  color: #666;
+}
+
+.spinner {
+  width: 50px;
+  height: 50px;
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #007bff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 20px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.loading-spinner p {
+  margin: 10px 0;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.loading-subtitle {
+  font-size: 14px;
+  color: #888;
+  margin-top: 5px;
+}
+
+/* 空状态样式 */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  min-height: 400px;
+  background: #f8f9fa;
+  border-radius: 12px;
+  margin: 20px 0;
+  text-align: center;
+  padding: 40px;
+}
+
+.empty-icon {
+  font-size: 64px;
+  margin-bottom: 20px;
+  opacity: 0.6;
+}
+
+.empty-state h3 {
+  margin: 0 0 10px 0;
+  color: #333;
+  font-size: 24px;
+}
+
+.empty-state p {
+  margin: 0 0 20px 0;
+  color: #666;
+  font-size: 16px;
+  max-width: 400px;
 }
 
 .stats-item {

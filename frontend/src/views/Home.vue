@@ -333,6 +333,7 @@ import { brandAPI, modelAPI, imageAPI, apiClient } from '@/services/api';
 import chineseToPinyin from 'chinese-to-pinyin'
 import scrollPositionMixin from '@/utils/scrollPositionMixin';
 import scrollPositionManager from '@/utils/scrollPositionManager';
+import axios from 'axios';
 
 export default {
   name: 'Home',
@@ -437,7 +438,7 @@ export default {
       displayModelsError: null,
       sortOrder: 'desc', // 'desc' 为最新优先，'asc' 为最老优先
       currentDisplayPage: 1,
-      displayPageSize: 36, // 修改为36个车型
+      displayPageSize: 18, // 减少到18个车型，提升加载速度
       hasMoreDisplayModels: true,
       
       // 年代筛选相关
@@ -461,6 +462,35 @@ export default {
       // 图片变体缓存，避免重复请求
       imageVariantCache: {},
       pendingVariantRequests: new Set(),
+      
+      // 数据缓存
+      dataCache: {
+        brands: null,
+        brandsCacheTime: null,
+        carousel: null,
+        carouselCacheTime: null,
+        displayModels: new Map(), // 按页码缓存车型数据
+        displayModelsCacheTime: new Map()
+      },
+      
+      // 错误重试机制
+      errorRetryCount: 0,
+      maxRetryCount: 3,
+      retryDelay: 2000, // 2秒后重试
+      
+      // 请求限制
+      requestQueue: [],
+      maxConcurrentRequests: 1, // 减少到1个并发请求，避免阻塞
+      activeRequests: 0,
+      
+      // 组件状态管理
+      isComponentActive: false,
+      
+      // 图片变体请求管理
+      variantRequestQueue: [],
+      maxVariantRequests: 1, // 限制变体请求并发数
+      activeVariantRequests: 0,
+      variantRequestDelay: 2000 // 变体请求延迟2秒
     }
   },
   computed: {
@@ -686,8 +716,19 @@ export default {
       console.log('========================');
     },
 
-    // 预加载数据以支持滚动位置恢复
+    // 简化的滚动位置恢复 - 只在必要时进行最小预加载
     async preloadDataForScrollRestore() {
+      // 检查组件是否仍然活跃
+      if (!this.isComponentActive) {
+        return;
+      }
+      
+      // 移除路由检查，允许图片变体请求功能
+      // if (this.$route.path !== '/') {
+      //   console.log('不在首页，跳过滚动位置恢复');
+      //   return;
+      // }
+      
       const modelPosition = scrollPositionManager.getModelPosition(this.$route.path);
       const targetPosition = modelPosition ? modelPosition.position : scrollPositionManager.getPosition(this.$route.path);
       
@@ -696,85 +737,43 @@ export default {
         return;
       }
 
-      if (modelPosition) {
-        console.log(`🎯 需要恢复到车型 ${modelPosition.modelId} 的位置: ${targetPosition}px`);
-      } else {
-        console.log(`🎯 需要恢复到滚动位置: ${targetPosition}px`);
-      }
+      console.log(`🎯 需要恢复到滚动位置: ${targetPosition}px`);
       
-      console.log(`🎯 开始预加载数据以支持滚动位置恢复: ${targetPosition}px`);
-      
-      // 估算需要加载多少页数据
-      // 更保守的估算：考虑轮播图、品牌区域、间距等
-      const carouselHeight = 600; // 轮播图高度（增加）
-      const brandsHeight = 300; // 品牌区域高度（增加）
-      const headerHeight = 150; // 头部高度（增加）
-      const paddingHeight = 200; // 各种间距（增加）
-      const itemHeight = 280; // 每个车型卡片的高度（更保守的估算）
+      // 简化的估算：只加载必要的1-2页数据
+      const carouselHeight = 600;
+      const brandsHeight = 300;
+      const headerHeight = 150;
+      const paddingHeight = 200;
+      const itemHeight = 250;
       
       const fixedHeight = carouselHeight + brandsHeight + headerHeight + paddingHeight;
       const availableHeight = targetPosition - fixedHeight;
-      const estimatedItemsNeeded = Math.ceil(availableHeight / itemHeight);
-      const estimatedPages = Math.ceil(estimatedItemsNeeded / this.displayPageSize);
       
-      // 更保守的策略：至少加载估算页数的3倍，确保有足够的内容
-      const conservativePages = Math.max(estimatedPages * 3, 5);
-      
-      console.log(`📏 高度分析:`);
-      console.log(`  - 目标位置: ${targetPosition}px`);
-      console.log(`  - 固定高度: ${fixedHeight}px (轮播图+品牌+头部+间距)`);
-      console.log(`  - 可用高度: ${availableHeight}px`);
-      console.log(`  - 需要车型: ${estimatedItemsNeeded}个`);
-      console.log(`  - 基础页数: ${estimatedPages}页`);
-      console.log(`  - 保守页数: ${conservativePages}页 (3倍安全系数)`);
-      
-      console.log(`📊 估算需要: ${conservativePages}页数据 (约${conservativePages * this.displayPageSize}个车型)`);
-      
-      // 如果当前数据不够，继续加载
-      let currentItems = this.displayModels.length;
-      let currentPage = this.currentDisplayPage;
-      let maxPages = Math.max(conservativePages, 5); // 至少加载5页，最多加载20页
-      let loadedPages = 0;
-      
-      while (this.hasMoreDisplayModels && !this.displayModelsLoading && loadedPages < maxPages) {
-        console.log(`📥 预加载第 ${currentPage + 1} 页数据...`);
+      // 只在目标位置明显超出当前内容时才预加载
+      if (availableHeight > 0 && this.displayModels.length < 20) {
+        console.log(`📊 需要预加载约 ${Math.ceil(availableHeight / itemHeight)} 个车型`);
         
-        try {
-          this.currentDisplayPage = currentPage + 1;
-          await this.fetchDisplayModels();
-          
-          currentItems = this.displayModels.length;
-          currentPage = this.currentDisplayPage;
-          loadedPages++;
-          
-          console.log(`✅ 已加载 ${currentItems} 个车型，还需要约 ${estimatedItemsNeeded - currentItems} 个`);
-          
-          // 给页面一些时间渲染
-          await new Promise(resolve => setTimeout(resolve, 100));
-          
-          // 检查当前页面高度是否足够
-          const currentHeight = document.documentElement.scrollHeight;
-          if (currentHeight >= targetPosition + window.innerHeight) {
-            console.log(`🎉 页面高度已足够 (${currentHeight}px >= ${targetPosition + window.innerHeight}px)，停止预加载`);
-            break;
+        // 最多预加载1页，避免过度加载
+        if (this.hasMoreDisplayModels && !this.displayModelsLoading) {
+          try {
+            this.currentDisplayPage = 2;
+            await this.fetchDisplayModels();
+            console.log(`✅ 预加载完成，共加载 ${this.displayModels.length} 个车型`);
+          } catch (error) {
+            console.error('预加载数据失败:', error);
           }
-          
-        } catch (error) {
-          console.error('预加载数据失败:', error);
-          break;
         }
       }
       
-      console.log(`🎉 预加载完成，共加载 ${currentItems} 个车型`);
-      
-      // 预加载完成后，恢复滚动位置
+      // 延迟恢复滚动位置，给页面渲染时间
       this.$nextTick(() => {
-        console.log('开始恢复滚动位置...');
-        if (modelPosition) {
-          this.restoreToModelPosition(modelPosition.modelId, targetPosition);
-        } else {
-          this.waitForContentAndRestore(3000, 100);
-        }
+        setTimeout(() => {
+          if (modelPosition) {
+            this.restoreToModelPosition(modelPosition.modelId, targetPosition);
+          } else {
+            this.scrollToPosition(targetPosition);
+          }
+        }, 200);
       });
     },
 
@@ -852,24 +851,38 @@ export default {
       }
     },
 
-    // 获取品牌列表
+    // 获取品牌列表 - 优化缓存机制
     async fetchChineseBrands() {
       this.loading = true;
       this.error = null;
       this.resetLogoLoadState();
       
       try {
-        // 检查本地缓存（10分钟有效期）
+        // 检查内存缓存（5分钟有效期）
+        const now = Date.now();
+        const cacheValidTime = 5 * 60 * 1000; // 5分钟
+        
+        if (this.dataCache.brands && this.dataCache.brandsCacheTime && 
+            (now - this.dataCache.brandsCacheTime) < cacheValidTime) {
+          console.log('使用内存缓存的品牌数据');
+          this.allBrands = this.dataCache.brands;
+          this.loading = false;
+          return;
+        }
+        
+        // 检查本地存储缓存（10分钟有效期）
         const cacheKey = 'brands_cache';
         const cacheTimeKey = 'brands_cache_time';
         const cachedData = localStorage.getItem(cacheKey);
         const cacheTime = localStorage.getItem(cacheTimeKey);
-        const now = Date.now();
-        const cacheValidTime = 10 * 60 * 1000; // 10分钟
+        const localCacheValidTime = 10 * 60 * 1000; // 10分钟
         
-        if (cachedData && cacheTime && (now - parseInt(cacheTime)) < cacheValidTime) {
-          console.log('使用缓存的品牌数据');
+        if (cachedData && cacheTime && (now - parseInt(cacheTime)) < localCacheValidTime) {
+          console.log('使用本地缓存的品牌数据');
           this.allBrands = JSON.parse(cachedData);
+          // 更新内存缓存
+          this.dataCache.brands = this.allBrands;
+          this.dataCache.brandsCacheTime = now;
           this.loading = false;
           return;
         }
@@ -889,8 +902,13 @@ export default {
           this.allBrands = Array.isArray(response) ? response : [];
         }
         
-        // 缓存数据
+        // 缓存数据到内存和本地存储
         if (this.allBrands && this.allBrands.length > 0) {
+          // 更新内存缓存
+          this.dataCache.brands = this.allBrands;
+          this.dataCache.brandsCacheTime = now;
+          
+          // 更新本地存储缓存
           localStorage.setItem(cacheKey, JSON.stringify(this.allBrands));
           localStorage.setItem(cacheTimeKey, now.toString());
         }
@@ -1034,8 +1052,8 @@ export default {
             }
           });
         }, {
-          rootMargin: '100px', // 提前100px开始加载，改善用户体验
-          threshold: 0.1 // 当图片10%进入视口时开始加载
+          rootMargin: '50px', // 减少提前加载距离，节省带宽
+          threshold: 0.2 // 当图片20%进入视口时开始加载，减少不必要的加载
         });
         
         // 观察所有懒加载图片
@@ -1071,27 +1089,44 @@ export default {
       });
     },
     
-    // 预加载下一批图片
+    // 优化图片预加载 - 减少预加载数量
     preloadNextBatchImages(models) {
-      // 只预加载前6张图片，避免过度预加载
-      const imagesToPreload = models.slice(0, 6);
+      // 检查组件是否仍然活跃
+      if (!this.isComponentActive) {
+        return;
+      }
+      
+      // 只预加载前1张图片，进一步减少网络请求
+      const imagesToPreload = models.slice(0, 1);
       
       imagesToPreload.forEach((model, index) => {
         if (model.Images && model.Images.length > 0) {
           // 延迟预加载，避免阻塞当前渲染
           setTimeout(() => {
-            const img = new Image();
-            img.src = model.Images[0].url;
-            // 不需要处理onload/onerror，只是预加载
-          }, index * 100); // 每100ms预加载一张图片
+            if (this.isComponentActive) {
+              const img = new Image();
+              img.src = this.getOptimizedImageUrl(model.Images[0], 300, 200);
+              // 不需要处理onload/onerror，只是预加载
+            }
+          }, index * 1000); // 每1秒预加载一张图片，大幅减少并发
         }
       });
     },
     
     // 根据上下文返回最佳图片URL（优先使用变体）
     getOptimizedImageUrl(imageInput, width = 300, height = 200, context = 'card') {
+      // 检查组件是否仍然活跃
+      if (!this.isComponentActive) {
+        return this.buildFallbackImageUrl(imageInput?.url || '', width, height);
+      }
+      
       const { imageId, url, image } = this.normalizeImageInput(imageInput);
       if (!url) return '';
+
+      // 移除路由检查，允许图片变体请求功能
+      // if (this.$route.path !== '/') {
+      //   return this.buildFallbackImageUrl(url, width, height);
+      // }
 
       if (image && image.optimizedUrl) {
         return image.optimizedUrl;
@@ -1107,9 +1142,10 @@ export default {
         return cachedUrl;
       }
 
+      // 使用队列管理变体请求，避免阻塞主要数据加载
       if (imageId && cacheKey && !this.pendingVariantRequests.has(cacheKey)) {
         this.pendingVariantRequests.add(cacheKey);
-        this.fetchVariantUrl({
+        this.queueVariantRequest({
           imageId,
           cacheKey,
           width,
@@ -1121,6 +1157,58 @@ export default {
       }
 
       return this.buildFallbackImageUrl(url, width, height);
+    },
+    
+    // 队列管理变体请求
+    queueVariantRequest(requestData) {
+      // 检查组件是否仍然活跃
+      if (!this.isComponentActive) {
+        return;
+      }
+      
+      // 创建取消令牌
+      const cancelToken = axios.CancelToken.source();
+      requestData.cancelToken = cancelToken;
+      
+      // 添加到队列
+      this.variantRequestQueue.push(requestData);
+      
+      // 延迟处理变体请求，避免阻塞主要数据加载
+      setTimeout(() => {
+        this.processVariantQueue();
+      }, this.variantRequestDelay);
+    },
+    
+    // 处理变体请求队列
+    async processVariantQueue() {
+      // 检查组件是否仍然活跃
+      if (!this.isComponentActive) {
+        this.variantRequestQueue = [];
+        return;
+      }
+      
+      // 检查并发限制
+      if (this.activeVariantRequests >= this.maxVariantRequests) {
+        return;
+      }
+      
+      // 处理队列中的请求
+      if (this.variantRequestQueue.length > 0) {
+        const requestData = this.variantRequestQueue.shift();
+        this.activeVariantRequests++;
+        
+        try {
+          await this.fetchVariantUrl(requestData);
+        } finally {
+          this.activeVariantRequests--;
+          // 继续处理队列
+          if (this.variantRequestQueue.length > 0) {
+            setTimeout(() => {
+              this.processVariantQueue();
+            }, 500); // 每个请求间隔500ms
+          }
+        }
+      }
     },
     
     // 根据使用场景获取合适的变体类型
@@ -1193,6 +1281,14 @@ export default {
     },
 
     async fetchVariantUrl({ imageId, cacheKey, width, height, context, fallbackUrl, imageRef }) {
+      // 检查组件是否仍然活跃
+      if (!this.isComponentActive) {
+        if (cacheKey) {
+          this.pendingVariantRequests.delete(cacheKey);
+        }
+        return;
+      }
+      
       if (!imageId) {
         if (cacheKey) {
           this.pendingVariantRequests.delete(cacheKey);
@@ -1200,6 +1296,9 @@ export default {
         return;
       }
 
+      // 创建取消令牌
+      const cancelToken = axios.CancelToken.source();
+      
       try {
         const response = await apiClient.get(`/image-variants/best/${imageId}`, {
           params: {
@@ -1207,7 +1306,8 @@ export default {
             width,
             height,
             preferWebp: true
-          }
+          },
+          cancelToken: cancelToken.token
         });
 
         if (response && response.success && response.data && response.data.bestUrl) {
@@ -1217,6 +1317,12 @@ export default {
           return;
         }
       } catch (error) {
+        // 如果是取消的请求，不显示警告
+        if (axios.isCancel(error)) {
+          console.log(`图片 ${imageId} 变体请求已取消`);
+          return;
+        }
+        
         const message = error && error.message ? error.message : error;
         console.warn(`获取图片 ${imageId} 变体失败，使用原图`, message);
       } finally {
@@ -1281,11 +1387,18 @@ export default {
 
     // 初始化品牌数据
     async initializeBrands() {
+      // 检查组件是否仍然活跃
+      if (!this.isComponentActive) {
+        return;
+      }
+      
       try {
         await this.fetchChineseBrands();
         // 数据加载完成后预加载logo
         this.$nextTick(() => {
-          this.preloadBrandLogos();
+          if (this.isComponentActive) {
+            this.preloadBrandLogos();
+          }
         });
       } catch (error) {
         console.error('初始化品牌数据失败:', error);
@@ -1341,16 +1454,21 @@ export default {
 
     // 获取轮播图内容（最新上传的车型）
     async fetchCarouselModels() {
+      // 检查组件是否仍然活跃
+      if (!this.isComponentActive) {
+        return;
+      }
+      
       this.latestModelsLoading = true;
       this.latestModelsError = null;
       
       try {
         console.log('开始获取轮播图内容...');
         
-        // 获取最新上传的车型数据
+        // 获取最新上传的车型数据 - 减少数量提升速度
         const modelsResponse = await modelAPI.getAll({
           latest: true,
-          limit: 8, // 增加数量，只展示车型
+          limit: 6, // 减少到6个车型，提升加载速度
           page: 1,
           sortOrder: 'desc', // 降序排列
           sortBy: 'createdAt' // 按创建时间排序，展示最新上传的车型
@@ -1455,8 +1573,14 @@ export default {
       this.startAutoPlay();
     },
     
-    // 获取车型展示数据
+    // 获取车型展示数据 - 添加缓存机制
     async fetchDisplayModels() {
+      // 检查组件是否仍然活跃
+      if (!this.isComponentActive) {
+        console.log('组件已停止，跳过车型展示数据加载');
+        return;
+      }
+      
       this.displayModelsLoading = true;
       this.displayModelsError = null;
       // 如果是第一页，重置图片加载错误状态
@@ -1468,6 +1592,25 @@ export default {
         console.log('开始获取车型展示数据...');
         console.log('排序参数:', this.sortOrder);
         console.log('年代筛选:', this.selectedDecade);
+        
+        // 检查缓存
+        const cacheKey = `${this.sortOrder}_${this.selectedDecade}_${this.currentDisplayPage}`;
+        const now = Date.now();
+        const cacheValidTime = 3 * 60 * 1000; // 3分钟缓存
+        
+        if (this.dataCache.displayModels.has(cacheKey) && 
+            this.dataCache.displayModelsCacheTime.has(cacheKey) &&
+            (now - this.dataCache.displayModelsCacheTime.get(cacheKey)) < cacheValidTime) {
+          console.log('使用缓存的车型展示数据');
+          const cachedData = this.dataCache.displayModels.get(cacheKey);
+          if (this.currentDisplayPage === 1) {
+            this.displayModels = cachedData;
+          } else {
+            this.displayModels = [...this.displayModels, ...cachedData];
+          }
+          this.displayModelsLoading = false;
+          return;
+        }
         
         // 检查是否需要恢复滚动位置，如果是，需要加载更多数据
         const targetPosition = scrollPositionManager.getPosition(this.$route.path);
@@ -1522,7 +1665,17 @@ export default {
             this.displayModels = [...this.displayModels, ...newModels];
           }
           this.hasMoreDisplayModels = newModels.length === this.displayPageSize;
+          // 再次检查组件是否仍然活跃
+          if (!this.isComponentActive) {
+            console.log('组件已停止，跳过车型展示数据处理');
+            return;
+          }
+          
           console.log('获取到车型展示数据:', this.displayModels);
+          
+          // 缓存数据
+          this.dataCache.displayModels.set(cacheKey, newModels);
+          this.dataCache.displayModelsCacheTime.set(cacheKey, now);
           
           // 预加载下一批图片
           this.preloadNextBatchImages(newModels);
@@ -1555,6 +1708,20 @@ export default {
       } catch (error) {
         console.error('获取车型展示数据失败:', error);
         this.displayModelsError = error.message || '获取车型展示数据失败';
+        
+        // 增加错误重试计数
+        this.errorRetryCount++;
+        
+        // 如果重试次数未达到上限，延迟重试
+        if (this.errorRetryCount < this.maxRetryCount) {
+          console.log(`将在 ${this.retryDelay}ms 后重试 (${this.errorRetryCount}/${this.maxRetryCount})`);
+          setTimeout(() => {
+            this.retryFetchDisplayModels();
+          }, this.retryDelay);
+        } else {
+          console.error('已达到最大重试次数，停止自动重试');
+          this.hasMoreDisplayModels = false;
+        }
       } finally {
         this.displayModelsLoading = false;
       }
@@ -1582,11 +1749,30 @@ export default {
     
     // 加载更多车型
     loadMoreModels() {
-      if (this.hasMoreDisplayModels && !this.displayModelsLoading) {
+      // 检查组件是否仍然活跃
+      if (!this.isComponentActive) {
+        return;
+      }
+      
+      if (this.hasMoreDisplayModels && !this.displayModelsLoading && !this.displayModelsError) {
+        // 检查并发请求限制
+        if (this.activeRequests >= this.maxConcurrentRequests) {
+          console.log('请求队列已满，跳过此次加载');
+          return;
+        }
+        
         this.currentDisplayPage++;
+        this.activeRequests++;
+        
         this.fetchDisplayModels().then(() => {
           // 新加载的车型图片也需要懒加载
           this.observeLazyImages();
+        }).catch(error => {
+          console.error('加载更多车型失败:', error);
+          // 发生错误时停止自动加载
+          this.hasMoreDisplayModels = false;
+        }).finally(() => {
+          this.activeRequests--;
         });
       }
     },
@@ -1597,6 +1783,11 @@ export default {
       this.displayModels = [];
       // 重置图片加载错误状态
       this.modelImageLoadError = {};
+      // 重置错误状态，允许重新加载
+      this.displayModelsError = null;
+      this.hasMoreDisplayModels = true;
+      // 重置错误重试计数
+      this.errorRetryCount = 0;
       this.fetchDisplayModels().then(() => {
         this.observeLazyImages();
       });
@@ -1698,7 +1889,7 @@ export default {
 
     // 添加滚动监听
     addScrollListener() {
-      this.handleScroll = this.throttle(this.checkScrollPosition, 200);
+      this.handleScroll = this.throttle(this.checkScrollPosition, 500); // 增加节流时间，减少触发频率
       window.addEventListener('scroll', this.handleScroll, { passive: true });
     },
 
@@ -1708,11 +1899,98 @@ export default {
         window.removeEventListener('scroll', this.handleScroll);
       }
     },
+    
+    // 停止所有自动加载
+    stopAllAutoLoading() {
+      // 设置组件为非活跃状态
+      this.isComponentActive = false;
+      
+      // 停止滚动监听
+      this.removeScrollListener();
+      
+      // 停止轮播图自动播放
+      this.stopAutoPlay();
+      
+      // 停止所有加载状态
+      this.displayModelsLoading = false;
+      this.latestModelsLoading = false;
+      
+      // 停止更多数据加载
+      this.hasMoreDisplayModels = false;
+      this.hasMoreModels = false;
+      
+      // 重置错误状态
+      this.displayModelsError = null;
+      this.latestModelsError = null;
+      
+      // 重置请求计数
+      this.activeRequests = 0;
+      this.errorRetryCount = 0;
+      
+      // 清理所有待处理的图片变体请求
+      this.pendingVariantRequests.clear();
+      this.imageVariantCache = {};
+      
+      // 清理变体请求队列
+      this.variantRequestQueue = [];
+      this.activeVariantRequests = 0;
+      
+      // 清理懒加载观察器
+      if (this.lazyLoadObserver) {
+        this.lazyLoadObserver.disconnect();
+        this.lazyLoadObserver = null;
+      }
+      
+      // 取消所有待处理的变体请求
+      this.cancelAllVariantRequests();
+      
+      console.log('已停止所有自动加载机制');
+    },
+    
+    // 取消所有变体请求
+    cancelAllVariantRequests() {
+      // 取消所有待处理的变体请求
+      this.variantRequestQueue.forEach(request => {
+        if (request.cancelToken) {
+          request.cancelToken.cancel('Component destroyed');
+        }
+      });
+      this.variantRequestQueue = [];
+      
+      // 清理所有待处理的变体请求
+      this.pendingVariantRequests.clear();
+      
+      console.log('已取消所有变体请求');
+    },
 
-    // 检查滚动位置
+    // 检查滚动位置 - 优化触发条件
     checkScrollPosition() {
+      // 检查组件是否仍然活跃
+      if (!this.isComponentActive) {
+        return;
+      }
+      
+      // 移除路由检查，允许图片变体请求功能
+      // if (this.$route.path !== '/') {
+      //   console.log('不在首页，停止滚动监听');
+      //   this.removeScrollListener();
+      //   return;
+      // }
+      
       // 如果正在加载或没有更多数据，则不执行
       if (this.displayModelsLoading || !this.hasMoreDisplayModels) {
+        return;
+      }
+
+      // 如果最近有错误，暂停自动加载
+      if (this.displayModelsError) {
+        return;
+      }
+
+      // 检查组件是否还存在（防止在组件销毁后继续执行）
+      if (!this.$el || !document.contains(this.$el)) {
+        console.log('组件已销毁，停止滚动监听');
+        this.removeScrollListener();
         return;
       }
 
@@ -1721,8 +1999,8 @@ export default {
       const windowHeight = window.innerHeight;
       const documentHeight = document.documentElement.scrollHeight;
 
-      // 当滚动到距离底部200px时触发加载
-      const threshold = 200;
+      // 当滚动到距离底部800px时触发加载，给用户更多缓冲时间
+      const threshold = 800;
       if (scrollTop + windowHeight >= documentHeight - threshold) {
         console.log('触发自动加载更多车型');
         this.loadMoreModels();
@@ -1749,42 +2027,106 @@ export default {
       };
     }
   },
-  mounted() {
-    this.initializeBrands();
-    this.fetchCarouselModels();
-    this.fetchDisplayModels().then(() => {
+  beforeRouteLeave(to, from, next) {
+    // 在离开首页时立即停止所有活动
+    console.log('离开首页，立即停止所有活动');
+    this.stopAllAutoLoading();
+    next();
+  },
+  async mounted() {
+    // 移除路由检查，允许图片变体请求功能
+    // if (this.$route.path !== '/') {
+    //   console.log('不在首页，跳过首页初始化');
+    //   return;
+    // }
+    
+    // 设置组件状态为活跃
+    this.isComponentActive = true;
+    
+    // 并行发起所有初始请求，提升加载速度
+    try {
+      const [brandsResult, carouselResult, displayResult] = await Promise.allSettled([
+        this.initializeBrands(),
+        this.fetchCarouselModels(),
+        this.fetchDisplayModels()
+      ]);
+      
+      // 检查组件是否仍然活跃
+      if (!this.isComponentActive) {
+        console.log('组件已停止，跳过后续处理');
+        return;
+      }
+      
+      // 处理结果
+      if (brandsResult.status === 'rejected') {
+        console.error('品牌数据加载失败:', brandsResult.reason);
+      }
+      if (carouselResult.status === 'rejected') {
+        console.error('轮播图数据加载失败:', carouselResult.reason);
+      }
+      if (displayResult.status === 'rejected') {
+        console.error('车型展示数据加载失败:', displayResult.reason);
+      }
+      
+      // 再次检查组件是否仍然活跃
+      if (!this.isComponentActive) {
+        console.log('组件已停止，跳过懒加载初始化');
+        return;
+      }
+      
       // 初始化图片懒加载
       this.initLazyLoading();
-      // 观察初始加载的图片
       this.observeLazyImages();
       
-      // 数据加载完成后，检查是否需要预加载更多数据以支持滚动位置恢复
+      // 检查是否需要预加载更多数据以支持滚动位置恢复
       this.$nextTick(() => {
-        this.preloadDataForScrollRestore();
+        if (this.isComponentActive) {
+          this.preloadDataForScrollRestore();
+        }
       });
-    }).catch(error => {
-      console.error('初始化车型展示数据失败:', error);
+      
+    } catch (error) {
+      console.error('初始化数据失败:', error);
       // 即使失败也要初始化懒加载
-      this.initLazyLoading();
-    });
+      if (this.isComponentActive) {
+        this.initLazyLoading();
+      }
+    }
     
     // 添加滚动监听
-    this.addScrollListener();
+    if (this.isComponentActive) {
+      this.addScrollListener();
+    }
   },
   beforeDestroy() {
+    // 设置组件为非活跃状态
+    this.isComponentActive = false;
+    
+    // 停止所有自动加载
+    this.stopAllAutoLoading();
+    
     // 清理懒加载观察器
     if (this.lazyLoadObserver) {
       this.lazyLoadObserver.disconnect();
     }
-    // 停止自动播放
-    this.stopAutoPlay();
-    // 移除滚动监听
-    this.removeScrollListener();
+    
+    // 清理所有定时器
+    if (this.autoPlayInterval) {
+      clearInterval(this.autoPlayInterval);
+    }
+    
+    console.log('首页组件销毁，已清理所有资源');
   },
   watch: {
     // 监听路由变化，重置logo加载状态
-    '$route'() {
+    '$route'(to, from) {
       this.resetLogoLoadState();
+      
+      // 如果离开首页，立即停止所有自动加载
+      if (from.path === '/' && to.path !== '/') {
+        console.log('离开首页，停止所有自动加载');
+        this.stopAllAutoLoading();
+      }
     }
   }
 }

@@ -73,6 +73,8 @@
             :key="model.id"
             class="model-card"
             @click="goToModel(model.id)"
+            @mouseenter="handleModelHover(model, $event)"
+            @mouseleave="hidePreview"
           >
             <div class="model-image">
               <img 
@@ -80,6 +82,10 @@
                 :src="getImageUrl(model.Images[0])" 
                 :alt="model.name" 
               />
+              <div v-else-if="model.isLoadingImage" class="loading-image">
+                <i class="el-icon-loading"></i>
+                <span>加载中...</span>
+              </div>
               <div v-else class="no-image">
                 <i class="el-icon-picture-outline"></i>
               </div>
@@ -101,7 +107,7 @@
                 :key="model.id"
                 class="model-list-item"
                 @click="goToModel(model.id)"
-                @mouseenter="showPreview(model, $event)"
+                @mouseenter="handleModelHover(model, $event)"
                 @mouseleave="hidePreview"
               >
                 {{ model.name }}
@@ -113,7 +119,7 @@
                 :key="model.id"
                 class="model-list-item"
                 @click="goToModel(model.id)"
-                @mouseenter="showPreview(model, $event)"
+                @mouseenter="handleModelHover(model, $event)"
                 @mouseleave="hidePreview"
               >
                 {{ model.name }}
@@ -134,6 +140,10 @@
               :alt="previewModel.name"
               class="preview-image"
             />
+            <div v-else-if="isLoadingImage" class="loading-preview-image">
+              <i class="el-icon-loading"></i>
+              <span>加载中...</span>
+            </div>
             <div v-else class="no-preview-image">
               <i class="el-icon-picture-outline"></i>
               <span>暂无图片</span>
@@ -142,6 +152,9 @@
             <div class="tooltip-arrow"></div>
           </div>
         </div>
+        
+        
+        
       </div>
     </div>
   </div>
@@ -165,7 +178,10 @@ export default {
       previewVisible: false,
       previewModel: null,
       previewStyle: {},
-      previewPosition: 'above' // 'above' 或 'below'
+      previewPosition: 'above', // 'above' 或 'below'
+      // 不再需要分页相关数据
+      isDataLoading: false, // 防止重复加载
+      isLoadingImage: false // 图片加载状态
     };
   },
   computed: {
@@ -226,9 +242,10 @@ export default {
     setViewMode(mode) {
       this.viewMode = mode;
     },
-    showPreview(model, event) {
+    showPreview(model, event, isLoading = false) {
       this.previewModel = model;
       this.previewVisible = true;
+      this.isLoadingImage = isLoading;
       
       // 计算预览框位置
       const rect = event.target.getBoundingClientRect();
@@ -261,48 +278,103 @@ export default {
     goToModel(modelId) {
       this.$router.push(`/model/${modelId}`);
     },
+    
+    // 处理车型悬停事件 - 懒加载图片
+    async handleModelHover(model, event) {
+      // 如果已经有图片，直接显示预览
+      if (model.Images && model.Images.length > 0) {
+        this.showPreview(model, event);
+        return;
+      }
+      
+      // 如果正在加载，不重复请求
+      if (model.isLoadingImage) {
+        return;
+      }
+      
+      // 设置加载状态
+      this.$set(model, 'isLoadingImage', true);
+      
+      // 如果是网格视图，显示加载状态
+      if (this.viewMode === 'grid') {
+        // 网格视图不需要预览，只需要加载图片
+      } else {
+        // 列表视图显示预览
+        this.showPreview(model, event, true);
+      }
+      
+      // 懒加载图片
+      try {
+        const imageResponse = await imageAPI.getByModelId(model.id, { limit: 1 });
+        if (imageResponse.success && imageResponse.data && imageResponse.data.length > 0) {
+          // 将图片添加到车型数据中
+          this.$set(model, 'Images', imageResponse.data);
+          // 更新预览
+          if (this.viewMode === 'list') {
+            this.showPreview(model, event);
+          }
+        } else {
+          // 没有图片，显示无图片状态
+          if (this.viewMode === 'list') {
+            this.showPreview(model, event, false);
+          }
+        }
+      } catch (error) {
+        console.error('加载车型图片失败:', error);
+        // 显示无图片状态
+        if (this.viewMode === 'list') {
+          this.showPreview(model, event, false);
+        }
+      } finally {
+        // 清除加载状态
+        this.$set(model, 'isLoadingImage', false);
+      }
+    },
     async fetchBrandModels() {
+      // 防止重复加载
+      if (this.isDataLoading) {
+        console.log('数据正在加载中，跳过重复请求');
+        return;
+      }
+      
+      this.isDataLoading = true;
       this.loading = true;
       this.error = null;
       
       try {
         const brandId = this.$route.params.id;
+        console.log(`开始加载品牌详情，品牌ID: ${brandId}`);
         
-        // 获取品牌信息
+        // 先获取品牌信息，再获取车型列表，避免并行请求造成阻塞
         const brandResponse = await brandAPI.getById(brandId);
-        if (!brandResponse.success) {
-          this.error = brandResponse.message || '获取品牌数据失败';
+        
+        if (brandResponse.success) {
+          this.brand = brandResponse.data;
+          console.log(`品牌信息加载完成: ${this.brand.name}`);
+        } else {
+          this.error = '获取品牌数据失败';
           return;
         }
-        this.brand = brandResponse.data;
         
-        // 获取车型列表 - 设置足够大的limit确保获取该品牌的所有车型
+        // 然后获取车型列表 - 只加载车型基本信息，不加载图片
         const modelsResponse = await modelAPI.getAll({ 
           brandId, 
-          limit: 1000  // 设置足够大的数量限制，确保获取所有车型
+          limit: 1000,  // 设置一个较大的限制，获取所有车型
+          page: 1,
+          includeImages: false  // 不包含图片信息，大幅提升加载速度
         });
-        if (modelsResponse && modelsResponse.success) {
+        
+        // 处理车型列表
+        if (modelsResponse.success) {
           this.models = modelsResponse.data || [];
+          console.log(`车型列表加载完成，共 ${this.models.length} 个车型`);
           
-          // 为每个车型获取图片
-          for (const model of this.models) {
-            if (!model.Images || model.Images.length === 0) {
-              try {
-                const imagesResponse = await imageAPI.getByModelId(model.id);
-                if (imagesResponse.success && imagesResponse.data) {
-                  model.Images = imagesResponse.data;
-                }
-              } catch (error) {
-                model.Images = [];
-              }
-            }
-          }
+          // 跳过图片预加载，直接显示车型列表，大幅提升速度
+          console.log('跳过图片预加载，直接显示车型列表以提升速度');
           
           // 按年份排序，最新年份排在前面
           this.models.sort((a, b) => {
-            // 从车型名称中提取年份 - 支持更广泛的年份范围
             const extractYear = (name) => {
-              // 匹配4位数字年份（1900-2099范围）
               const match = name.match(/\b(19|20)\d{2}\b/);
               return match ? parseInt(match[0]) : 0;
             };
@@ -310,12 +382,10 @@ export default {
             const yearA = extractYear(a.name);
             const yearB = extractYear(b.name);
             
-            // 按年份降序排序（新年份在前）
             if (yearA !== yearB) {
               return yearB - yearA;
             }
             
-            // 如果年份相同，按名称排序
             return a.name.localeCompare(b.name, 'zh-CN');
           });
           
@@ -328,6 +398,7 @@ export default {
         this.error = '获取数据失败，请检查网络连接';
       } finally {
         this.loading = false;
+        this.isDataLoading = false;
       }
     }
   },
@@ -335,8 +406,11 @@ export default {
     this.fetchBrandModels();
   },
   watch: {
-    '$route.params.id': function() {
-      this.fetchBrandModels();
+    '$route.params.id': function(newId, oldId) {
+      // 只有当品牌ID真正改变时才重新加载
+      if (newId !== oldId) {
+        this.fetchBrandModels();
+      }
     }
   }
 };
@@ -522,6 +596,25 @@ export default {
   font-size: 40px;
 }
 
+.loading-image {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 120px;
+  color: #999;
+}
+
+.loading-image i {
+  font-size: 24px;
+  margin-bottom: 8px;
+  animation: rotating 2s linear infinite;
+}
+
+.loading-image span {
+  font-size: 12px;
+}
+
 .model-info {
   padding: 6px 8px 8px 8px;
   height: 25%;
@@ -632,6 +725,34 @@ export default {
   font-size: 12px;
 }
 
+.loading-preview-image {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 120px;
+  color: #999;
+}
+
+.loading-preview-image i {
+  font-size: 24px;
+  margin-bottom: 8px;
+  animation: rotating 2s linear infinite;
+}
+
+.loading-preview-image span {
+  font-size: 12px;
+}
+
+@keyframes rotating {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
 /* 箭头指示器 */
 .tooltip-arrow {
   position: absolute;
@@ -654,6 +775,8 @@ export default {
   border-bottom: 6px solid white;
   filter: drop-shadow(0 -1px 1px rgba(0, 0, 0, 0.1));
 }
+
+
 
 /* 响应式设计 */
 @media (max-width: 768px) {

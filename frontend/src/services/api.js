@@ -123,7 +123,7 @@ export const modelAPI = {
 // 图片相关API
 export const imageAPI = {
   getAll: (params) => apiClient.get('/images', { params }),
-  getByModelId: (modelId) => apiClient.get(`/images/model/${modelId}`),
+  getByModelId: (modelId, params = {}) => apiClient.get(`/models/${modelId}/images`, { params }),
   upload: (data) => apiClient.post('/images/upload', data),
   delete: (id) => apiClient.delete(`/images/${id}`)
 };

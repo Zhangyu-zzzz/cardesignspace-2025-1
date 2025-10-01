@@ -26,17 +26,20 @@
           <i class="el-icon-arrow-left"></i>
         </button>
 
-        <img 
-          ref="imageElement"
-          :src="currentImageUrl" 
-          :alt="(currentImage && currentImage.title) || '图片'"
-          :style="imageStyles"
-          @load="handleImageLoad"
-          @error="handleImageError"
-          draggable="false"
-          @mousedown="handleMouseDown"
-          @contextmenu="handleImageContextMenu"
-        />
+        <!-- 图片容器，支持左右切换效果 -->
+        <div class="image-container" :style="containerStyles">
+          <img 
+            ref="imageElement"
+            :src="currentImageUrl" 
+            :alt="(currentImage && currentImage.title) || '图片'"
+            :style="imageStyles"
+            @load="handleImageLoad"
+            @error="handleImageError"
+            draggable="false"
+            @mousedown="handleMouseDown"
+            @contextmenu="handleImageContextMenu"
+          />
+        </div>
         
         <!-- 右侧导航按钮 -->
         <button 
@@ -196,7 +199,7 @@ export default {
   data() {
     return {
       currentIndex: 0,
-      scale: 1,
+      scale: 0.4, // 设置初始缩放为0.4，适中的初始显示
       rotation: 0,
       translateX: 0,
       translateY: 0,
@@ -224,10 +227,17 @@ export default {
       return {
         transform: `scale(${this.scale}) rotate(${this.rotation}deg) translate(${this.translateX}px, ${this.translateY}px)`,
         transformOrigin: 'center center',
-        transition: this.isDragging ? 'none' : 'transform 0.3s ease',
+        // 移除transition，避免缩放翻页效果
+        transition: this.isDragging ? 'none' : 'none',
         cursor: this.isDragging ? 'grabbing' : 'grab',
         maxWidth: 'none',
         maxHeight: 'none'
+      };
+    },
+    containerStyles() {
+      return {
+        transition: 'opacity 0.2s ease-in-out',
+        opacity: this.imageLoading ? 0.7 : 1
       };
     }
   },
@@ -235,7 +245,8 @@ export default {
     visible(newVal) {
       if (newVal) {
         this.currentIndex = this.initialIndex;
-        this.resetTransform();
+        // 移除resetTransform()，保持我们设置的初始缩放值
+        // this.resetTransform();
         document.addEventListener('keydown', this.handleKeyDown);
         document.addEventListener('wheel', this.handleWheel, { passive: false });
       } else {
@@ -245,7 +256,8 @@ export default {
       }
     },
     currentIndex() {
-      this.resetTransform();
+      // 移除resetTransform()，避免缩放翻页效果
+      // this.resetTransform();
       this.imageLoading = true;
       this.imageError = false;
     }
@@ -253,9 +265,11 @@ export default {
   methods: {
     // 图片加载处理
     handleImageLoad() {
-      this.imageLoading = false;
-      this.imageError = false;
-      this.autoFitImage();
+      // 添加短暂延迟，让切换效果更流畅
+      setTimeout(() => {
+        this.imageLoading = false;
+        this.imageError = false;
+      }, 100);
     },
     
     // 处理图片右键菜单
@@ -285,6 +299,11 @@ export default {
         
         if (!img || !container) return;
         
+        // 如果缩放值已经是自定义的（小于1），则不自动适应
+        if (this.scale < 1) {
+          return;
+        }
+        
         const containerWidth = container.clientWidth;
         const containerHeight = container.clientHeight;
         const imageWidth = img.naturalWidth;
@@ -301,12 +320,14 @@ export default {
     // 导航控制
     prevImage() {
       if (this.currentIndex > 0) {
+        this.imageLoading = true;
         this.currentIndex--;
       }
     },
     
     nextImage() {
       if (this.currentIndex < this.images.length - 1) {
+        this.imageLoading = true;
         this.currentIndex++;
       }
     },
@@ -668,7 +689,16 @@ export default {
   overflow: hidden;
 }
 
-.image-display-area img {
+.image-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+.image-container img {
   max-width: 90%;
   max-height: 90%;
   object-fit: contain;
@@ -723,11 +753,16 @@ export default {
 
 .image-loading,
 .image-error {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
   display: flex;
   flex-direction: column;
   align-items: center;
   color: white;
   font-size: 16px;
+  z-index: 10;
 }
 
 .image-loading i,

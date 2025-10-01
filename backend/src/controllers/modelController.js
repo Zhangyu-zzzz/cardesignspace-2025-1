@@ -7,7 +7,7 @@ const logger = require('../config/logger');
 // 获取所有车型
 exports.getAllModels = async (req, res) => {
   try {
-    const { brandId, search, page = 1, limit = 20, latest = false, sortOrder = 'desc', decade, sortBy = 'year' } = req.query;
+    const { brandId, search, page = 1, limit = 20, latest = false, sortOrder = 'desc', decade, sortBy = 'year', includeImages = 'true' } = req.query;
     
     console.log(`排序参数: sortOrder=${sortOrder}, 类型: ${typeof sortOrder}`);
     console.log(`年代筛选: decade=${decade}`);
@@ -54,16 +54,20 @@ exports.getAllModels = async (req, res) => {
         model: Brand, 
         as: 'Brand',
         attributes: ['id', 'name', 'logo', 'country'] // 只选择需要的字段
-      },
-      { 
+      }
+    ];
+    
+    // 根据includeImages参数决定是否包含图片
+    if (includeImages === 'true') {
+      includeConditions.push({
         model: Image, 
         as: 'Images',
         attributes: ['id', 'url', 'filename', 'title'], // 只选择需要的字段，移除category
         required: false, // 允许没有图片的车型也显示
         limit: 1, // 每个车型只获取第一张图片
         order: [['createdAt', 'ASC']] // 获取最早的图片作为缩略图
-      }
-    ];
+      });
+    }
     
     if (brandId) {
       whereCondition.brandId = brandId;
@@ -111,13 +115,7 @@ exports.getAllModels = async (req, res) => {
 
       const { count, rows: models } = await Model.findAndCountAll({
         where: whereCondition,
-        include: [
-          {
-            model: Brand,
-            as: 'Brand',
-            attributes: ['id', 'name', 'logo', 'country']
-          }
-        ],
+        include: includeConditions,
         order: [
           [sortField, sortOrder.toUpperCase()],
           ['name', 'ASC']
@@ -127,33 +125,19 @@ exports.getAllModels = async (req, res) => {
         distinct: true
       });
 
-      finalModels = await Promise.all(models.map(async (model) => {
-        const data = model.toJSON();
-        const firstImage = await Image.findOne({
-          where: { modelId: model.id },
-          attributes: ['id', 'url', 'filename', 'title'],
-          order: [['createdAt', 'ASC']]
-        });
-        data.Images = firstImage ? [firstImage.toJSON ? firstImage.toJSON() : firstImage] : [];
-        return data;
-      }));
+      // 直接使用查询结果，避免N+1查询
+      finalModels = models.map(model => model.toJSON());
       finalCount = count;
 
       console.log(`最新车型分页查询: 本页 ${finalModels.length} 条 / 总计 ${finalCount} 条`);
     } else {
-      // 常规查询（包括按品牌筛选）
+      // 常规查询（包括按品牌筛选）- 优化查询性能
       const sortField = sortBy === 'createdAt' ? 'createdAt' : 'year';
       console.log(`常规查询排序字段: ${sortField}, 排序方式: ${sortOrder.toUpperCase()}`);
       
       const { count, rows: models } = await Model.findAndCountAll({
         where: whereCondition,
-        include: [
-          { 
-            model: Brand, 
-            as: 'Brand',
-            attributes: ['id', 'name', 'logo', 'country']
-          }
-        ],
+        include: includeConditions,
         order: [
           [sortField, sortOrder.toUpperCase()], // 根据sortBy参数决定排序字段
           ['name', 'ASC'] // 名称升序
@@ -165,22 +149,8 @@ exports.getAllModels = async (req, res) => {
       
       console.log(`数据库查询结果: 找到 ${models.length} 个车型`);
       
-      // 为每个车型添加第一张图片
-      const modelsWithImages = await Promise.all(models.map(async (model) => {
-        const firstImage = await Image.findOne({
-          where: { modelId: model.id },
-          attributes: ['id', 'url', 'filename', 'title'],
-          order: [['createdAt', 'ASC']]
-        });
-        
-        // 转换为普通对象并添加图片
-        const modelData = model.toJSON();
-        modelData.Images = firstImage ? [firstImage] : [];
-        
-        return modelData;
-      }));
-      
-      finalModels = modelsWithImages;
+      // 直接使用查询结果，避免N+1查询
+      finalModels = models.map(model => model.toJSON());
       finalCount = count;
     }
     

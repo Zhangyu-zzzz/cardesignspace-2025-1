@@ -23,6 +23,21 @@
  */
 
 require('dotenv').config();
+// Fallback: also try loading project root .env when executed from backend/
+try {
+  const path = require('path');
+  const fs = require('fs');
+  const candidatePaths = [
+    path.resolve(__dirname, '../../.env'),
+    path.resolve(__dirname, '../.env'),
+  ];
+  for (const p of candidatePaths) {
+    if (fs.existsSync(p)) {
+      require('dotenv').config({ path: p });
+      break;
+    }
+  }
+} catch (_) {}
 const fs = require('fs').promises;
 const path = require('path');
 const { Sequelize } = require('sequelize');
@@ -525,16 +540,31 @@ class CosToS3Backup {
   async backupVariants() {
     logger.info('开始备份图片变体');
     
-    const variants = await this.querier.getImageVariants();
+    // 获取所有图片的变体
+    const query = `
+      SELECT 
+        ia.imageId,
+        ia.variant,
+        ia.url,
+        ia.width,
+        ia.height,
+        ia.size
+      FROM image_assets ia
+      ORDER BY ia.imageId, ia.variant
+    `;
+    
+    const variants = await sequelize.query(query, {
+      type: Sequelize.QueryTypes.SELECT
+    });
     
     for (const variant of variants) {
       try {
-        const cosInfo = this.urlParser.parseCosUrl(variant.url);
+        const cosInfo = ImageUrlParser.parseCosUrl(variant.url);
         if (!cosInfo) {
           throw new Error(`无法解析变体COS URL: ${variant.url}`);
         }
         
-        const s3Key = this.urlParser.buildS3Key(cosInfo.key, true);
+        const s3Key = ImageUrlParser.buildS3Key(cosInfo.key, true);
         
         if (this.options.dryRun) {
           logger.info(`[DRY RUN] 备份变体: ${cosInfo.key} -> ${s3Key}`);

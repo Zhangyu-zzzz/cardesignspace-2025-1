@@ -406,14 +406,16 @@ class BackupScheduler {
         return;
       }
       
-      // 检查低峰期剩余时间
-      const remainingTime = this.lowTrafficDetector.getLowTrafficDuration();
-      if (remainingTime < CONFIG.TASK.maxDuration) {
-        this.logger.warn('跳过任务：低峰期剩余时间不足', { 
-          remainingTime: remainingTime / 1000 / 60 + '分钟',
-          requiredTime: CONFIG.TASK.maxDuration / 1000 / 60 + '分钟'
-        });
-        return;
+      // 仅当限制低峰期时，检查低峰期剩余时间
+      if (this.options.lowTrafficOnly) {
+        const remainingTime = this.lowTrafficDetector.getLowTrafficDuration();
+        if (remainingTime < CONFIG.TASK.maxDuration) {
+          this.logger.warn('跳过任务：低峰期剩余时间不足', { 
+            remainingTime: remainingTime / 1000 / 60 + '分钟',
+            requiredTime: CONFIG.TASK.maxDuration / 1000 / 60 + '分钟'
+          });
+          return;
+        }
       }
       
       this.logger.info('开始执行计划备份任务');
@@ -498,6 +500,8 @@ function parseArgs() {
       options.daemon = true;
     } else if (arg === '--low-traffic') {
       options.lowTrafficOnly = true;
+    } else if (arg === '--low-traffic=false') {
+      options.lowTrafficOnly = false;
     }
   }
   
@@ -518,11 +522,19 @@ async function main() {
       console.log(JSON.stringify(scheduler.getStatus(), null, 2));
       
       // 等待用户输入退出
-      process.stdin.setRawMode(true);
-      process.stdin.resume();
-      process.stdin.on('data', async () => {
-        await scheduler.shutdown();
-      });
+      if (process.stdin.setRawMode) {
+        process.stdin.setRawMode(true);
+        process.stdin.resume();
+        process.stdin.on('data', async () => {
+          await scheduler.shutdown();
+        });
+      } else {
+        // 如果没有setRawMode，使用定时器保持运行
+        console.log('按 Ctrl+C 退出调度器');
+        setInterval(() => {
+          // 保持进程运行
+        }, 1000);
+      }
     }
     
   } catch (error) {

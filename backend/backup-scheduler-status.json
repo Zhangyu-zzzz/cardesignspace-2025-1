@@ -1,0 +1,11 @@
+{
+  "isRunning": false,
+  "lastRun": null,
+  "nextRun": "2025-10-02T02:59:00.093Z",
+  "totalRuns": 0,
+  "successfulRuns": 0,
+  "failedRuns": 0,
+  "currentTask": null,
+  "schedule": "* * * * *",
+  "errors": []
+}

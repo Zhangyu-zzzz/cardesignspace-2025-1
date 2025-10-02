@@ -1,11 +1,11 @@
 {
   "isRunning": false,
   "lastRun": null,
-  "nextRun": "2025-10-02T02:59:00.093Z",
+  "nextRun": "2025-10-03T04:13:22.413Z",
   "totalRuns": 0,
   "successfulRuns": 0,
   "failedRuns": 0,
   "currentTask": null,
-  "schedule": "* * * * *",
+  "schedule": "0 3 * * *",
   "errors": []
 }

@@ -117,3 +117,4 @@ test-*.js
 AGENTS.md
 
 docs/operations/cos-to-s3-backup-guide.md
+backend/backup-progress.json

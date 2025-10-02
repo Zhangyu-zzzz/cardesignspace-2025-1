@@ -67,18 +67,12 @@ generate_cron_config() {
     case "$strategy" in
         "standard")
             cat > "$CRON_TEMP_FILE" << EOF
-# 数据库自动备份任务 - 标准策略
-# 每日凌晨2点执行每日备份
-0 2 * * * $BACKUP_SCRIPT daily >> $PROJECT_ROOT/logs/db-backup-cron.log 2>&1
+# 数据库自动备份任务 - 标准策略（服务器空闲时执行）
+# 每日凌晨3点执行每日备份（服务器空闲时间）
+0 3 * * * $BACKUP_SCRIPT daily >> $PROJECT_ROOT/logs/db-backup-cron.log 2>&1
 
-# 每周日凌晨1点执行每周备份
-0 1 * * 0 $BACKUP_SCRIPT weekly >> $PROJECT_ROOT/logs/db-backup-cron.log 2>&1
-
-# 每月1日凌晨0点执行每月备份
-0 0 1 * * $BACKUP_SCRIPT monthly >> $PROJECT_ROOT/logs/db-backup-cron.log 2>&1
-
-# 每周日凌晨3点清理旧备份
-0 3 * * 0 $BACKUP_SCRIPT cleanup >> $PROJECT_ROOT/logs/db-backup-cron.log 2>&1
+# 每周日凌晨2点清理旧备份
+0 2 * * 0 $BACKUP_SCRIPT cleanup >> $PROJECT_ROOT/logs/db-backup-cron.log 2>&1
 EOF
             ;;
         "frequent")

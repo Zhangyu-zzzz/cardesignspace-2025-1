@@ -77,8 +77,17 @@ check_environment() {
     
     # 检查必需的数据库配置
     if [ -z "$DB_HOST" ] || [ -z "$DB_NAME" ] || [ -z "$DB_USER" ] || [ -z "$DB_PASSWORD" ]; then
-        log_error "数据库配置不完整"
+        log_error "主数据库配置不完整"
         exit 1
+    fi
+    
+    # 检查备份数据库配置
+    if [ -z "$BACKUP_DB_HOST" ] || [ -z "$BACKUP_DB_NAME" ] || [ -z "$BACKUP_DB_USER" ] || [ -z "$BACKUP_DB_PASSWORD" ]; then
+        log_warn "备份数据库配置不完整，将跳过备份数据库同步"
+        export SKIP_BACKUP_DB=true
+    else
+        export SKIP_BACKUP_DB=false
+        log_info "备份数据库配置检查通过"
     fi
     
     # 检查S3配置（可选）
@@ -90,10 +99,20 @@ check_environment() {
         log_info "S3配置检查通过"
     fi
     
-    # 检查MySQL连接
+    # 检查主数据库连接
     if ! mysql -h"$DB_HOST" -u"$DB_USER" -p"$DB_PASSWORD" -e "SELECT 1;" "$DB_NAME" >/dev/null 2>&1; then
-        log_error "无法连接到数据库"
+        log_error "无法连接到主数据库"
         exit 1
+    fi
+    
+    # 检查备份数据库连接
+    if [ "$SKIP_BACKUP_DB" = "false" ]; then
+        if ! mysql -h"$BACKUP_DB_HOST" -P"$BACKUP_DB_PORT" -u"$BACKUP_DB_USER" -p"$BACKUP_DB_PASSWORD" -e "SELECT 1;" "$BACKUP_DB_NAME" >/dev/null 2>&1; then
+            log_warn "无法连接到备份数据库，将跳过备份数据库同步"
+            export SKIP_BACKUP_DB=true
+        else
+            log_info "备份数据库连接检查通过"
+        fi
     fi
     
     log_info "环境检查通过"
@@ -151,6 +170,15 @@ backup_database() {
                 else
                     log_warn "S3上传失败，但本地备份成功"
                     log_to_file "S3上传失败，但本地备份成功"
+                fi
+                
+                # 同步到备份数据库
+                if sync_to_backup_database "$backup_file"; then
+                    log_info "备份已成功同步到cardesignspace_local数据库"
+                    log_to_file "备份已成功同步到cardesignspace_local数据库"
+                else
+                    log_warn "备份数据库同步失败，但本地备份成功"
+                    log_to_file "备份数据库同步失败，但本地备份成功"
                 fi
                 
                 return 0
@@ -255,6 +283,86 @@ upload_to_s3() {
     fi
 }
 
+# 同步到备份数据库
+sync_to_backup_database() {
+    local backup_file="$1"
+    
+    if [ "$SKIP_BACKUP_DB" = "true" ]; then
+        log_info "跳过备份数据库同步（配置不完整）"
+        return 0
+    fi
+    
+    log_step "同步备份到cardesignspace_local数据库"
+    
+    # 解压备份文件到临时位置
+    local temp_sql_file="/tmp/backup_$(date +%Y%m%d_%H%M%S).sql"
+    
+    if ! zcat "$backup_file.gz" > "$temp_sql_file" 2>/dev/null; then
+        log_error "解压备份文件失败"
+        return 1
+    fi
+    
+    # 备份当前备份数据库（可选）
+    local backup_timestamp=$(date +%Y%m%d_%H%M%S)
+    local backup_db_backup="$BACKUP_DIR/backup_db_backup_${backup_timestamp}.sql.gz"
+    
+    log_info "备份当前cardesignspace_local数据库..."
+    if mysqldump \
+        -h"$BACKUP_DB_HOST" \
+        -P"$BACKUP_DB_PORT" \
+        -u"$BACKUP_DB_USER" \
+        -p"$BACKUP_DB_PASSWORD" \
+        --single-transaction \
+        --routines \
+        --triggers \
+        --events \
+        --hex-blob \
+        --complete-insert \
+        --extended-insert \
+        --lock-tables=false \
+        "$BACKUP_DB_NAME" | gzip > "$backup_db_backup" 2>/dev/null; then
+        
+        log_info "cardesignspace_local数据库备份完成: $backup_db_backup"
+        log_to_file "cardesignspace_local数据库备份完成: $backup_db_backup"
+    else
+        log_warn "cardesignspace_local数据库备份失败，继续执行同步"
+        log_to_file "cardesignspace_local数据库备份失败，继续执行同步"
+    fi
+    
+    # 清空备份数据库并导入新数据
+    log_info "清空cardesignspace_local数据库..."
+    if mysql -h"$BACKUP_DB_HOST" -P"$BACKUP_DB_PORT" -u"$BACKUP_DB_USER" -p"$BACKUP_DB_PASSWORD" -e "DROP DATABASE IF EXISTS $BACKUP_DB_NAME; CREATE DATABASE $BACKUP_DB_NAME CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;" 2>/dev/null; then
+        log_info "cardesignspace_local数据库重建成功"
+        log_to_file "cardesignspace_local数据库重建成功"
+    else
+        log_error "cardesignspace_local数据库重建失败"
+        rm -f "$temp_sql_file"
+        return 1
+    fi
+    
+    # 导入备份数据
+    log_info "导入备份数据到cardesignspace_local..."
+    if mysql -h"$BACKUP_DB_HOST" -P"$BACKUP_DB_PORT" -u"$BACKUP_DB_USER" -p"$BACKUP_DB_PASSWORD" "$BACKUP_DB_NAME" < "$temp_sql_file" 2>/dev/null; then
+        log_info "数据导入到cardesignspace_local成功"
+        log_to_file "数据导入到cardesignspace_local成功"
+        
+        # 验证导入结果
+        local table_count=$(mysql -h"$BACKUP_DB_HOST" -P"$BACKUP_DB_PORT" -u"$BACKUP_DB_USER" -p"$BACKUP_DB_PASSWORD" -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='$BACKUP_DB_NAME';" -s -N 2>/dev/null)
+        log_info "cardesignspace_local数据库表数量: $table_count"
+        log_to_file "cardesignspace_local数据库表数量: $table_count"
+        
+        # 清理临时文件
+        rm -f "$temp_sql_file"
+        
+        return 0
+    else
+        log_error "数据导入到cardesignspace_local失败"
+        log_to_file "数据导入到cardesignspace_local失败"
+        rm -f "$temp_sql_file"
+        return 1
+    fi
+}
+
 # 验证备份完整性
 verify_backups() {
     log_step "验证备份完整性"
@@ -296,6 +404,7 @@ generate_report() {
         echo "  每日备份: $(find "$BACKUP_DIR" -name "daily_backup_*.sql.gz" | wc -l) 个"
         echo "  每周备份: $(find "$BACKUP_DIR" -name "weekly_backup_*.sql.gz" | wc -l) 个"
         echo "  每月备份: $(find "$BACKUP_DIR" -name "monthly_backup_*.sql.gz" | wc -l) 个"
+        echo "  备份数据库备份: $(find "$BACKUP_DIR" -name "backup_db_backup_*.sql.gz" | wc -l) 个"
         echo ""
         echo "存储使用情况:"
         du -sh "$BACKUP_DIR" | sed 's/^/  总大小: /'

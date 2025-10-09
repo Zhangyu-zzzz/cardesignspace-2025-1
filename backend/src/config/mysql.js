@@ -3,7 +3,7 @@ const mysql = require('mysql2/promise');
 const logger = require('../../utils/logger');
 
 // 加载环境变量
-require('dotenv').config();
+require('dotenv').config({ path: '../../.env' });
 
 const sequelize = new Sequelize(
   process.env.DB_NAME,  // 数据库名称

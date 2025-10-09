@@ -61,3 +61,4 @@ async function checkAllTables() {
 
 // 执行查询
 checkAllTables();
+

@@ -409,4 +409,86 @@ exports.getImagesByModelId = async (req, res, next) => {
       error: error.message
     });
   }
+};
+
+// 获取车型的缩略图 - 专门用于网格模式优化
+exports.getThumbnailsByModelId = async (req, res, next) => {
+  try {
+    const { modelId } = req.params;
+    const { limit = 1 } = req.query;
+    
+    console.log(`获取车型 ${modelId} 的缩略图`);
+    
+    // 构建查询条件
+    const whereCondition = {
+      modelId: modelId,
+    };
+    
+    // 查询图片，只获取缩略图变体
+    const { count, rows: images } = await Image.findAndCountAll({
+      where: whereCondition,
+      order: [
+        [{ model: ImageCuration, as: 'Curation' }, 'isCurated', 'DESC'],
+        [{ model: ImageCuration, as: 'Curation' }, 'curationScore', 'DESC'],
+        ['createdAt', 'DESC'],
+        ['id', 'ASC'],
+      ],
+      include: [
+        {
+          model: ImageAsset,
+          as: 'Assets',
+          attributes: ['variant', 'url', 'width', 'height', 'size'],
+          where: {
+            variant: 'thumb'  // 只获取缩略图变体
+          },
+          required: false,
+        },
+        {
+          model: ImageCuration,
+          as: 'Curation',
+          required: false,
+          attributes: ['isCurated', 'curationScore', 'validUntil'],
+        },
+      ],
+      limit: parseInt(limit),
+      offset: 0
+    });
+    
+    console.log(`找到 ${images.length} 张缩略图`);
+    
+    // 处理缩略图数据
+    const items = images.map((img) => {
+      const data = img.toJSON();
+      const assetsMap = Array.isArray(data.Assets)
+        ? data.Assets.reduce((acc, a) => {
+            acc[a.variant] = a.url;
+            return acc;
+          }, {})
+        : {};
+      
+      // 优先使用缩略图，如果没有则使用原图
+      const thumbnailUrl = assetsMap.thumb || data.url;
+      
+      return { 
+        ...data, 
+        thumbnailUrl,
+        // 为了兼容前端现有代码，也提供 bestUrl
+        bestUrl: thumbnailUrl
+      };
+    });
+
+    res.json({
+      success: true,
+      data: items,
+      count: items.length,
+      total: count
+    });
+  } catch (error) {
+    console.error('获取车型缩略图失败:', error);
+    res.status(500).json({
+      success: false,
+      message: '获取车型缩略图失败',
+      error: error.message
+    });
+  }
 }; 

@@ -71,3 +71,4 @@ async function checkImageAssetsCount() {
 
 // 执行查询
 checkImageAssetsCount();
+

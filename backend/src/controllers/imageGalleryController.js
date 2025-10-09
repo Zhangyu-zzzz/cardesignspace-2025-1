@@ -3,9 +3,17 @@ const { sequelize } = require('../config/mysql');
 const Image = require('../models/mysql/Image');
 const Model = require('../models/mysql/Model');
 const Brand = require('../models/mysql/Brand');
+const ImageAsset = require('../models/mysql/ImageAsset');
 const logger = require('../config/logger');
 
-// 获取筛选后的图片列表
+// 简单的内存缓存
+const cache = {
+  totalCount: null,
+  totalCountTime: 0,
+  cacheExpiry: 5 * 60 * 1000, // 5分钟缓存
+};
+
+// 获取筛选后的图片列表 - 优化版本
 exports.getFilteredImages = async (req, res) => {
   try {
     const {
@@ -16,8 +24,11 @@ exports.getFilteredImages = async (req, res) => {
       angles,
       types,
       tagSearch = '',
-      styleTags
+      styleTags,
+      concept = false
     } = req.query;
+
+    const startTime = Date.now();
 
     // 解析数组参数
     const anglesArray = angles ? (Array.isArray(angles) ? angles : [angles]) : [];
@@ -39,112 +50,193 @@ exports.getFilteredImages = async (req, res) => {
       modelWhereCondition.brandId = brandId;
     }
 
+    // 概念车筛选
+    if (concept === 'true') {
+      modelWhereCondition.name = {
+        [Op.like]: '%concept%'
+      };
+      console.log('筛选概念车：车型名称包含"concept"');
+    }
+
     // 视角筛选
     if (anglesArray.length > 0) {
-      whereCondition[Op.and] = anglesArray.map(angle => 
-        Sequelize.literal(`JSON_CONTAINS(tags, '"${angle}"')`)
+      const angleConditions = anglesArray.map(angle => 
+        Sequelize.literal(`JSON_SEARCH(tags, 'one', '${angle}') IS NOT NULL`)
       );
+      whereCondition[Op.and] = whereCondition[Op.and] ? 
+        [...whereCondition[Op.and], ...angleConditions] : angleConditions;
     }
 
     // 图片类型筛选
     if (typesArray.length > 0) {
       const typeConditions = typesArray.map(type => 
-        Sequelize.literal(`JSON_CONTAINS(tags, '"${type}"')`)
+        Sequelize.literal(`JSON_SEARCH(tags, 'one', '${type}') IS NOT NULL`)
       );
-      if (whereCondition[Op.and]) {
-        whereCondition[Op.and].push(...typeConditions);
-      } else {
-        whereCondition[Op.and] = typeConditions;
-      }
+      whereCondition[Op.and] = whereCondition[Op.and] ? 
+        [...whereCondition[Op.and], ...typeConditions] : typeConditions;
     }
 
     // 标签关键词搜索
     if (tagSearch) {
       const searchCondition = Sequelize.literal(`JSON_SEARCH(tags, 'one', '%${tagSearch}%') IS NOT NULL`);
-      if (whereCondition[Op.and]) {
-        whereCondition[Op.and].push(searchCondition);
-      } else {
-        whereCondition[Op.and] = [searchCondition];
-      }
+      whereCondition[Op.and] = whereCondition[Op.and] ? 
+        [...whereCondition[Op.and], searchCondition] : [searchCondition];
     }
 
     // 风格标签筛选
     if (styleTagsArray.length > 0) {
-      modelWhereCondition[Op.and] = styleTagsArray.map(tag => 
+      const styleConditions = styleTagsArray.map(tag => 
         Sequelize.literal(`JSON_CONTAINS(Model.styleTags, '"${tag}"')`)
       );
+      modelWhereCondition[Op.and] = styleConditions;
     }
 
     // 计算偏移量
     const offset = (page - 1) * limit;
 
-    // 查询图片总数
-    const totalCount = await Image.count({
-      include: [
-        {
-          model: Model,
-          where: modelWhereCondition,
-          include: [
-            {
-              model: Brand,
-              where: brandWhereCondition
-            }
-          ]
-        }
-      ],
-      where: whereCondition
-    });
+    // 优化策略：使用原生SQL查询，利用新创建的索引
+    const hasFilters = modelType || brandId || anglesArray.length > 0 || 
+                      typesArray.length > 0 || tagSearch || styleTagsArray.length > 0 || concept === 'true';
 
-    // 查询筛选后的图片总数
-    const filteredCount = await Image.count({
-      include: [
-        {
-          model: Model,
-          where: modelWhereCondition,
-          include: [
-            {
-              model: Brand,
-              where: brandWhereCondition
-            }
-          ]
-        }
-      ],
-      where: whereCondition
-    });
+    let filteredCount, totalCount, images;
 
-    // 查询图片列表
-    const images = await Image.findAll({
-      where: whereCondition,
-      include: [
-        {
-          model: Model,
-          where: modelWhereCondition,
-          include: [
-            {
-              model: Brand,
-              attributes: ['id', 'name']
-            }
-          ],
-          attributes: ['id', 'name', 'type', 'styleTags']
+    if (hasFilters) {
+      // 有筛选条件时，使用原生SQL
+      const [countResult, imageResult] = await Promise.all([
+        // 筛选后的图片总数
+        sequelize.query(`
+          SELECT COUNT(*) as count
+          FROM images i
+          INNER JOIN models m ON i.modelId = m.id
+          LEFT JOIN brands b ON m.brandId = b.id
+          WHERE 1=1
+          ${modelType ? `AND m.type = '${modelType}'` : ''}
+          ${brandId ? `AND m.brandId = ${brandId}` : ''}
+          ${concept === 'true' ? `AND m.name LIKE '%concept%'` : ''}
+          ${tagSearch ? `AND JSON_SEARCH(i.tags, 'one', '%${tagSearch}%') IS NOT NULL` : ''}
+        `, { type: Sequelize.QueryTypes.SELECT }),
+        
+        // 图片列表 - 利用新创建的索引
+        sequelize.query(`
+          SELECT 
+            i.id, i.modelId, i.userId, i.title, i.description, i.url,
+            i.filename, i.fileSize, i.fileType, i.category, i.isFeatured,
+            i.uploadDate, i.tags, i.createdAt, i.updatedAt,
+            m.id as model_id, m.name as model_name, m.type as model_type, m.styleTags as model_styleTags,
+            b.id as brand_id, b.name as brand_name
+          FROM images i
+          INNER JOIN models m ON i.modelId = m.id
+          LEFT JOIN brands b ON m.brandId = b.id
+          WHERE 1=1
+          ${modelType ? `AND m.type = '${modelType}'` : ''}
+          ${brandId ? `AND m.brandId = ${brandId}` : ''}
+          ${concept === 'true' ? `AND m.name LIKE '%concept%'` : ''}
+          ${tagSearch ? `AND JSON_SEARCH(i.tags, 'one', '%${tagSearch}%') IS NOT NULL` : ''}
+          ORDER BY i.createdAt DESC
+          LIMIT ${limit} OFFSET ${offset}
+        `, { type: Sequelize.QueryTypes.SELECT })
+      ]);
+
+      filteredCount = countResult[0].count;
+      totalCount = filteredCount;
+      images = imageResult;
+    } else {
+      // 无筛选条件时，使用缓存
+      const now = Date.now();
+      if (!cache.totalCount || (now - cache.totalCountTime) > cache.cacheExpiry) {
+        const countResult = await sequelize.query(`
+          SELECT COUNT(*) as count FROM images
+        `, { type: Sequelize.QueryTypes.SELECT });
+        cache.totalCount = countResult[0].count;
+        cache.totalCountTime = now;
+      }
+
+      const [imageResult] = await Promise.all([
+        // 利用新创建的索引进行快速查询
+        sequelize.query(`
+          SELECT 
+            i.id, i.modelId, i.userId, i.title, i.description, i.url,
+            i.filename, i.fileSize, i.fileType, i.category, i.isFeatured,
+            i.uploadDate, i.tags, i.createdAt, i.updatedAt,
+            m.id as model_id, m.name as model_name, m.type as model_type, m.styleTags as model_styleTags,
+            b.id as brand_id, b.name as brand_name
+          FROM images i
+          INNER JOIN models m ON i.modelId = m.id
+          LEFT JOIN brands b ON m.brandId = b.id
+          ORDER BY i.createdAt DESC
+          LIMIT ${limit} OFFSET ${offset}
+        `, { type: Sequelize.QueryTypes.SELECT })
+      ]);
+
+      filteredCount = cache.totalCount;
+      totalCount = cache.totalCount;
+      images = imageResult;
+    }
+
+    // 转换数据格式以匹配前端期望
+    const formattedImages = images.map(img => ({
+      id: img.id,
+      modelId: img.modelId,
+      userId: img.userId,
+      title: img.title,
+      description: img.description,
+      url: img.url,
+      filename: img.filename,
+      fileSize: img.fileSize,
+      fileType: img.fileType,
+      category: img.category,
+      isFeatured: img.isFeatured,
+      uploadDate: img.uploadDate,
+      tags: img.tags,
+      createdAt: img.createdAt,
+      updatedAt: img.updatedAt,
+      displayUrl: img.url, // 默认使用原图URL
+      Model: {
+        id: img.model_id,
+        name: img.model_name,
+        type: img.model_type,
+        styleTags: img.model_styleTags,
+        Brand: {
+          id: img.brand_id,
+          name: img.brand_name
         }
-      ],
-      attributes: [
-        'id', 'modelId', 'userId', 'title', 'description', 'url', 
-        'filename', 'fileSize', 'fileType', 'category', 'isFeatured', 
-        'uploadDate', 'tags', 'createdAt', 'updatedAt'
-      ],
-      order: [['createdAt', 'DESC']],
-      limit: parseInt(limit),
-      offset: offset
-    });
+      }
+    }));
 
     // 计算分页信息
     const totalPages = Math.ceil(filteredCount / limit);
 
-    res.json({
+    // 异步获取图片变体URL（不阻塞响应）
+    const imageIds = formattedImages.map(img => img.id);
+    if (imageIds.length > 0) {
+      setImmediate(async () => {
+        try {
+          // 利用新创建的索引快速查询图片变体
+          const imageAssets = await sequelize.query(`
+            SELECT imageId, variant, url, width, height
+            FROM image_assets
+            WHERE imageId IN (${imageIds.join(',')})
+          `, { type: Sequelize.QueryTypes.SELECT });
+
+          // 更新图片的displayUrl
+          imageAssets.forEach(asset => {
+            if (asset.variant === 'small') {
+              const image = formattedImages.find(img => img.id === asset.imageId);
+              if (image) {
+                image.displayUrl = asset.url;
+              }
+            }
+          });
+        } catch (error) {
+          logger.warn('异步获取图片变体失败:', error.message);
+        }
+      });
+    }
+
+    const responseData = {
       status: 'success',
       data: {
-        images,
+        images: formattedImages,
         pagination: {
           page: parseInt(page),
           limit: parseInt(limit),
@@ -153,7 +245,14 @@ exports.getFilteredImages = async (req, res) => {
           pages: totalPages
         }
       }
-    });
+    };
+
+    const endTime = Date.now();
+    const duration = endTime - startTime;
+    
+    logger.info(`优化查询完成: ${duration}ms, 返回${formattedImages.length}张图片`);
+    
+    res.json(responseData);
 
   } catch (error) {
     logger.error('获取筛选图片失败:', error);
@@ -310,37 +409,37 @@ exports.getPopularTags = async (req, res) => {
   try {
     const { limit = 20 } = req.query;
 
-    // 查询所有图片的标签
-    const images = await Image.findAll({
-      attributes: ['tags'],
-      where: {
-        tags: {
-          [Op.ne]: null,
-          [Op.ne]: '[]',
-          [Op.ne]: []
-        }
-      }
+    // 优化：使用原生SQL查询提高性能
+    const popularTags = await sequelize.query(`
+      SELECT 
+        JSON_UNQUOTE(JSON_EXTRACT(tags, CONCAT('$[', numbers.n, ']'))) as tag,
+        COUNT(*) as count
+      FROM images i
+      CROSS JOIN (
+        SELECT 0 as n UNION SELECT 1 UNION SELECT 2 UNION SELECT 3 UNION SELECT 4
+        UNION SELECT 5 UNION SELECT 6 UNION SELECT 7 UNION SELECT 8 UNION SELECT 9
+      ) numbers
+      WHERE JSON_EXTRACT(i.tags, CONCAT('$[', numbers.n, ']')) IS NOT NULL
+        AND i.tags IS NOT NULL
+        AND i.tags != '[]'
+        AND JSON_UNQUOTE(JSON_EXTRACT(tags, CONCAT('$[', numbers.n, ']'))) IS NOT NULL
+      GROUP BY tag
+      HAVING tag IS NOT NULL AND tag != ''
+      ORDER BY count DESC
+      LIMIT :limit
+    `, {
+      replacements: { limit: parseInt(limit) },
+      type: Sequelize.QueryTypes.SELECT
     });
 
-    // 统计标签出现次数
-    const tagCounts = {};
-    images.forEach(image => {
-      if (Array.isArray(image.tags)) {
-        image.tags.forEach(tag => {
-          tagCounts[tag] = (tagCounts[tag] || 0) + 1;
-        });
-      }
-    });
-
-    // 排序并返回热门标签
-    const popularTags = Object.entries(tagCounts)
-      .map(([tag, count]) => ({ tag, count }))
-      .sort((a, b) => b.count - a.count)
-      .slice(0, parseInt(limit));
+    const result = popularTags.map(item => ({
+      tag: item.tag,
+      count: parseInt(item.count)
+    }));
 
     res.json({
       status: 'success',
-      data: popularTags
+      data: result
     });
 
   } catch (error) {

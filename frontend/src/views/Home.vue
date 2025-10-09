@@ -233,6 +233,19 @@
           </div>
         </div>
         
+        <!-- 概念车筛选 -->
+        <div class="concept-control">
+          <span class="control-label">车型类型：</span>
+          <button 
+            class="concept-btn" 
+            :class="{ active: showConceptCars }"
+            @click="toggleConceptCars"
+          >
+            <i class="el-icon-star-on"></i>
+            {{ showConceptCars ? '概念车' : '全部车型' }}
+          </button>
+        </div>
+        
         <!-- 排序控制 -->
         <div class="sort-control">
           <span class="control-label">排序方式：</span>
@@ -458,6 +471,9 @@ export default {
         { label: '10s', value: '1910s' },
         { label: '00s', value: '1900s' }
       ],
+      
+      // 概念车筛选相关
+      showConceptCars: false, // 是否显示概念车
 
       // 图片变体缓存，避免重复请求
       imageVariantCache: {},
@@ -482,6 +498,13 @@ export default {
       requestQueue: [],
       maxConcurrentRequests: 1, // 减少到1个并发请求，避免阻塞
       activeRequests: 0,
+      
+      // 防重复加载机制
+      lastLoadTime: 0,
+      loadCooldown: 2000, // 2秒冷却时间
+      
+      // 初始化状态管理
+      isInitializing: true,
       
       // 组件状态管理
       isComponentActive: false,
@@ -720,6 +743,12 @@ export default {
     async preloadDataForScrollRestore() {
       // 检查组件是否仍然活跃
       if (!this.isComponentActive) {
+        return;
+      }
+      
+      // 检查是否已经在加载中，避免重复调用
+      if (this.displayModelsLoading || this.isInitializing) {
+        console.log('车型数据正在加载中或初始化中，跳过预加载');
         return;
       }
       
@@ -1594,7 +1623,7 @@ export default {
         console.log('年代筛选:', this.selectedDecade);
         
         // 检查缓存
-        const cacheKey = `${this.sortOrder}_${this.selectedDecade}_${this.currentDisplayPage}`;
+        const cacheKey = `${this.sortOrder}_${this.selectedDecade}_${this.showConceptCars}_${this.currentDisplayPage}`;
         const now = Date.now();
         const cacheValidTime = 3 * 60 * 1000; // 3分钟缓存
         
@@ -1602,6 +1631,10 @@ export default {
             this.dataCache.displayModelsCacheTime.has(cacheKey) &&
             (now - this.dataCache.displayModelsCacheTime.get(cacheKey)) < cacheValidTime) {
           console.log('使用缓存的车型展示数据');
+          
+          // 临时禁用滚动监听器，避免页面高度变化触发重复加载
+          this.removeScrollListener();
+          
           const cachedData = this.dataCache.displayModels.get(cacheKey);
           if (this.currentDisplayPage === 1) {
             this.displayModels = cachedData;
@@ -1609,6 +1642,28 @@ export default {
             this.displayModels = [...this.displayModels, ...cachedData];
           }
           this.displayModelsLoading = false;
+          
+          // 使用缓存数据时，需要更新hasMoreDisplayModels状态
+          // 只有当缓存数据长度等于页面大小时，才可能有更多数据
+          this.hasMoreDisplayModels = cachedData.length === this.displayPageSize;
+          
+          // 添加调试日志
+          console.log(`缓存数据长度: ${cachedData.length}, 页面大小: ${this.displayPageSize}, 当前页: ${this.currentDisplayPage}`);
+          console.log(`hasMoreDisplayModels 设置为: ${this.hasMoreDisplayModels}`);
+          
+          // 延迟重新观察懒加载图片，避免立即触发滚动监听
+          this.$nextTick(() => {
+            setTimeout(() => {
+              this.observeLazyImages();
+              // 延迟启用滚动监听器，避免页面高度变化立即触发
+              setTimeout(() => {
+                if (this.isComponentActive) {
+                  console.log('缓存数据加载完成，重新启用滚动监听');
+                  this.addScrollListener();
+                }
+              }, 500);
+            }, 100);
+          });
           return;
         }
         
@@ -1650,6 +1705,11 @@ export default {
         // 如果选择了年代筛选，添加年代参数
         if (this.selectedDecade) {
           params.decade = this.selectedDecade;
+        }
+        
+        // 如果选择了概念车筛选，添加概念车参数
+        if (this.showConceptCars) {
+          params.concept = 'true';
         }
         
         const response = await modelAPI.getAll(params);
@@ -1747,10 +1807,27 @@ export default {
       this.fetchDisplayModels();
     },
     
+    // 切换概念车筛选
+    toggleConceptCars() {
+      this.showConceptCars = !this.showConceptCars;
+      console.log('切换概念车筛选:', this.showConceptCars);
+      this.currentDisplayPage = 1;
+      // 重置图片加载错误状态
+      this.modelImageLoadError = {};
+      this.fetchDisplayModels();
+    },
+    
     // 加载更多车型
     loadMoreModels() {
       // 检查组件是否仍然活跃
       if (!this.isComponentActive) {
+        return;
+      }
+      
+      // 检查冷却时间，防止重复加载
+      const now = Date.now();
+      if (now - this.lastLoadTime < this.loadCooldown) {
+        console.log('加载冷却中，跳过此次加载');
         return;
       }
       
@@ -1761,6 +1838,7 @@ export default {
           return;
         }
         
+        this.lastLoadTime = now;
         this.currentDisplayPage++;
         this.activeRequests++;
         
@@ -1889,7 +1967,7 @@ export default {
 
     // 添加滚动监听
     addScrollListener() {
-      this.handleScroll = this.throttle(this.checkScrollPosition, 500); // 增加节流时间，减少触发频率
+      this.handleScroll = this.throttle(this.checkScrollPosition, 1000); // 增加节流时间到1秒，减少触发频率
       window.addEventListener('scroll', this.handleScroll, { passive: true });
     },
 
@@ -1967,6 +2045,11 @@ export default {
     checkScrollPosition() {
       // 检查组件是否仍然活跃
       if (!this.isComponentActive) {
+        return;
+      }
+      
+      // 如果正在初始化，跳过
+      if (this.isInitializing) {
         return;
       }
       
@@ -2079,11 +2162,12 @@ export default {
       this.observeLazyImages();
       
       // 检查是否需要预加载更多数据以支持滚动位置恢复
-      this.$nextTick(() => {
-        if (this.isComponentActive) {
+      // 延迟执行，确保初始数据加载完成
+      setTimeout(() => {
+        if (this.isComponentActive && !this.displayModelsLoading) {
           this.preloadDataForScrollRestore();
         }
-      });
+      }, 1000);
       
     } catch (error) {
       console.error('初始化数据失败:', error);
@@ -2097,6 +2181,9 @@ export default {
     if (this.isComponentActive) {
       this.addScrollListener();
     }
+    
+    // 标记初始化完成
+    this.isInitializing = false;
   },
   beforeDestroy() {
     // 设置组件为非活跃状态
@@ -2499,6 +2586,39 @@ export default {
   background: #d02e20;
 }
 
+.concept-btn {
+  background: #fff;
+  color: #666;
+  border: 1px solid #ddd;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 500;
+}
+
+.concept-btn:hover {
+  background: #fce4e4;
+  border-color: #f5a5a5;
+  color: #e03426;
+  transform: translateY(-1px);
+}
+
+.concept-btn.active {
+  background: #e03426;
+  border-color: #e03426;
+  color: white;
+  box-shadow: 0 2px 6px rgba(224, 52, 38, 0.3);
+}
+
+.concept-btn:active {
+  transform: scale(0.95);
+}
+
 /* 筛选控制栏样式 */
 .filter-control-bar {
   padding: 16px 16px;
@@ -2512,7 +2632,8 @@ export default {
 }
 
 .sort-control,
-.decade-control {
+.decade-control,
+.concept-control {
   display: flex;
   align-items: center;
   gap: 12px;
@@ -3382,7 +3503,8 @@ body, html {
   }
   
   .sort-control,
-  .decade-control {
+  .decade-control,
+  .concept-control {
     justify-content: center;
   }
   
@@ -3411,7 +3533,8 @@ body, html {
   }
   
   .sort-control,
-  .decade-control {
+  .decade-control,
+  .concept-control {
     flex-direction: column;
     gap: 8px;
     text-align: center;
@@ -3611,7 +3734,8 @@ body, html {
   }
   
   .decade-control,
-  .sort-control {
+  .sort-control,
+  .concept-control {
     gap: 8px;
   }
   
@@ -3899,7 +4023,8 @@ body, html {
     min-width: 45px;
   }
   
-  .sort-btn {
+  .sort-btn,
+  .concept-btn {
     padding: 5px 10px;
     font-size: 11px;
   }

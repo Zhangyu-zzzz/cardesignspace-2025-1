@@ -7,15 +7,24 @@ const logger = require('../config/logger');
 // 获取所有车型
 exports.getAllModels = async (req, res) => {
   try {
-    const { brandId, search, page = 1, limit = 20, latest = false, sortOrder = 'desc', decade, sortBy = 'year', includeImages = 'true' } = req.query;
+    const { brandId, search, page = 1, limit = 20, latest = false, sortOrder = 'desc', decade, sortBy = 'year', includeImages = 'true', concept = false } = req.query;
     
     console.log(`排序参数: sortOrder=${sortOrder}, 类型: ${typeof sortOrder}`);
     console.log(`年代筛选: decade=${decade}`);
+    console.log(`概念车筛选: concept=${concept}`);
     
     // 构建查询条件 - 只显示启用的车型
     const whereCondition = {
       isActive: true  // 只显示启用的车型
     };
+    
+    // 添加概念车筛选条件
+    if (concept === 'true') {
+      whereCondition.name = {
+        [Op.like]: '%concept%'
+      };
+      console.log('筛选概念车：车型名称包含"concept"');
+    }
     
     // 添加年代筛选条件
     if (decade) {

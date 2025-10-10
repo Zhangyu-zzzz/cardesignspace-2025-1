@@ -159,7 +159,7 @@ backup_database() {
             log_to_file "备份文件验证成功"
             
             # 测试备份文件可读性
-            if zcat "$compressed_file" | head -10 >/dev/null 2>&1; then
+            if gunzip -c "$compressed_file" | head -10 >/dev/null 2>&1; then
                 log_info "备份文件完整性验证通过"
                 log_to_file "备份文件完整性验证通过"
                 
@@ -283,21 +283,41 @@ upload_to_s3() {
     fi
 }
 
-# 同步到备份数据库
+# 同步到备份数据库（支持增量同步）
 sync_to_backup_database() {
     local backup_file="$1"
+    local sync_mode="${2:-incremental}"
     
     if [ "$SKIP_BACKUP_DB" = "true" ]; then
         log_info "跳过备份数据库同步（配置不完整）"
         return 0
     fi
     
-    log_step "同步备份到cardesignspace_local数据库"
+    # 检查增量同步脚本是否存在
+    local incremental_script="$PROJECT_ROOT/scripts/incremental-db-sync.sh"
+    if [ -f "$incremental_script" ] && [ "$sync_mode" = "incremental" ]; then
+        log_step "使用增量同步到cardesignspace_local数据库"
+        log_to_file "使用增量同步到cardesignspace_local数据库"
+        
+        # 执行增量同步
+        if bash "$incremental_script" incremental; then
+            log_info "增量同步到cardesignspace_local成功"
+            log_to_file "增量同步到cardesignspace_local成功"
+            return 0
+        else
+            log_warn "增量同步失败，回退到传统同步方式"
+            log_to_file "增量同步失败，回退到传统同步方式"
+        fi
+    fi
+    
+    # 传统同步方式（完全重建）
+    log_step "使用传统方式同步到cardesignspace_local数据库"
+    log_to_file "使用传统方式同步到cardesignspace_local数据库"
     
     # 解压备份文件到临时位置
     local temp_sql_file="/tmp/backup_$(date +%Y%m%d_%H%M%S).sql"
     
-    if ! zcat "$backup_file.gz" > "$temp_sql_file" 2>/dev/null; then
+    if ! gunzip -c "$backup_file.gz" > "$temp_sql_file" 2>/dev/null; then
         log_error "解压备份文件失败"
         return 1
     fi
@@ -372,7 +392,7 @@ verify_backups() {
     local failed_count=0
     
     for backup_file in "${backup_files[@]}"; do
-        if zcat "$backup_file" | head -10 >/dev/null 2>&1; then
+        if gunzip -c "$backup_file" | head -10 >/dev/null 2>&1; then
             log_info "验证通过: $(basename "$backup_file")"
             verified_count=$((verified_count + 1))
         else
@@ -410,7 +430,7 @@ generate_report() {
         du -sh "$BACKUP_DIR" | sed 's/^/  总大小: /'
         echo ""
         echo "最近的备份文件:"
-        find "$BACKUP_DIR" -name "*.sql.gz" -type f -printf "  %TY-%Tm-%Td %TH:%TM  %f\n" | sort -r | head -5
+        find "$BACKUP_DIR" -name "*.sql.gz" -type f -exec ls -l {} \; | awk '{print "  " $6 " " $7 " " $8 "  " $9}' | sed 's|.*/||' | sort -r | head -5
         echo ""
         echo "最近的日志:"
         tail -10 "$LOG_FILE" | sed 's/^/  /'

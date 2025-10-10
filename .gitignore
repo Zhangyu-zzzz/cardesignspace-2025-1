@@ -148,3 +148,4 @@ docs/operations/cos-to-s3-backup-guide.md
 # 📦 压缩文件
 **.gz
 AGENTS.md
+.env.dev

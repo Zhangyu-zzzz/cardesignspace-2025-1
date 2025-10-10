@@ -121,3 +121,4 @@ backend/backup-progress.json
 backend/backup-scheduler-status.json
 
 **.gz
+.env.dev

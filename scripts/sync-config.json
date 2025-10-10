@@ -1,0 +1,38 @@
+{
+  "sync_settings": {
+    "default_mode": "incremental",
+    "backup_before_sync": true,
+    "verify_after_sync": true,
+    "max_retry_attempts": 3,
+    "retry_delay_seconds": 30,
+    "sync_timeout_minutes": 60
+  },
+  "table_settings": {
+    "exclude_tables": [
+      "temp_*",
+      "cache_*",
+      "session_*"
+    ],
+    "force_full_sync_tables": [
+      "users",
+      "permissions"
+    ],
+    "sync_priority": {
+      "high": ["users", "models", "series", "brands"],
+      "medium": ["images", "tags", "comments"],
+      "low": ["logs", "statistics"]
+    }
+  },
+  "performance_settings": {
+    "batch_size": 1000,
+    "parallel_tables": 3,
+    "chunk_size_mb": 10,
+    "enable_compression": true
+  },
+  "monitoring": {
+    "enable_detailed_logging": true,
+    "log_sql_queries": false,
+    "performance_metrics": true,
+    "alert_on_failure": true
+  }
+}

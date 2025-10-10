@@ -1,0 +1,75 @@
+services:
+  # 本地开发后端服务
+  backend-dev:
+    image: ghcr.io/catthehacker/ubuntu:act-latest
+    container_name: cardesignspace-backend-dev
+    restart: unless-stopped
+    env_file:
+      - .env.dev
+    environment:
+      NODE_ENV: development
+      DB_HOST: ${DB_HOST:-124.221.249.173}
+      DB_PORT: ${DB_PORT:-44302}
+      DB_NAME: ${DB_NAME:-cardesignspace_dev}
+      DB_USER: ${DB_USER:-birdmanoutman}
+      DB_PASSWORD: ${DB_PASSWORD:-Zez12345687!}
+      JWT_SECRET: dev-jwt-secret-key-2024
+      PORT: 3000
+      LOG_LEVEL: debug
+      ENABLE_EXPERIMENTAL_FEATURES: true
+      STORAGE_DRIVER: ${STORAGE_DRIVER:-s3}
+      S3_ENDPOINT: ${S3_ENDPOINT:-https://minio.birdmanoutman.com}
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY:-changeme}
+      S3_SECRET_KEY: ${S3_SECRET_KEY:-changeme}
+      S3_BUCKET: ${S3_BUCKET:-cardesignspace-backup}
+      S3_REGION: ${S3_REGION:-us-east-1}
+      S3_DOMAIN: ${S3_DOMAIN:-https://minio.birdmanoutman.com}
+      QUEUE_ENABLED: ${QUEUE_ENABLED:-false}
+      REDIS_URL: ${REDIS_URL:-redis://127.0.0.1:6379}
+    working_dir: /app
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./backend:/app
+    networks:
+      - dev-network
+    command: bash -lc "npm install --legacy-peer-deps && npm run dev"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # 本地开发前端服务
+  frontend-dev:
+    image: ghcr.io/catthehacker/ubuntu:act-latest
+    container_name: cardesignspace-frontend-dev
+    restart: unless-stopped
+    env_file:
+      - .env.dev
+    environment:
+      NODE_ENV: development
+      VUE_APP_API_URL: http://localhost:3000/api
+      VUE_APP_API_BASE_URL: http://localhost:3000
+    working_dir: /app
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./frontend:/app
+    networks:
+      - dev-network
+    depends_on:
+      backend-dev:
+        condition: service_healthy
+    command: bash -lc "npm install --legacy-peer-deps && npm run serve -- --host 0.0.0.0 --port 8080"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+networks:
+  dev-network:
+    driver: bridge

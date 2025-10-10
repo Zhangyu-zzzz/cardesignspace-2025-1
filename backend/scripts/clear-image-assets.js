@@ -70,3 +70,4 @@ async function clearImageAssets() {
 
 // 执行清空操作
 clearImageAssets();
+

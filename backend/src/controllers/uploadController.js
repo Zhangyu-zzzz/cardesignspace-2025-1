@@ -10,6 +10,15 @@ const { Brand, Model, Image, ArticleImage } = require('../models/mysql');
 const { analyzeBufferAndUpsert } = require('../services/analysisService');
 const User = require('../models/mysql/User');
 
+// 从文件名中提取数字的辅助函数
+function extractNumberFromFilename(filename) {
+  if (!filename) return null;
+  
+  // 匹配文件名开头的数字，支持前导零
+  const match = filename.match(/^(\d+)/);
+  return match ? parseInt(match[1], 10) : null;
+}
+
 /**
  * 获取所有车型列表（用于下拉选择）
  */
@@ -500,15 +509,29 @@ exports.getImagesList = async (req, res) => {
           required: false
         }
       ],
-      order: [['uploadDate', 'DESC']],
+      order: [['uploadDate', 'DESC']],  // 按时间排序，后续在应用层进行数字排序
       limit: parseInt(limit),
       offset: offset
+    });
+
+    // 按文件名中的数字进行排序
+    const sortedImages = images.sort((a, b) => {
+      // 按文件名中的数字排序
+      const aNum = extractNumberFromFilename(a.filename);
+      const bNum = extractNumberFromFilename(b.filename);
+      
+      if (aNum !== null && bNum !== null) {
+        return aNum - bNum; // 数字升序：01, 02, 03, ..., 37
+      }
+      
+      // 如果无法提取数字，按文件名字母排序
+      return (a.filename || '').localeCompare(b.filename || '');
     });
 
     res.json({
       status: 'success',
       data: {
-        images,
+        images: sortedImages,
         pagination: {
           total: count,
           page: parseInt(page),

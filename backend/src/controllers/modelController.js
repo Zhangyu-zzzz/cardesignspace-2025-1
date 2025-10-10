@@ -1,5 +1,14 @@
 const { Model, Series, Brand, Image, User, ImageAsset, ImageCuration } = require('../models/mysql');
 const { chooseBestUrl } = require('../services/assetService');
+
+// 从文件名中提取数字的辅助函数
+function extractNumberFromFilename(filename) {
+  if (!filename) return null;
+  
+  // 匹配文件名开头的数字，支持前导零
+  const match = filename.match(/^(\d+)/);
+  return match ? parseInt(match[1], 10) : null;
+}
 const { Op } = require('sequelize');
 const { sequelize } = require('../config/mysql');
 const logger = require('../config/logger');
@@ -7,15 +16,24 @@ const logger = require('../config/logger');
 // 获取所有车型
 exports.getAllModels = async (req, res) => {
   try {
-    const { brandId, search, page = 1, limit = 20, latest = false, sortOrder = 'desc', decade, sortBy = 'year', includeImages = 'true' } = req.query;
+    const { brandId, search, page = 1, limit = 20, latest = false, sortOrder = 'desc', decade, sortBy = 'year', includeImages = 'true', concept = false } = req.query;
     
     console.log(`排序参数: sortOrder=${sortOrder}, 类型: ${typeof sortOrder}`);
     console.log(`年代筛选: decade=${decade}`);
+    console.log(`概念车筛选: concept=${concept}`);
     
     // 构建查询条件 - 只显示启用的车型
     const whereCondition = {
       isActive: true  // 只显示启用的车型
     };
+    
+    // 添加概念车筛选条件
+    if (concept === 'true') {
+      whereCondition.name = {
+        [Op.like]: '%concept%'
+      };
+      console.log('筛选概念车：车型名称包含"concept"');
+    }
     
     // 添加年代筛选条件
     if (decade) {
@@ -357,7 +375,7 @@ exports.getModelImages = async (req, res) => {
       ]
     });
 
-    const items = images.map((img) => {
+    let items = images.map((img) => {
       const data = img.toJSON();
       const assetsMap = Array.isArray(data.Assets)
         ? data.Assets.reduce((acc, a) => {
@@ -366,6 +384,34 @@ exports.getModelImages = async (req, res) => {
           }, {})
         : {};
       return { ...data, bestUrl: chooseBestUrl(assetsMap, true) || data.url };
+    });
+    
+    // 按文件名中的数字进行排序（精选图片保持优先）
+    items.sort((a, b) => {
+      // 精选图片优先
+      const aCurated = a.Curation?.isCurated || false;
+      const bCurated = b.Curation?.isCurated || false;
+      
+      if (aCurated && !bCurated) return -1;
+      if (!aCurated && bCurated) return 1;
+      
+      // 如果都是精选图片，按精选分数排序
+      if (aCurated && bCurated) {
+        const aScore = a.Curation?.curationScore || 0;
+        const bScore = b.Curation?.curationScore || 0;
+        if (aScore !== bScore) return bScore - aScore;
+      }
+      
+      // 按文件名中的数字排序
+      const aNum = extractNumberFromFilename(a.filename);
+      const bNum = extractNumberFromFilename(b.filename);
+      
+      if (aNum !== null && bNum !== null) {
+        return aNum - bNum; // 数字升序：01, 02, 03, ..., 37
+      }
+      
+      // 如果无法提取数字，按文件名字母排序
+      return (a.filename || '').localeCompare(b.filename || '');
     });
 
     res.status(200).json({

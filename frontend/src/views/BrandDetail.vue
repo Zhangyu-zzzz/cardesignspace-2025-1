@@ -241,6 +241,11 @@ export default {
     },
     setViewMode(mode) {
       this.viewMode = mode;
+      
+      // 如果切换到网格模式且车型数据已加载，则预加载图片
+      if (mode === 'grid' && this.models.length > 0) {
+        this.preloadGridImages();
+      }
     },
     showPreview(model, event, isLoading = false) {
       this.previewModel = model;
@@ -281,6 +286,11 @@ export default {
     
     // 处理车型悬停事件 - 懒加载图片
     async handleModelHover(model, event) {
+      // 如果是网格视图，不需要处理悬停预览
+      if (this.viewMode === 'grid') {
+        return;
+      }
+      
       // 如果已经有图片，直接显示预览
       if (model.Images && model.Images.length > 0) {
         this.showPreview(model, event);
@@ -295,13 +305,8 @@ export default {
       // 设置加载状态
       this.$set(model, 'isLoadingImage', true);
       
-      // 如果是网格视图，显示加载状态
-      if (this.viewMode === 'grid') {
-        // 网格视图不需要预览，只需要加载图片
-      } else {
-        // 列表视图显示预览
-        this.showPreview(model, event, true);
-      }
+      // 列表视图显示预览
+      this.showPreview(model, event, true);
       
       // 懒加载图片
       try {
@@ -310,21 +315,15 @@ export default {
           // 将图片添加到车型数据中
           this.$set(model, 'Images', imageResponse.data);
           // 更新预览
-          if (this.viewMode === 'list') {
-            this.showPreview(model, event);
-          }
+          this.showPreview(model, event);
         } else {
           // 没有图片，显示无图片状态
-          if (this.viewMode === 'list') {
-            this.showPreview(model, event, false);
-          }
+          this.showPreview(model, event, false);
         }
       } catch (error) {
         console.error('加载车型图片失败:', error);
         // 显示无图片状态
-        if (this.viewMode === 'list') {
-          this.showPreview(model, event, false);
-        }
+        this.showPreview(model, event, false);
       } finally {
         // 清除加载状态
         this.$set(model, 'isLoadingImage', false);
@@ -369,9 +368,6 @@ export default {
           this.models = modelsResponse.data || [];
           console.log(`车型列表加载完成，共 ${this.models.length} 个车型`);
           
-          // 跳过图片预加载，直接显示车型列表，大幅提升速度
-          console.log('跳过图片预加载，直接显示车型列表以提升速度');
-          
           // 按年份排序，最新年份排在前面
           this.models.sort((a, b) => {
             const extractYear = (name) => {
@@ -390,6 +386,11 @@ export default {
           });
           
           console.log(`品牌 ${this.brand.name} 车型按年份排序完成，共 ${this.models.length} 个车型`);
+          
+          // 如果是网格模式，自动加载车型图片
+          if (this.viewMode === 'grid') {
+            this.preloadGridImages();
+          }
         } else {
           this.models = [];
         }
@@ -400,6 +401,65 @@ export default {
         this.loading = false;
         this.isDataLoading = false;
       }
+    },
+    
+    // 预加载网格模式下的车型图片（使用缩略图优化）
+    async preloadGridImages() {
+      console.log('开始预加载网格模式下的车型缩略图');
+      
+      // 分批加载图片，避免同时请求过多
+      const batchSize = 15; // 缩略图更小，可以增加批次大小
+      const batches = [];
+      
+      for (let i = 0; i < this.models.length; i += batchSize) {
+        batches.push(this.models.slice(i, i + batchSize));
+      }
+      
+      // 逐批加载缩略图
+      for (let i = 0; i < batches.length; i++) {
+        const batch = batches[i];
+        console.log(`加载第 ${i + 1}/${batches.length} 批缩略图，共 ${batch.length} 个车型`);
+        
+        // 并行加载当前批次的缩略图
+        const promises = batch.map(async (model) => {
+          try {
+            // 使用新的缩略图API，专门获取缩略图
+            const thumbnailResponse = await imageAPI.getThumbnailsByModelId(model.id, { limit: 1 });
+            if (thumbnailResponse.success && thumbnailResponse.data && thumbnailResponse.data.length > 0) {
+              // 将缩略图数据存储到车型对象中
+              this.$set(model, 'Images', thumbnailResponse.data);
+              console.log(`车型 ${model.name} 缩略图加载成功`);
+            } else {
+              console.log(`车型 ${model.name} 没有缩略图，使用原图`);
+              // 如果没有缩略图，回退到原图
+              const imageResponse = await imageAPI.getByModelId(model.id, { limit: 1 });
+              if (imageResponse.success && imageResponse.data && imageResponse.data.length > 0) {
+                this.$set(model, 'Images', imageResponse.data);
+              }
+            }
+          } catch (error) {
+            console.warn(`加载车型 ${model.name} 的缩略图失败:`, error);
+            // 缩略图加载失败时，尝试加载原图
+            try {
+              const imageResponse = await imageAPI.getByModelId(model.id, { limit: 1 });
+              if (imageResponse.success && imageResponse.data && imageResponse.data.length > 0) {
+                this.$set(model, 'Images', imageResponse.data);
+              }
+            } catch (fallbackError) {
+              console.warn(`车型 ${model.name} 的原图也加载失败:`, fallbackError);
+            }
+          }
+        });
+        
+        await Promise.all(promises);
+        
+        // 批次间稍作延迟，避免请求过于频繁
+        if (i < batches.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 50)); // 缩略图加载更快，减少延迟
+        }
+      }
+      
+      console.log('网格模式车型缩略图预加载完成');
     }
   },
   mounted() {

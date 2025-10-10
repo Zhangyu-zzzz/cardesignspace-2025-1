@@ -39,6 +39,14 @@ yarn-debug.log*
 yarn-error.log*
 server.log
 
+# 🔐 证书与密钥（严禁入库）
+www.cardesignspace.com_1754988619/**
+*.crt
+*.key
+*.pem
+*.pfx
+*password*.txt
+
 # 📤 上传文件（可选，根据需要调整）
 uploads/
 temp/
@@ -97,6 +105,9 @@ coverage/
 test-*.js
 debug-*.js
 count-*.js
+
+# 🧪 测试产物
+test-results/
 
 # 📋 临时文档
 *.md.bak

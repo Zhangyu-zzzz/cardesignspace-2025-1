@@ -8,6 +8,12 @@ const { authenticateToken } = require('../middleware/auth');
 // 获取车型的图片
 router.get('/car/:carId', imageController.getImagesByCarId);
 
+// 获取车型的图片（新方法）
+router.get('/model/:modelId', imageController.getImagesByModelId);
+
+// 获取车型的缩略图（用于网格模式优化）
+router.get('/model/:modelId/thumbnails', imageController.getThumbnailsByModelId);
+
 // 获取单张图片详情
 router.get('/:id', imageController.getImageById);
 

@@ -6,8 +6,8 @@ const getBaseURL = () => {
   if (process.env.NODE_ENV === 'production') {
     return '/api';  // 使用相对路径，通过nginx代理
   }
-  // 开发环境直接连接到后端服务器
-  return process.env.VUE_APP_API_URL || 'http://localhost:3000/api';
+  // 开发环境使用相对路径，通过vue.config.js中的代理配置
+  return process.env.VUE_APP_API_URL || '/api';
 };
 
 // 创建axios实例
@@ -124,6 +124,7 @@ export const modelAPI = {
 export const imageAPI = {
   getAll: (params) => apiClient.get('/images', { params }),
   getByModelId: (modelId, params = {}) => apiClient.get(`/models/${modelId}/images`, { params }),
+  getThumbnailsByModelId: (modelId, params = {}) => apiClient.get(`/images/model/${modelId}/thumbnails`, { params }),
   upload: (data) => apiClient.post('/images/upload', data),
   delete: (id) => apiClient.delete(`/images/${id}`)
 };

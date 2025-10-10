@@ -21,7 +21,7 @@
                     ┌─────────────────┐
                     │     Local       │
                     │cardesignspace_  │
-                    │     local       │
+                    │     dev         │
                     └─────────────────┘
 ```
 
@@ -79,10 +79,12 @@
 
 ## 环境配置
 
+### 环境配置
+
 ### 生产环境配置
 
 ```bash
-# .env.production
+# env/env.production
 DB_HOST=49.235.98.5
 DB_PORT=3306
 DB_NAME=cardesignspace
@@ -94,7 +96,7 @@ NODE_ENV=production
 ### 备份环境配置
 
 ```bash
-# .env.backup
+# env/env.backup
 DB_HOST=124.221.249.173
 DB_PORT=44302
 DB_NAME=cardesignspace_backup
@@ -106,7 +108,7 @@ NODE_ENV=backup
 ### 开发环境配置
 
 ```bash
-# .env.dev
+# env/env.dev
 DB_HOST=124.221.249.173
 DB_PORT=44302
 DB_NAME=cardesignspace_dev

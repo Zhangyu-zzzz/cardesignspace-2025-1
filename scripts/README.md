@@ -4,6 +4,13 @@ This directory contains all project scripts organized by category.
 
 ## Directory Structure
 
+### Core Scripts
+Essential scripts for database management and environment control:
+- `db-environment.sh` - Environment configuration management (production, backup, dev)
+- `incremental-db-sync.sh` - Incremental database synchronization
+- `db-backup-scheduler.sh` - Automated backup scheduling
+- `dev-server.sh` - Development environment management (start/stop/restart)
+
 ### `development/`
 Development and local environment scripts:
 - `start.sh` / `start.bat` - Local development environment startup scripts
@@ -22,41 +29,93 @@ Verification and testing scripts:
 Data import and management scripts:
 - `import_inspiration_data.js` - Inspiration data import script
 
+### `archived/`
+Archived scripts and reports (completed tasks):
+- One-time fix scripts (tag editing, performance optimization, etc.)
+- Optimization reports and documentation
+- Legacy deployment scripts
+
 ### Root Level Scripts
 Deployment and CI/CD scripts remain in the root directory for deployment compatibility:
 - `deploy.sh` - Basic deployment script
 - `connect-and-deploy.sh` - SSH deployment script
-- `apply-*-cicd.sh` - CI/CD configuration scripts
-- `fix-*.sh` - Various fix scripts
+- `fix-git-lock.sh` - Git lock file fix
 
 ## Usage
 
-### Development Scripts
+### Environment Management
 ```bash
-# Start local development environment
-./scripts/development/start.sh
+# Initialize environment configurations
+./scripts/db-environment.sh init
 
-# Rebuild frontend
-./scripts/development/rebuild-frontend.sh
+# Switch to development environment
+./scripts/db-environment.sh switch dev
+
+# Verify environment configuration
+./scripts/db-environment.sh verify dev
+
+# Show environment status
+./scripts/db-environment.sh status
 ```
 
-### Verification Scripts
+### Database Synchronization
 ```bash
-# Verify fixes
-node scripts/verification/verify-fix.js
+# Incremental sync (default)
+./scripts/incremental-db-sync.sh incremental
 
-# Check server status
-./scripts/verification/check-server-index.sh
+# Full sync (first time)
+./scripts/incremental-db-sync.sh full-sync
+
+# Test development environment sync
+./scripts/incremental-db-sync.sh test-dev
+
+# Verify sync results
+./scripts/incremental-db-sync.sh verify
 ```
 
-### Data Scripts
+### Development Environment
 ```bash
-# Import inspiration data
-node scripts/data/import_inspiration_data.js
+# Start development environment
+./scripts/dev-server.sh start
+
+# Stop development environment
+./scripts/dev-server.sh stop
+
+# Restart development environment
+./scripts/dev-server.sh restart
+
+# View logs
+./scripts/dev-server.sh logs
+
+# Enter backend container
+./scripts/dev-server.sh shell
 ```
+
+### Backup Management
+```bash
+# Schedule daily backups
+./scripts/db-backup-scheduler.sh daily
+
+# Manual backup
+./scripts/backup-db.sh
+```
+
+## Environment Strategy
+
+The project uses a three-environment strategy:
+
+1. **Production** (`cardesignspace`) - Live production database
+2. **Backup** (`cardesignspace_backup`) - Automated backup of production data
+3. **Development** (`cardesignspace_dev`) - Development and testing environment
+
+### Sync Flow
+- Production → Backup (daily incremental sync)
+- Backup → Development (on-demand sync + new features)
+- Development → Production (schema changes only, after testing)
 
 ## Notes
 
 - Scripts in the root directory are critical for deployment and should not be moved
-- Development scripts can be safely moved to subdirectories
+- Environment configurations are managed through `db-environment.sh`
+- All archived scripts are preserved for reference but are no longer actively used
 - Always test deployment after any script reorganization

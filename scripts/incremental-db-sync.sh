@@ -552,6 +552,102 @@ execute_full_sync() {
     fi
 }
 
+# 测试开发环境同步
+test_dev_sync() {
+    log_step "开发环境增量同步测试"
+    
+    # 开发环境数据库配置
+    local dev_db_name="cardesignspace_dev"
+    local backup_db_name="cardesignspace_dev_backup"
+    
+    echo "主数据库: $dev_db_name"
+    echo "备份数据库: $backup_db_name"
+    echo ""
+    
+    # 检查数据库是否存在
+    log_step "检查数据库"
+    
+    if mysql -e "USE $dev_db_name;" 2>/dev/null; then
+        log_info "✓ 开发数据库 $dev_db_name 存在"
+    else
+        log_error "✗ 开发数据库 $dev_db_name 不存在"
+        exit 1
+    fi
+    
+    if mysql -e "USE $backup_db_name;" 2>/dev/null; then
+        log_info "✓ 备份数据库 $backup_db_name 存在"
+    else
+        log_warn "⚠ 备份数据库 $backup_db_name 不存在，正在创建..."
+        mysql -e "CREATE DATABASE $backup_db_name CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+        log_info "✓ 备份数据库创建完成"
+    fi
+    
+    # 检查表结构
+    log_step "检查表结构"
+    
+    local table_count=$(mysql -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='$dev_db_name';" -s -N)
+    log_info "开发数据库表数量: $table_count"
+    
+    if [ "$table_count" -gt 0 ]; then
+        log_info "✓ 开发数据库包含 $table_count 个表"
+        
+        # 显示前几个表
+        local tables=$(mysql -e "SELECT table_name FROM information_schema.tables WHERE table_schema='$dev_db_name' LIMIT 5;" -s -N | tr '\n' ', ' | sed 's/,$//')
+        log_info "示例表: $tables"
+    else
+        log_warn "⚠ 开发数据库为空"
+    fi
+    
+    # 设置环境变量进行测试
+    export DB_HOST=localhost
+    export DB_PORT=3306
+    export DB_NAME="$dev_db_name"
+    export DB_USER=root
+    export DB_PASSWORD=""
+    export BACKUP_DB_HOST=localhost
+    export BACKUP_DB_PORT=3306
+    export BACKUP_DB_NAME="$backup_db_name"
+    export BACKUP_DB_USER=root
+    export BACKUP_DB_PASSWORD=""
+    
+    log_info "环境变量设置完成"
+    log_info "主数据库: $DB_HOST:$DB_PORT/$DB_NAME"
+    log_info "备份数据库: $BACKUP_DB_HOST:$BACKUP_DB_PORT/$BACKUP_DB_NAME"
+    
+    # 执行模拟同步
+    log_info "执行模拟增量同步..."
+    if execute_incremental_sync "true"; then
+        log_info "✓ 模拟增量同步成功"
+    else
+        log_error "✗ 模拟增量同步失败"
+        return 1
+    fi
+    
+    # 显示开发环境信息
+    log_step "开发环境信息"
+    
+    echo ""
+    echo "🔧 开发环境配置:"
+    echo "  主数据库: $dev_db_name (localhost:3306)"
+    echo "  备份数据库: $backup_db_name (localhost:3306)"
+    echo "  用户: root (无密码)"
+    echo ""
+    echo "📊 数据库状态:"
+    local dev_tables=$(mysql -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='$dev_db_name';" -s -N)
+    local backup_tables=$(mysql -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='$backup_db_name';" -s -N)
+    echo "  开发数据库表数: $dev_tables"
+    echo "  备份数据库表数: $backup_tables"
+    echo ""
+    echo "🚀 可用命令:"
+    echo "  查看开发数据库: mysql $dev_db_name"
+    echo "  查看备份数据库: mysql $backup_db_name"
+    echo "  执行增量同步: $0 incremental"
+    echo "  模拟同步: $0 dry-run"
+    echo ""
+    
+    log_info "🎉 开发环境配置完成！"
+}
+
 # 主函数
 main() {
     case "${1:-incremental}" in
@@ -579,6 +675,10 @@ main() {
             fi
             rollback_to_backup_point "$backup_file"
             ;;
+        "test-dev")
+            check_environment
+            test_dev_sync
+            ;;
         "help"|"--help"|"-h")
             echo "增量数据库同步脚本"
             echo ""
@@ -590,12 +690,14 @@ main() {
             echo "  full-sync          - 执行全量同步"
             echo "  dry-run            - 模拟运行，不执行实际同步"
             echo "  verify             - 验证同步结果"
+            echo "  test-dev           - 测试开发环境同步"
             echo "  rollback <file>    - 回滚到指定备份点"
             echo "  help               - 显示帮助信息"
             echo ""
             echo "示例:"
             echo "  $0 incremental     # 执行增量同步"
             echo "  $0 dry-run         # 模拟同步"
+            echo "  $0 test-dev        # 测试开发环境同步"
             echo "  $0 verify          # 验证同步结果"
             echo "  $0 rollback /path/to/backup.sql.gz  # 回滚"
             ;;

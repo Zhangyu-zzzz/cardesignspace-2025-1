@@ -45,11 +45,9 @@ ENV_DIR="$PROJECT_ROOT/env"
 CURRENT_ENV_FILE="$PROJECT_ROOT/.env"
 
 # 环境配置定义
-declare -A ENV_CONFIGS=(
-    ["production"]="env.production"
-    ["backup"]="env.backup"
-    ["dev"]="env.dev"
-)
+ENV_CONFIGS_production="env.production"
+ENV_CONFIGS_backup="env.backup"
+ENV_CONFIGS_dev="env.dev"
 
 # 确保环境目录存在
 mkdir -p "$ENV_DIR"
@@ -192,17 +190,27 @@ switch_environment() {
     
     if [ -z "$env_name" ]; then
         log_error "请指定环境名称"
-        echo "可用环境: ${!ENV_CONFIGS[@]}"
+        echo "可用环境: production, backup, dev"
         exit 1
     fi
     
-    if [ -z "${ENV_CONFIGS[$env_name]}" ]; then
-        log_error "未知环境: $env_name"
-        echo "可用环境: ${!ENV_CONFIGS[@]}"
-        exit 1
-    fi
-    
-    local env_file="$ENV_DIR/${ENV_CONFIGS[$env_name]}"
+    local env_file=""
+    case "$env_name" in
+        "production")
+            env_file="$ENV_DIR/$ENV_CONFIGS_production"
+            ;;
+        "backup")
+            env_file="$ENV_DIR/$ENV_CONFIGS_backup"
+            ;;
+        "dev")
+            env_file="$ENV_DIR/$ENV_CONFIGS_dev"
+            ;;
+        *)
+            log_error "未知环境: $env_name"
+            echo "可用环境: production, backup, dev"
+            exit 1
+            ;;
+    esac
     
     if [ ! -f "$env_file" ]; then
         log_error "环境配置文件不存在: $env_file"
@@ -233,7 +241,22 @@ verify_environment() {
     if [ "$env_name" = "current" ]; then
         local env_file="$CURRENT_ENV_FILE"
     else
-        local env_file="$ENV_DIR/${ENV_CONFIGS[$env_name]}"
+        local env_file=""
+        case "$env_name" in
+            "production")
+                env_file="$ENV_DIR/$ENV_CONFIGS_production"
+                ;;
+            "backup")
+                env_file="$ENV_DIR/$ENV_CONFIGS_backup"
+                ;;
+            "dev")
+                env_file="$ENV_DIR/$ENV_CONFIGS_dev"
+                ;;
+            *)
+                log_error "未知环境: $env_name"
+                return 1
+                ;;
+        esac
     fi
     
     if [ ! -f "$env_file" ]; then
@@ -288,8 +311,20 @@ show_environment_status() {
     
     echo ""
     echo "=== 环境配置文件 ==="
-    for env_name in "${!ENV_CONFIGS[@]}"; do
-        local env_file="$ENV_DIR/${ENV_CONFIGS[$env_name]}"
+    for env_name in "production" "backup" "dev"; do
+        local env_file=""
+        case "$env_name" in
+            "production")
+                env_file="$ENV_DIR/$ENV_CONFIGS_production"
+                ;;
+            "backup")
+                env_file="$ENV_DIR/$ENV_CONFIGS_backup"
+                ;;
+            "dev")
+                env_file="$ENV_DIR/$ENV_CONFIGS_dev"
+                ;;
+        esac
+        
         if [ -f "$env_file" ]; then
             echo "✓ $env_name: $env_file"
         else
@@ -314,8 +349,20 @@ show_environment_status() {
     
     echo ""
     echo "=== 数据库状态 ==="
-    for env_name in "${!ENV_CONFIGS[@]}"; do
-        local env_file="$ENV_DIR/${ENV_CONFIGS[$env_name]}"
+    for env_name in "production" "backup" "dev"; do
+        local env_file=""
+        case "$env_name" in
+            "production")
+                env_file="$ENV_DIR/$ENV_CONFIGS_production"
+                ;;
+            "backup")
+                env_file="$ENV_DIR/$ENV_CONFIGS_backup"
+                ;;
+            "dev")
+                env_file="$ENV_DIR/$ENV_CONFIGS_dev"
+                ;;
+        esac
+        
         if [ -f "$env_file" ]; then
             source "$env_file"
             echo -n "$env_name: "
@@ -351,8 +398,20 @@ generate_report() {
 |------|--------|------|------|------|
 EOF
 
-    for env_name in "${!ENV_CONFIGS[@]}"; do
-        local env_file="$ENV_DIR/${ENV_CONFIGS[$env_name]}"
+    for env_name in "production" "backup" "dev"; do
+        local env_file=""
+        case "$env_name" in
+            "production")
+                env_file="$ENV_DIR/$ENV_CONFIGS_production"
+                ;;
+            "backup")
+                env_file="$ENV_DIR/$ENV_CONFIGS_backup"
+                ;;
+            "dev")
+                env_file="$ENV_DIR/$ENV_CONFIGS_dev"
+                ;;
+        esac
+        
         if [ -f "$env_file" ]; then
             source "$env_file"
             local status="未知"
@@ -436,9 +495,9 @@ main() {
             echo "  help                    - 显示帮助信息"
             echo ""
             echo "可用环境:"
-            for env_name in "${!ENV_CONFIGS[@]}"; do
-                echo "  - $env_name"
-            done
+            echo "  - production"
+            echo "  - backup"
+            echo "  - dev"
             echo ""
             echo "示例:"
             echo "  $0 init                 # 初始化环境配置"

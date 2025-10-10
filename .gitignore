@@ -33,6 +33,10 @@ coverage/
 
 # 📝 日志文件
 logs/
+logs/*.log
+logs/*.out
+logs/*.pid
+backend/logs/*.log
 *.log
 npm-debug.log*
 yarn-debug.log*
@@ -84,6 +88,7 @@ coverage/
 *.dump
 *.sqlite
 *.db
+backups/database/*.sql.gz
 
 # 📦 包管理器锁文件（可选）
 # package-lock.json
@@ -108,6 +113,7 @@ count-*.js
 
 # 🧪 测试产物
 test-results/
+sync/
 
 # 📋 临时文档
 *.md.bak
@@ -127,9 +133,15 @@ su7_model_data.json
 test-*.js 
 AGENTS.md
 
-docs/operations/cos-to-s3-backup-guide.md
-backend/backup-progress.json
-backend/backup-scheduler-status.json
+# 📋 备份文件
+*.backup
+*.backup.*
+backend/backup-*.json
+backend/backup.log
 
+# 🔧 环境配置备份
+.env.backup.*
+docs/operations/cos-to-s3-backup-guide.md
+
+# 📦 压缩文件
 **.gz
-.env.dev

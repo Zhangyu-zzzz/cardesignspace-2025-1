@@ -110,6 +110,8 @@ backups/database/*.sql.gz
 test-*.js
 debug-*.js
 count-*.js
+check-*.js
+fix-*.sh
 
 # 🧪 测试产物
 test-results/
@@ -145,3 +147,4 @@ docs/operations/cos-to-s3-backup-guide.md
 
 # 📦 压缩文件
 **.gz
+AGENTS.md

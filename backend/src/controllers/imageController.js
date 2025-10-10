@@ -6,6 +6,15 @@ const { sequelize } = require('../config/mysql');
 const { Op } = require('sequelize');
 const { chooseBestUrl } = require('../services/assetService');
 
+// 从文件名中提取数字的辅助函数
+function extractNumberFromFilename(filename) {
+  if (!filename) return null;
+  
+  // 匹配文件名开头的数字，支持前导零
+  const match = filename.match(/^(\d+)/);
+  return match ? parseInt(match[1], 10) : null;
+}
+
 // 获取车型的图片
 exports.getImagesByCarId = async (req, res, next) => {
   try {
@@ -44,6 +53,7 @@ exports.getImagesByCarId = async (req, res, next) => {
       order: [
         [{ model: ImageCuration, as: 'Curation' }, 'isCurated', 'DESC'],
         [{ model: ImageCuration, as: 'Curation' }, 'curationScore', 'DESC'],
+        ['filename', 'ASC'],  // 按文件名排序，让图片按命名顺序显示
         ['created_at', 'DESC']
       ],
       limit: parseInt(limit),
@@ -350,7 +360,7 @@ exports.getImagesByModelId = async (req, res, next) => {
       whereCondition.category = category;
     }
     
-    // 查询图片（精选优先 + 时间顺序）
+    // 查询图片（精选优先 + 数字排序）
     const { count, rows: images } = await Image.findAndCountAll({
       where: whereCondition,
       order: [
@@ -380,7 +390,7 @@ exports.getImagesByModelId = async (req, res, next) => {
     console.log(`找到 ${images.length} 张图片`);
     
     // 输出时附加 bestUrl 字段（优先 webp，回退 jpeg）
-    const items = images.map((img) => {
+    let items = images.map((img) => {
       const data = img.toJSON();
       const assetsMap = Array.isArray(data.Assets)
         ? data.Assets.reduce((acc, a) => {
@@ -389,6 +399,34 @@ exports.getImagesByModelId = async (req, res, next) => {
           }, {})
         : {};
       return { ...data, bestUrl: chooseBestUrl(assetsMap, true) || data.url };
+    });
+    
+    // 按文件名中的数字进行排序（精选图片保持优先）
+    items.sort((a, b) => {
+      // 精选图片优先
+      const aCurated = a.Curation?.isCurated || false;
+      const bCurated = b.Curation?.isCurated || false;
+      
+      if (aCurated && !bCurated) return -1;
+      if (!aCurated && bCurated) return 1;
+      
+      // 如果都是精选图片，按精选分数排序
+      if (aCurated && bCurated) {
+        const aScore = a.Curation?.curationScore || 0;
+        const bScore = b.Curation?.curationScore || 0;
+        if (aScore !== bScore) return bScore - aScore;
+      }
+      
+      // 按文件名中的数字排序
+      const aNum = extractNumberFromFilename(a.filename);
+      const bNum = extractNumberFromFilename(b.filename);
+      
+      if (aNum !== null && bNum !== null) {
+        return aNum - bNum; // 数字升序：01, 02, 03, ..., 37
+      }
+      
+      // 如果无法提取数字，按文件名字母排序
+      return (a.filename || '').localeCompare(b.filename || '');
     });
 
     res.json({
@@ -406,6 +444,116 @@ exports.getImagesByModelId = async (req, res, next) => {
     res.status(500).json({
       success: false,
       message: '获取图片失败',
+      error: error.message
+    });
+  }
+};
+
+// 获取车型的缩略图 - 专门用于网格模式优化
+exports.getThumbnailsByModelId = async (req, res, next) => {
+  try {
+    const { modelId } = req.params;
+    const { limit = 1 } = req.query;
+    
+    console.log(`获取车型 ${modelId} 的缩略图`);
+    
+    // 构建查询条件
+    const whereCondition = {
+      modelId: modelId,
+    };
+    
+    // 查询图片，只获取缩略图变体
+    const { count, rows: images } = await Image.findAndCountAll({
+      where: whereCondition,
+      order: [
+        [{ model: ImageCuration, as: 'Curation' }, 'isCurated', 'DESC'],
+        [{ model: ImageCuration, as: 'Curation' }, 'curationScore', 'DESC'],
+        ['createdAt', 'DESC'],
+        ['id', 'ASC'],
+      ],
+      include: [
+        {
+          model: ImageAsset,
+          as: 'Assets',
+          attributes: ['variant', 'url', 'width', 'height', 'size'],
+          where: {
+            variant: 'thumb'  // 只获取缩略图变体
+          },
+          required: false,
+        },
+        {
+          model: ImageCuration,
+          as: 'Curation',
+          required: false,
+          attributes: ['isCurated', 'curationScore', 'validUntil'],
+        },
+      ],
+      limit: parseInt(limit),
+      offset: 0
+    });
+    
+    console.log(`找到 ${images.length} 张缩略图`);
+    
+    // 处理缩略图数据
+    let items = images.map((img) => {
+      const data = img.toJSON();
+      const assetsMap = Array.isArray(data.Assets)
+        ? data.Assets.reduce((acc, a) => {
+            acc[a.variant] = a.url;
+            return acc;
+          }, {})
+        : {};
+      
+      // 优先使用缩略图，如果没有则使用原图
+      const thumbnailUrl = assetsMap.thumb || data.url;
+      
+      return { 
+        ...data, 
+        thumbnailUrl,
+        // 为了兼容前端现有代码，也提供 bestUrl
+        bestUrl: thumbnailUrl
+      };
+    });
+    
+    // 按文件名中的数字进行排序（精选图片保持优先）
+    items.sort((a, b) => {
+      // 精选图片优先
+      const aCurated = a.Curation?.isCurated || false;
+      const bCurated = b.Curation?.isCurated || false;
+      
+      if (aCurated && !bCurated) return -1;
+      if (!aCurated && bCurated) return 1;
+      
+      // 如果都是精选图片，按精选分数排序
+      if (aCurated && bCurated) {
+        const aScore = a.Curation?.curationScore || 0;
+        const bScore = b.Curation?.curationScore || 0;
+        if (aScore !== bScore) return bScore - aScore;
+      }
+      
+      // 按文件名中的数字排序
+      const aNum = extractNumberFromFilename(a.filename);
+      const bNum = extractNumberFromFilename(b.filename);
+      
+      if (aNum !== null && bNum !== null) {
+        return aNum - bNum; // 数字升序：01, 02, 03, ..., 37
+      }
+      
+      // 如果无法提取数字，按文件名字母排序
+      return (a.filename || '').localeCompare(b.filename || '');
+    });
+
+    res.json({
+      success: true,
+      data: items,
+      count: items.length,
+      total: count
+    });
+  } catch (error) {
+    console.error('获取车型缩略图失败:', error);
+    res.status(500).json({
+      success: false,
+      message: '获取车型缩略图失败',
       error: error.message
     });
   }

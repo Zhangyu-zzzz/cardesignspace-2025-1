@@ -1,4 +1,4 @@
-require('dotenv').config();
+require('dotenv').config({ path: '../.env' });
 const express = require('express');
 const cors = require('cors');
 const morgan = require('morgan');
@@ -124,6 +124,7 @@ app.use('/api/search', require('./routes/searchRoutes'));
 app.use('/api/notifications', require('./routes/notificationRoutes'));
 // 统一与去重后的路由挂载
 app.use('/api/images', require('./routes/imageRoutes'));
+app.use('/api/images', require('./routes/imageTagRoutes'));
 app.use('/api/tags', require('./routes/tagRoutes'));
 app.use('/api/curation', require('./routes/curationRoutes'));
 app.use('/api/articles', require('./routes/articleRoutes'));
@@ -132,6 +133,8 @@ app.use('/api/image-tags', require('./routes/imageTagRoutes'));
 app.use('/api/image-gallery', require('./routes/imageGalleryRoutes'));
 // 图片变体路由
 app.use('/api/image-variants', require('./routes/imageVariantRoutes'));
+// 缓存管理路由
+app.use('/api/cache', require('./routes/cacheRoutes'));
 // 变体后台处理器路由
 app.use('/api/variant-processor', require('./routes/variantProcessorRoutes'));
 // 摄取路由（特性开关控制，默认 404）

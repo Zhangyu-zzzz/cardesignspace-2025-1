@@ -8,7 +8,8 @@ NC='\033[0m' # No Color
 
 # 获取脚本所在目录的绝对路径
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-cd "$SCRIPT_DIR"
+# 切换到项目根目录（脚本目录的上级目录的上级目录的上级目录）
+cd "$SCRIPT_DIR/../../.."
 
 echo -e "${BLUE}====================================${NC}"
 echo -e "${GREEN}开始启动汽车官方图片网站${NC}"

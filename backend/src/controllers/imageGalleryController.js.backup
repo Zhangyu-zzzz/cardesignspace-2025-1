@@ -1,0 +1,422 @@
+const { Op, Sequelize } = require('sequelize');
+const { sequelize } = require('../config/mysql');
+const Image = require('../models/mysql/Image');
+const Model = require('../models/mysql/Model');
+const Brand = require('../models/mysql/Brand');
+const ImageAsset = require('../models/mysql/ImageAsset');
+const logger = require('../config/logger');
+
+// 获取筛选后的图片列表
+exports.getFilteredImages = async (req, res) => {
+  try {
+    const {
+      page = 1,
+      limit = 20,
+      modelType = '',
+      brandId = '',
+      angles,
+      types,
+      tagSearch = '',
+      styleTags
+    } = req.query;
+
+    // 解析数组参数
+    const anglesArray = angles ? (Array.isArray(angles) ? angles : [angles]) : [];
+    const typesArray = types ? (Array.isArray(types) ? types : [types]) : [];
+    const styleTagsArray = styleTags ? (Array.isArray(styleTags) ? styleTags : [styleTags]) : [];
+
+    // 构建查询条件
+    const whereCondition = {};
+    const modelWhereCondition = {};
+    const brandWhereCondition = {};
+
+    // 车型分类筛选
+    if (modelType) {
+      modelWhereCondition.type = modelType;
+    }
+
+    // 品牌筛选
+    if (brandId) {
+      modelWhereCondition.brandId = brandId;
+    }
+
+    // 视角筛选 - 使用JSON_SEARCH
+    if (anglesArray.length > 0) {
+      const angleConditions = anglesArray.map(angle => 
+        Sequelize.literal(`JSON_SEARCH(tags, 'one', '${angle}') IS NOT NULL`)
+      );
+      whereCondition[Op.and] = whereCondition[Op.and] ? 
+        [...whereCondition[Op.and], ...angleConditions] : angleConditions;
+    }
+
+    // 图片类型筛选
+    if (typesArray.length > 0) {
+      const typeConditions = typesArray.map(type => 
+        Sequelize.literal(`JSON_SEARCH(tags, 'one', '${type}') IS NOT NULL`)
+      );
+      whereCondition[Op.and] = whereCondition[Op.and] ? 
+        [...whereCondition[Op.and], ...typeConditions] : typeConditions;
+    }
+
+    // 标签关键词搜索
+    if (tagSearch) {
+      const searchCondition = Sequelize.literal(`JSON_SEARCH(tags, 'one', '%${tagSearch}%') IS NOT NULL`);
+      whereCondition[Op.and] = whereCondition[Op.and] ? 
+        [...whereCondition[Op.and], searchCondition] : [searchCondition];
+    }
+
+    // 风格标签筛选
+    if (styleTagsArray.length > 0) {
+      const styleConditions = styleTagsArray.map(tag => 
+        Sequelize.literal(`JSON_CONTAINS(Model.styleTags, '"${tag}"')`)
+      );
+      modelWhereCondition[Op.and] = styleConditions;
+    }
+
+    // 计算偏移量
+    const offset = (page - 1) * limit;
+
+    // 优化：并行执行查询
+    const [filteredCount, totalCount, images] = await Promise.all([
+      // 筛选后的图片总数
+      Image.count({
+        include: [
+          {
+            model: Model,
+            where: modelWhereCondition,
+            include: [
+              {
+                model: Brand,
+                where: brandWhereCondition
+              }
+            ]
+          }
+        ],
+        where: whereCondition
+      }),
+      
+      // 总图片数（只在没有筛选条件时计算）
+      (modelType || brandId || anglesArray.length > 0 || typesArray.length > 0 || tagSearch || styleTagsArray.length > 0) 
+        ? Promise.resolve(0) 
+        : Image.count(),
+      
+      // 图片列表
+      Image.findAll({
+        where: whereCondition,
+        include: [
+          {
+            model: Model,
+            where: modelWhereCondition,
+            include: [
+              {
+                model: Brand,
+                attributes: ['id', 'name']
+              }
+            ],
+            attributes: ['id', 'name', 'type', 'styleTags']
+          }
+        ],
+        attributes: [
+          'id', 'modelId', 'userId', 'title', 'description', 'url', 
+          'filename', 'fileSize', 'fileType', 'category', 'isFeatured', 
+          'uploadDate', 'tags', 'createdAt', 'updatedAt'
+        ],
+        order: [['createdAt', 'DESC']],
+        limit: parseInt(limit),
+        offset: offset
+      })
+    ]);
+
+    // 计算分页信息
+    const totalPages = Math.ceil(filteredCount / limit);
+    const finalTotalCount = totalCount || filteredCount;
+
+    // 优化：异步获取图片变体URL，不阻塞响应
+    const imageIds = images.map(img => img.id);
+    
+    // 为图片设置默认displayUrl
+    images.forEach(image => {
+      image.displayUrl = image.url;
+    });
+
+    // 异步获取变体URL（不等待完成）
+    if (imageIds.length > 0) {
+      setImmediate(async () => {
+        try {
+          const imageAssets = await ImageAsset.findAll({
+            where: {
+              imageId: imageIds
+            },
+            attributes: ['imageId', 'variant', 'url', 'width', 'height']
+          });
+
+          // 更新图片的displayUrl
+          imageAssets.forEach(asset => {
+            if (asset.variant === 'small') {
+              const image = images.find(img => img.id === asset.imageId);
+              if (image) {
+                image.displayUrl = asset.url;
+              }
+            }
+          });
+        } catch (error) {
+          logger.warn('异步获取图片变体失败:', error.message);
+        }
+      });
+    }
+
+    const responseData = {
+      status: 'success',
+      data: {
+        images,
+        pagination: {
+          page: parseInt(page),
+          limit: parseInt(limit),
+          total: finalTotalCount,
+          filteredCount,
+          pages: totalPages
+        }
+      }
+    };
+
+    res.json(responseData);
+
+  } catch (error) {
+    logger.error('获取筛选图片失败:', error);
+    res.status(500).json({
+      status: 'error',
+      message: '获取筛选图片失败',
+      details: error.message
+    });
+  }
+};
+
+// 获取筛选统计信息
+exports.getFilterStats = async (req, res) => {
+  try {
+    const {
+      modelType = '',
+      brandId = '',
+      angles = [],
+      types = [],
+      tagSearch = '',
+      styleTags = []
+    } = req.query;
+
+    // 构建查询条件（与getFilteredImages相同）
+    const whereCondition = {};
+    const modelWhereCondition = {};
+    const brandWhereCondition = {};
+
+    if (modelType) {
+      modelWhereCondition.type = modelType;
+    }
+
+    if (brandId) {
+      modelWhereCondition.brandId = brandId;
+    }
+
+    if (angles && angles.length > 0) {
+      whereCondition.tags = {
+        [Op.and]: angles.map(angle => ({
+          [Op.like]: `%${angle}%`
+        }))
+      };
+    }
+
+    if (types && types.length > 0) {
+      whereCondition.tags = {
+        [Op.and]: [
+          ...(whereCondition.tags ? [whereCondition.tags] : []),
+          ...types.map(type => ({
+            [Op.like]: `%${type}%`
+          }))
+        ]
+      };
+    }
+
+    if (tagSearch) {
+      whereCondition.tags = {
+        [Op.and]: [
+          ...(whereCondition.tags ? [whereCondition.tags] : []),
+          {
+            [Op.like]: `%${tagSearch}%`
+          }
+        ]
+      };
+    }
+
+    if (styleTags && styleTags.length > 0) {
+      modelWhereCondition.styleTags = {
+        [Op.and]: styleTags.map(tag => ({
+          [Op.like]: `%${tag}%`
+        }))
+      };
+    }
+
+    // 获取各种统计信息
+    const stats = await Promise.all([
+      // 总图片数
+      Image.count(),
+      
+      // 筛选后的图片数
+      Image.count({
+        include: [
+          {
+            model: Model,
+            where: modelWhereCondition,
+            include: [
+              {
+                model: Brand,
+                where: brandWhereCondition
+              }
+            ]
+          }
+        ],
+        where: whereCondition
+      }),
+
+      // 车型分类统计
+      Image.count({
+        include: [
+          {
+            model: Model,
+            where: modelWhereCondition,
+            include: [
+              {
+                model: Brand,
+                where: brandWhereCondition
+              }
+            ]
+          }
+        ],
+        where: whereCondition
+      }),
+
+      // 品牌统计
+      Image.count({
+        include: [
+          {
+            model: Model,
+            where: modelWhereCondition,
+            include: [
+              {
+                model: Brand,
+                where: brandWhereCondition
+              }
+            ]
+          }
+        ],
+        where: whereCondition
+      })
+    ]);
+
+    res.json({
+      status: 'success',
+      data: {
+        totalImages: stats[0],
+        filteredImages: stats[1],
+        modelTypeCount: stats[2],
+        brandCount: stats[3]
+      }
+    });
+
+  } catch (error) {
+    logger.error('获取筛选统计失败:', error);
+    res.status(500).json({
+      status: 'error',
+      message: '获取筛选统计失败',
+      details: error.message
+    });
+  }
+};
+
+// 获取热门标签
+exports.getPopularTags = async (req, res) => {
+  try {
+    const { limit = 20 } = req.query;
+
+    // 优化：使用原生SQL查询提高性能
+    const popularTags = await sequelize.query(`
+      SELECT 
+        JSON_UNQUOTE(JSON_EXTRACT(tags, CONCAT('$[', numbers.n, ']'))) as tag,
+        COUNT(*) as count
+      FROM images i
+      CROSS JOIN (
+        SELECT 0 as n UNION SELECT 1 UNION SELECT 2 UNION SELECT 3 UNION SELECT 4
+        UNION SELECT 5 UNION SELECT 6 UNION SELECT 7 UNION SELECT 8 UNION SELECT 9
+      ) numbers
+      WHERE JSON_EXTRACT(i.tags, CONCAT('$[', numbers.n, ']')) IS NOT NULL
+        AND i.tags IS NOT NULL
+        AND i.tags != '[]'
+        AND JSON_UNQUOTE(JSON_EXTRACT(tags, CONCAT('$[', numbers.n, ']'))) IS NOT NULL
+      GROUP BY tag
+      HAVING tag IS NOT NULL AND tag != ''
+      ORDER BY count DESC
+      LIMIT :limit
+    `, {
+      replacements: { limit: parseInt(limit) },
+      type: Sequelize.QueryTypes.SELECT
+    });
+
+    const result = popularTags.map(item => ({
+      tag: item.tag,
+      count: parseInt(item.count)
+    }));
+
+    res.json({
+      status: 'success',
+      data: result
+    });
+
+  } catch (error) {
+    logger.error('获取热门标签失败:', error);
+    res.status(500).json({
+      status: 'error',
+      message: '获取热门标签失败',
+      details: error.message
+    });
+  }
+};
+
+// 获取图片详情
+exports.getImageDetail = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const image = await Image.findByPk(id, {
+      include: [
+        {
+          model: Model,
+          include: [
+            {
+              model: Brand,
+              attributes: ['id', 'name']
+            }
+          ],
+          attributes: ['id', 'name', 'type', 'styleTags']
+        }
+      ]
+    });
+
+    if (!image) {
+      return res.status(404).json({
+        status: 'error',
+        message: '图片不存在'
+      });
+    }
+
+    res.json({
+      status: 'success',
+      data: image
+    });
+
+  } catch (error) {
+    logger.error('获取图片详情失败:', error);
+    res.status(500).json({
+      status: 'error',
+      message: '获取图片详情失败',
+      details: error.message
+    });
+  }
+};

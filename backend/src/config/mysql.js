@@ -3,7 +3,7 @@ const mysql = require('mysql2/promise');
 const logger = require('../../utils/logger');
 
 // 加载环境变量
-require('dotenv').config();
+require('dotenv').config({ path: '../../.env' });
 
 const sequelize = new Sequelize(
   process.env.DB_NAME,  // 数据库名称
@@ -15,10 +15,24 @@ const sequelize = new Sequelize(
     dialect: 'mysql',
     logging: msg => logger.debug(msg),
     pool: {
-      max: 10,
-      min: 0,
-      acquire: 30000,
-      idle: 10000
+      max: 20,        // 增加最大连接数
+      min: 5,         // 保持最小连接数
+      acquire: 60000, // 增加获取连接超时时间
+      idle: 30000,    // 增加空闲连接超时时间
+      evict: 1000,    // 连接回收间隔
+      handleDisconnects: true
+    },
+    dialectOptions: {
+      charset: 'utf8mb4',
+      collate: 'utf8mb4_unicode_ci',
+      supportBigNumbers: true,
+      bigNumberStrings: true
+    },
+    define: {
+      charset: 'utf8mb4',
+      collate: 'utf8mb4_unicode_ci',
+      timestamps: true,
+      underscored: false
     }
   }
 );
@@ -32,8 +46,13 @@ const mysqlPool = mysql.createPool({
   database: process.env.DB_NAME,
   charset: 'utf8mb4',
   waitForConnections: true,
-  connectionLimit: 10,
-  queueLimit: 0
+  connectionLimit: 20,    // 增加连接数限制
+  queueLimit: 0,
+  acquireTimeout: 60000,  // 获取连接超时
+  timeout: 60000,         // 查询超时
+  reconnect: true,        // 自动重连
+  idleTimeout: 30000,     // 空闲超时
+  maxReconnects: 3        // 最大重连次数
 });
 
 const connectMySQL = async () => {

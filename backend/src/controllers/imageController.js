@@ -6,6 +6,15 @@ const { sequelize } = require('../config/mysql');
 const { Op } = require('sequelize');
 const { chooseBestUrl } = require('../services/assetService');
 
+// 从文件名中提取数字的辅助函数
+function extractNumberFromFilename(filename) {
+  if (!filename) return null;
+  
+  // 匹配文件名开头的数字，支持前导零
+  const match = filename.match(/^(\d+)/);
+  return match ? parseInt(match[1], 10) : null;
+}
+
 // 获取车型的图片
 exports.getImagesByCarId = async (req, res, next) => {
   try {
@@ -44,6 +53,7 @@ exports.getImagesByCarId = async (req, res, next) => {
       order: [
         [{ model: ImageCuration, as: 'Curation' }, 'isCurated', 'DESC'],
         [{ model: ImageCuration, as: 'Curation' }, 'curationScore', 'DESC'],
+        ['filename', 'ASC'],  // 按文件名排序，让图片按命名顺序显示
         ['created_at', 'DESC']
       ],
       limit: parseInt(limit),
@@ -350,7 +360,7 @@ exports.getImagesByModelId = async (req, res, next) => {
       whereCondition.category = category;
     }
     
-    // 查询图片（精选优先 + 时间顺序）
+    // 查询图片（精选优先 + 数字排序）
     const { count, rows: images } = await Image.findAndCountAll({
       where: whereCondition,
       order: [
@@ -380,7 +390,7 @@ exports.getImagesByModelId = async (req, res, next) => {
     console.log(`找到 ${images.length} 张图片`);
     
     // 输出时附加 bestUrl 字段（优先 webp，回退 jpeg）
-    const items = images.map((img) => {
+    let items = images.map((img) => {
       const data = img.toJSON();
       const assetsMap = Array.isArray(data.Assets)
         ? data.Assets.reduce((acc, a) => {
@@ -389,6 +399,34 @@ exports.getImagesByModelId = async (req, res, next) => {
           }, {})
         : {};
       return { ...data, bestUrl: chooseBestUrl(assetsMap, true) || data.url };
+    });
+    
+    // 按文件名中的数字进行排序（精选图片保持优先）
+    items.sort((a, b) => {
+      // 精选图片优先
+      const aCurated = a.Curation?.isCurated || false;
+      const bCurated = b.Curation?.isCurated || false;
+      
+      if (aCurated && !bCurated) return -1;
+      if (!aCurated && bCurated) return 1;
+      
+      // 如果都是精选图片，按精选分数排序
+      if (aCurated && bCurated) {
+        const aScore = a.Curation?.curationScore || 0;
+        const bScore = b.Curation?.curationScore || 0;
+        if (aScore !== bScore) return bScore - aScore;
+      }
+      
+      // 按文件名中的数字排序
+      const aNum = extractNumberFromFilename(a.filename);
+      const bNum = extractNumberFromFilename(b.filename);
+      
+      if (aNum !== null && bNum !== null) {
+        return aNum - bNum; // 数字升序：01, 02, 03, ..., 37
+      }
+      
+      // 如果无法提取数字，按文件名字母排序
+      return (a.filename || '').localeCompare(b.filename || '');
     });
 
     res.json({
@@ -457,7 +495,7 @@ exports.getThumbnailsByModelId = async (req, res, next) => {
     console.log(`找到 ${images.length} 张缩略图`);
     
     // 处理缩略图数据
-    const items = images.map((img) => {
+    let items = images.map((img) => {
       const data = img.toJSON();
       const assetsMap = Array.isArray(data.Assets)
         ? data.Assets.reduce((acc, a) => {
@@ -475,6 +513,34 @@ exports.getThumbnailsByModelId = async (req, res, next) => {
         // 为了兼容前端现有代码，也提供 bestUrl
         bestUrl: thumbnailUrl
       };
+    });
+    
+    // 按文件名中的数字进行排序（精选图片保持优先）
+    items.sort((a, b) => {
+      // 精选图片优先
+      const aCurated = a.Curation?.isCurated || false;
+      const bCurated = b.Curation?.isCurated || false;
+      
+      if (aCurated && !bCurated) return -1;
+      if (!aCurated && bCurated) return 1;
+      
+      // 如果都是精选图片，按精选分数排序
+      if (aCurated && bCurated) {
+        const aScore = a.Curation?.curationScore || 0;
+        const bScore = b.Curation?.curationScore || 0;
+        if (aScore !== bScore) return bScore - aScore;
+      }
+      
+      // 按文件名中的数字排序
+      const aNum = extractNumberFromFilename(a.filename);
+      const bNum = extractNumberFromFilename(b.filename);
+      
+      if (aNum !== null && bNum !== null) {
+        return aNum - bNum; // 数字升序：01, 02, 03, ..., 37
+      }
+      
+      // 如果无法提取数字，按文件名字母排序
+      return (a.filename || '').localeCompare(b.filename || '');
     });
 
     res.json({

@@ -2280,7 +2280,7 @@ export default {
   created() {
     // 创建专门的axios实例用于文件上传
     this.uploadClient = axios.create({
-      baseURL: process.env.NODE_ENV === 'production' ? '/api' : (process.env.VUE_APP_API_BASE_URL ? `${process.env.VUE_APP_API_BASE_URL}/api` : 'http://localhost:3000/api'),
+      baseURL: process.env.VUE_APP_API_BASE_URL ? `${process.env.VUE_APP_API_BASE_URL}/api` : (process.env.NODE_ENV === 'production' ? '/api' : 'http://localhost:3000/api'),
       timeout: 120000, // 2分钟超时
       headers: {
         'Content-Type': 'multipart/form-data'

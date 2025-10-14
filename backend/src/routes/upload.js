@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const uploadController = require('../controllers/uploadController');
 const { optionalAuth, authenticateToken } = require('../middleware/auth');
+const { restrictTo } = require('../middleware/authMiddleware');
 const multer = require('multer');
 
 // 配置主要的multer中间件用于图片上传
@@ -64,16 +65,18 @@ router.get('/images', optionalAuth, uploadController.getImagesList);
 
 // ==================== 品牌管理路由 ====================
 router.get('/brands', uploadController.getAllBrands);
-router.post('/brands', authenticateToken, uploadController.createBrand);
-router.put('/brands/:id', authenticateToken, uploadController.updateBrand);
-router.delete('/brands/:id', authenticateToken, uploadController.deleteBrand);
-// 品牌Logo上传路由 - 使用独立的multer配置
-router.post('/brands/:id/logo', logoUpload.single('logo'), uploadController.uploadBrandLogo);
+// 品牌创建、更新、删除需要管理员或编辑者权限
+router.post('/brands', authenticateToken, restrictTo('admin', 'editor'), uploadController.createBrand);
+router.put('/brands/:id', authenticateToken, restrictTo('admin', 'editor'), uploadController.updateBrand);
+router.delete('/brands/:id', authenticateToken, restrictTo('admin', 'editor'), uploadController.deleteBrand);
+// 品牌Logo上传路由 - 使用独立的multer配置，需要管理员或编辑者权限
+router.post('/brands/:id/logo', authenticateToken, restrictTo('admin', 'editor'), logoUpload.single('logo'), uploadController.uploadBrandLogo);
 
 // ==================== 车型管理路由 ====================
 router.get('/brands/:brandId/models', uploadController.getModelsByBrand);
-router.post('/models', authenticateToken, uploadController.createModel);
-router.put('/models/:id', authenticateToken, uploadController.updateModel);
-router.delete('/models/:id', authenticateToken, uploadController.deleteModel);
+// 车型创建、更新、删除需要管理员或编辑者权限
+router.post('/models', authenticateToken, restrictTo('admin', 'editor'), uploadController.createModel);
+router.put('/models/:id', authenticateToken, restrictTo('admin', 'editor'), uploadController.updateModel);
+router.delete('/models/:id', authenticateToken, restrictTo('admin', 'editor'), uploadController.deleteModel);
 
 module.exports = router; 

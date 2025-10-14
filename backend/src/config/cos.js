@@ -6,12 +6,20 @@ const cos = new COS({
   SecretKey: process.env.TENCENT_SECRET_KEY || 'your-secret-key',
 });
 
-const cosConfig = {
-  Bucket: process.env.COS_BUCKET || 'your-bucket-1234567890',
-  Region: process.env.COS_REGION || 'ap-beijing',
-  // 公共读写权限的存储桶域名
-  BucketDomain: process.env.COS_DOMAIN || 'https://your-bucket-1234567890.cos.ap-beijing.myqcloud.com'
+// 动态获取COS配置，确保每次都读取最新的环境变量
+const getCosConfig = () => {
+  return {
+    Bucket: process.env.COS_BUCKET || 'test-1250000000',
+    Region: process.env.COS_REGION || 'ap-beijing',
+    // 公共读写权限的存储桶域名
+    BucketDomain: process.env.COS_DOMAIN || 'https://test-1250000000.cos.ap-beijing.myqcloud.com'
+  };
 };
+
+const cosConfig = getCosConfig();
+
+// 开发模式：也使用腾讯云COS存储
+const isDevelopment = process.env.NODE_ENV !== 'production';
 
 /**
  * 上传文件到腾讯云COS
@@ -22,9 +30,20 @@ const cosConfig = {
  */
 const uploadToCOS = (fileBuffer, key, contentType) => {
   return new Promise((resolve, reject) => {
+    // 动态获取最新的COS配置
+    const currentCosConfig = getCosConfig();
+    
+    console.log('开始上传到腾讯云COS:', {
+      bucket: currentCosConfig.Bucket,
+      region: currentCosConfig.Region,
+      key: key,
+      contentType: contentType
+    });
+    
+    // 使用腾讯云COS存储
     cos.putObject({
-      Bucket: cosConfig.Bucket,
-      Region: cosConfig.Region,
+      Bucket: currentCosConfig.Bucket,
+      Region: currentCosConfig.Region,
       Key: key,
       Body: fileBuffer,
       ContentType: contentType,
@@ -40,7 +59,7 @@ const uploadToCOS = (fileBuffer, key, contentType) => {
         console.log('COS上传成功:', data);
         // 构建完整的访问URL，确保正确的URL编码
         const encodedKey = encodeURIComponent(key).replace(/%2F/g, '/');
-        const url = `${cosConfig.BucketDomain}/${encodedKey}`;
+        const url = `${currentCosConfig.BucketDomain}/${encodedKey}`;
         resolve({
           url,
           location: data.Location,
@@ -136,6 +155,7 @@ const generateUploadPath = async (originalName, modelId, category = 'general', p
 module.exports = {
   cos,
   cosConfig,
+  getCosConfig,
   uploadToCOS,
   deleteFromCOS,
   generateUploadPath

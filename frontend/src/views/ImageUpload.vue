@@ -436,6 +436,117 @@
           </div>
         </el-form-item>
 
+        <!-- 车型图片上传区域 -->
+        <el-form-item label="车型图片" v-if="!modelDialog.isEdit">
+          <div class="model-image-upload-section">
+            <div class="upload-type-selector">
+              <el-radio-group v-model="modelDialog.uploadType" size="small">
+                <el-radio-button label="single">单图上传</el-radio-button>
+                <el-radio-button label="multiple">批量上传</el-radio-button>
+              </el-radio-group>
+            </div>
+
+            <!-- 单图上传 -->
+            <div v-if="modelDialog.uploadType === 'single'" class="single-upload-area">
+              <el-upload
+                class="model-image-uploader"
+                action=""
+                :show-file-list="false"
+                :before-upload="handleModelImageUpload"
+                :auto-upload="false"
+                accept="image/*"
+              >
+                <div class="upload-area">
+                  <img v-if="modelDialog.imagePreview" :src="modelDialog.imagePreview" class="preview-image" />
+                  <div v-else class="upload-placeholder">
+                    <i class="el-icon-plus upload-icon"></i>
+                    <div class="upload-text">点击选择车型图片</div>
+                  </div>
+                </div>
+              </el-upload>
+              
+              <div class="upload-form" v-if="modelDialog.imagePreview">
+                <el-form-item label="图片标题" size="small">
+                  <el-input v-model="modelDialog.imageTitle" placeholder="请输入图片标题" />
+                </el-form-item>
+                <el-form-item label="图片分类" size="small">
+                  <el-select v-model="modelDialog.imageCategory" placeholder="请选择分类" style="width: 100%">
+                    <el-option label="外观图" value="exterior" />
+                    <el-option label="内饰图" value="interior" />
+                    <el-option label="细节图" value="details" />
+                    <el-option label="其他" value="general" />
+                  </el-select>
+                </el-form-item>
+                <el-form-item label="设为特色图" size="small">
+                  <el-switch v-model="modelDialog.isFeatured" />
+                </el-form-item>
+              </div>
+            </div>
+
+            <!-- 批量上传 -->
+            <div v-if="modelDialog.uploadType === 'multiple'" class="multiple-upload-area">
+              <div class="custom-batch-uploader">
+                <input 
+                  ref="modelFileInput"
+                  type="file" 
+                  multiple 
+                  accept="image/*" 
+                  @change="handleModelFileInputChange"
+                  style="display: none;"
+                />
+                
+                <el-button type="primary" @click="$refs.modelFileInput.click()">
+                  <i class="el-icon-plus"></i> 选择车型图片
+                </el-button>
+                
+                <div v-if="modelDialog.fileList.length > 0" class="custom-file-list">
+                  <div class="file-list-header">
+                    <span>已选择 {{ modelDialog.fileList.length }} 个文件:</span>
+                    <el-button size="mini" type="text" @click="clearModelFiles">清空</el-button>
+                  </div>
+                  
+                  <div class="file-items">
+                    <div 
+                      v-for="(file, index) in modelDialog.fileList" 
+                      :key="index" 
+                      class="file-item"
+                    >
+                      <div class="file-preview">
+                        <img :src="file.preview" alt="预览图" />
+                      </div>
+                      <div class="file-info">
+                        <div class="file-name">{{ file.name }}</div>
+                        <div class="file-size">{{ formatFileSize(file.size) }}</div>
+                      </div>
+                      <el-button 
+                        type="danger" 
+                        size="mini" 
+                        icon="el-icon-delete"
+                        @click="removeModelFile(index)"
+                        circle
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="batch-upload-form" v-if="modelDialog.fileList.length > 0">
+                <el-form-item label="图片分类" size="small">
+                  <el-select v-model="modelDialog.batchCategory" placeholder="请选择分类" style="width: 100%">
+                    <el-option label="外观图" value="exterior" />
+                    <el-option label="内饰图" value="interior" />
+                    <el-option label="细节图" value="details" />
+                    <el-option label="其他" value="general" />
+                  </el-select>
+                </el-form-item>
+                <el-form-item label="第一张设为特色图" size="small">
+                  <el-switch v-model="modelDialog.batchFeatured" />
+                </el-form-item>
+              </div>
+            </div>
+          </div>
+        </el-form-item>
+
         <el-form-item label="车型描述" prop="description">
           <el-input 
             v-model="modelDialog.form.description" 
@@ -912,6 +1023,7 @@
 
 <script>
 import { apiClient } from '@/services/api'
+import axios from 'axios'
 
 export default {
   name: 'ComprehensiveManagement',
@@ -976,7 +1088,17 @@ export default {
           isActive: true,
           thumbnail: '',
           specs: []
-        }
+        },
+        // 图片上传相关字段
+        uploadType: 'single', // 'single' | 'multiple'
+        imageFile: null,
+        imagePreview: '',
+        imageTitle: '',
+        imageCategory: 'exterior',
+        isFeatured: false,
+        fileList: [],
+        batchCategory: 'exterior',
+        batchFeatured: false
       },
       
       uploadDialog: {
@@ -1318,6 +1440,18 @@ export default {
         thumbnail: '',
         specs: []
       }
+      
+      // 重置图片上传相关字段
+      this.modelDialog.uploadType = 'single'
+      this.modelDialog.imageFile = null
+      this.modelDialog.imagePreview = ''
+      this.modelDialog.imageTitle = ''
+      this.modelDialog.imageCategory = 'exterior'
+      this.modelDialog.isFeatured = false
+      this.modelDialog.fileList = []
+      this.modelDialog.batchCategory = 'exterior'
+      this.modelDialog.batchFeatured = false
+      
       this.modelDialog.visible = true
     },
     
@@ -1343,7 +1477,21 @@ export default {
         const response = await apiClient[method](url, modelData)
         
         if (response.status === 'success') {
-          this.$message.success(response.message)
+          const newModel = response.data
+          
+          // 如果是新建车型且有图片需要上传
+          if (!this.modelDialog.isEdit && this.hasModelImagesToUpload()) {
+            try {
+              await this.uploadModelImages(newModel.id)
+              this.$message.success('车型创建成功，图片上传成功！')
+            } catch (uploadError) {
+              this.$message.warning('车型创建成功，但图片上传失败，您可以稍后重新上传')
+              console.error('图片上传失败:', uploadError)
+            }
+          } else {
+            this.$message.success(response.message)
+          }
+          
           this.modelDialog.visible = false
           this.loadModelsByBrand()
         } else {
@@ -2275,6 +2423,142 @@ export default {
         'body_structure': ''
       }
       return units[key] || ''
+    },
+    
+    // ==================== 车型图片上传相关方法 ====================
+    handleModelImageUpload(file) {
+      // 验证文件
+      if (!file.type.startsWith('image/')) {
+        this.$message.error('只能上传图片文件')
+        return false
+      }
+      
+      if (file.size > 10 * 1024 * 1024) {
+        this.$message.error('文件大小不能超过 10MB')
+        return false
+      }
+      
+      // 设置文件和预览
+      this.modelDialog.imageFile = file
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        this.modelDialog.imagePreview = e.target.result
+      }
+      reader.readAsDataURL(file)
+      
+      return false // 阻止自动上传
+    },
+    
+    handleModelFileInputChange(event) {
+      const files = event.target.files
+      const validFiles = []
+      
+      Array.from(files).forEach((file) => {
+        // 验证文件类型
+        if (!file.type.startsWith('image/')) {
+          this.$message.error(`文件 ${file.name} 不是图片格式`)
+          return
+        }
+        
+        // 验证文件大小
+        if (file.size > 10 * 1024 * 1024) {
+          this.$message.error(`文件 ${file.name} 大小超过 10MB`)
+          return
+        }
+        
+        // 创建预览URL
+        const preview = URL.createObjectURL(file)
+        validFiles.push({
+          file: file,
+          name: file.name,
+          size: file.size,
+          type: file.type,
+          preview: preview
+        })
+      })
+      
+      this.modelDialog.fileList = validFiles
+    },
+    
+    removeModelFile(index) {
+      const fileItem = this.modelDialog.fileList[index]
+      if (fileItem) {
+        URL.revokeObjectURL(fileItem.preview)
+        this.modelDialog.fileList.splice(index, 1)
+      }
+      
+      // 如果没有文件了，清空input
+      if (this.modelDialog.fileList.length === 0) {
+        this.$refs.modelFileInput.value = ''
+      }
+    },
+    
+    clearModelFiles() {
+      // 释放预览URL避免内存泄漏
+      this.modelDialog.fileList.forEach(item => {
+        URL.revokeObjectURL(item.preview)
+      })
+      this.modelDialog.fileList = []
+      this.$refs.modelFileInput.value = ''
+    },
+    
+    hasModelImagesToUpload() {
+      return (this.modelDialog.uploadType === 'single' && this.modelDialog.imageFile) ||
+             (this.modelDialog.uploadType === 'multiple' && this.modelDialog.fileList.length > 0)
+    },
+    
+    async uploadModelImages(modelId) {
+      if (this.modelDialog.uploadType === 'single') {
+        await this.uploadSingleModelImage(modelId)
+      } else if (this.modelDialog.uploadType === 'multiple') {
+        await this.uploadMultipleModelImages(modelId)
+      }
+    },
+    
+    async uploadSingleModelImage(modelId) {
+      const formData = new FormData()
+      formData.append('image', this.modelDialog.imageFile)
+      formData.append('title', this.modelDialog.imageTitle || this.modelDialog.imageFile.name)
+      formData.append('description', '')
+      formData.append('modelId', modelId)
+      formData.append('category', this.modelDialog.imageCategory)
+      formData.append('isFeatured', this.modelDialog.isFeatured)
+      
+      const response = await apiClient.post('/upload/single', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      })
+      
+      if (response.status !== 'success') {
+        throw new Error(response.message || '图片上传失败')
+      }
+    },
+    
+    async uploadMultipleModelImages(modelId) {
+      const files = this.modelDialog.fileList
+      
+      for (let i = 0; i < files.length; i++) {
+        const fileItem = files[i]
+        
+        const formData = new FormData()
+        formData.append('image', fileItem.file)
+        formData.append('title', fileItem.name)
+        formData.append('description', '')
+        formData.append('modelId', modelId)
+        formData.append('category', this.modelDialog.batchCategory)
+        formData.append('isFeatured', i === 0 && this.modelDialog.batchFeatured)
+        
+        const response = await apiClient.post('/upload/single', formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data'
+          }
+        })
+        
+        if (response.status !== 'success') {
+          throw new Error(`文件 ${fileItem.name} 上传失败: ${response.message}`)
+        }
+      }
     }
   },
   created() {
@@ -3325,5 +3609,207 @@ export default {
 
 .comprehensive-management >>> .el-link--primary:hover {
   color: #b8251a !important;
+}
+
+/* 车型图片上传区域样式 */
+.model-image-upload-section {
+  border: 1px solid #e4e7ed;
+  border-radius: 8px;
+  padding: 20px;
+  background: #fafafa;
+  margin-top: 10px;
+}
+
+.upload-type-selector {
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.upload-type-selector .el-radio-group {
+  background: white;
+  padding: 4px;
+  border-radius: 6px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.single-upload-area,
+.multiple-upload-area {
+  margin-top: 15px;
+}
+
+.model-image-uploader {
+  width: 100%;
+  margin-bottom: 15px;
+}
+
+.model-image-uploader .upload-area {
+  height: 150px;
+  border: 2px dashed #d9d9d9;
+  border-radius: 6px;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 0.3s;
+  background: white;
+}
+
+.model-image-uploader .upload-area:hover {
+  border-color: #e03426;
+}
+
+.model-image-uploader .upload-placeholder {
+  text-align: center;
+  color: #999;
+}
+
+.model-image-uploader .upload-icon {
+  font-size: 24px;
+  color: #c0c4cc;
+  margin-bottom: 12px;
+}
+
+.model-image-uploader .upload-text {
+  color: #606266;
+  font-size: 14px;
+}
+
+.model-image-uploader .preview-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.upload-form,
+.batch-upload-form {
+  background: white;
+  padding: 15px;
+  border-radius: 6px;
+  border: 1px solid #e4e7ed;
+  margin-top: 15px;
+}
+
+.upload-form .el-form-item,
+.batch-upload-form .el-form-item {
+  margin-bottom: 15px;
+}
+
+.upload-form .el-form-item:last-child,
+.batch-upload-form .el-form-item:last-child {
+  margin-bottom: 0;
+}
+
+.custom-batch-uploader {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.custom-batch-uploader .el-button {
+  margin-bottom: 15px;
+}
+
+.custom-file-list {
+  width: 100%;
+  border: 1px solid #e4e7ed;
+  border-radius: 6px;
+  padding: 10px;
+  background: white;
+}
+
+.file-list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  font-weight: 500;
+  color: #333;
+  font-size: 14px;
+}
+
+.file-items {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 10px;
+}
+
+.file-item {
+  display: flex;
+  align-items: center;
+  padding: 8px;
+  background: #f8f9fa;
+  border-radius: 4px;
+  border: 1px solid #e9ecef;
+  transition: all 0.3s ease;
+}
+
+.file-item:hover {
+  border-color: #e03426;
+  box-shadow: 0 2px 4px rgba(224, 52, 38, 0.1);
+}
+
+.file-preview {
+  width: 40px;
+  height: 40px;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-right: 8px;
+  flex-shrink: 0;
+}
+
+.file-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.file-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.file-name {
+  font-size: 12px;
+  font-weight: 500;
+  margin-bottom: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #333;
+}
+
+.file-size {
+  font-size: 11px;
+  color: #909399;
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+  .file-items {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 8px;
+  }
+  
+  .file-item {
+    padding: 6px;
+  }
+  
+  .file-preview {
+    width: 30px;
+    height: 30px;
+    margin-right: 6px;
+  }
+  
+  .file-name {
+    font-size: 11px;
+  }
+  
+  .file-size {
+    font-size: 10px;
+  }
 }
 </style> 

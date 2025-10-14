@@ -974,19 +974,35 @@ const deleteModel = async (req, res) => {
       });
     }
     
-    // 检查是否有关联的图片
+    // 如果有关联的图片，先删除所有图片
     if (model.Images && model.Images.length > 0) {
-      return res.status(400).json({
-        status: 'error',
-        message: '该车型下还有图片，无法删除'
-      });
+      console.log(`车型 ${model.name} 下有 ${model.Images.length} 张图片，开始删除...`);
+      
+      for (const image of model.Images) {
+        try {
+          // 删除COS中的文件
+          if (image.cosKey) {
+            await deleteFromCOS(image.cosKey);
+          }
+          
+          // 删除数据库记录
+          await image.destroy();
+          console.log(`已删除图片: ${image.title}`);
+        } catch (imageError) {
+          console.error(`删除图片失败 (${image.title}):`, imageError);
+          // 继续删除其他图片，不中断流程
+        }
+      }
+      
+      console.log(`车型 ${model.name} 下的所有图片已删除`);
     }
     
+    // 删除车型
     await model.destroy();
     
     res.json({
       status: 'success',
-      message: '车型删除成功'
+      message: '车型及关联图片删除成功'
     });
   } catch (error) {
     console.error('删除车型失败:', error);

@@ -140,6 +140,9 @@ app.use('/api/variant-processor', require('./routes/variantProcessorRoutes'));
 // 摄取路由（特性开关控制，默认 404）
 app.use('/api/ingest', require('./routes/ingestRoutes'));
 
+// 反馈API路由
+app.use('/api/feedback', require('./routes/feedback'));
+
 console.log('所有API路由已加载完成');
 
 // 在路由之后添加全局错误处理中间件

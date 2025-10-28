@@ -337,11 +337,15 @@
       </div>
       </div>
     </div>
+    
+    <!-- 悬浮反馈组件 -->
+    <FloatingFeedback @feedback-submitted="handleFeedbackSubmitted" />
   </div>
 </template>
 
 <script>
 import { brandAPI, modelAPI, imageAPI, apiClient } from '@/services/api';
+import FloatingFeedback from '@/components/FloatingFeedback.vue';
 // 恢复使用chinese-to-pinyin库
 import chineseToPinyin from 'chinese-to-pinyin'
 import scrollPositionMixin from '@/utils/scrollPositionMixin';
@@ -350,6 +354,9 @@ import axios from 'axios';
 
 export default {
   name: 'Home',
+  components: {
+    FloatingFeedback
+  },
   mixins: [scrollPositionMixin],
   data() {
     return {
@@ -2108,8 +2115,16 @@ export default {
           }, delay - (currentTime - lastExecTime));
         }
       };
+    },
+    
+    // 处理反馈提交
+    handleFeedbackSubmitted(feedbackData) {
+      console.log('收到用户反馈:', feedbackData);
+      // 可以在这里添加统计逻辑或其他处理
+      this.$message.success('感谢您的反馈！我们会认真考虑您的建议。');
     }
   },
+  
   beforeRouteLeave(to, from, next) {
     // 在离开首页时立即停止所有活动
     console.log('离开首页，立即停止所有活动');
@@ -2185,6 +2200,7 @@ export default {
     // 标记初始化完成
     this.isInitializing = false;
   },
+  
   beforeDestroy() {
     // 设置组件为非活跃状态
     this.isComponentActive = false;

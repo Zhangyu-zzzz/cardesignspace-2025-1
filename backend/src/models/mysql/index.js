@@ -18,6 +18,7 @@ const ImageAnalysis = require('./ImageAnalysis');
 const ImageStat = require('./ImageStat');
 const Tag = require('./Tag');
 const ImageTag = require('./ImageTag');
+const Feedback = require('./Feedback');
 
 // 设置模型之间的关联关系，避免循环引用问题
 
@@ -153,6 +154,16 @@ ArticleImage.belongsTo(Article, { foreignKey: 'articleId' });
 User.hasMany(ArticleImage, { foreignKey: 'userId', as: 'ArticleImages' });
 ArticleImage.belongsTo(User, { foreignKey: 'userId', as: 'Uploader' });
 
+// === 反馈模型关联 ===
+
+// 用户和反馈的关联
+User.hasMany(Feedback, { foreignKey: 'userId', as: 'Feedbacks' });
+Feedback.belongsTo(User, { foreignKey: 'userId', as: 'User' });
+
+// 回复人和反馈的关联
+User.hasMany(Feedback, { foreignKey: 'repliedBy', as: 'RepliedFeedbacks' });
+Feedback.belongsTo(User, { foreignKey: 'repliedBy', as: 'RepliedBy' });
+
 module.exports = {
   Brand,
   Model,
@@ -173,5 +184,6 @@ module.exports = {
   ArticleImage,
   ImageCuration,
   Tag,
-  ImageTag
+  ImageTag,
+  Feedback
 }; 

@@ -2353,5 +2353,468 @@ export default {
   color: #ff9800;
   font-size: 16px;
 }
+
+/* ========================================= */
+/* 移动端响应式设计 */
+/* ========================================= */
+
+/* 平板及以下设备 (≤768px) */
+@media (max-width: 768px) {
+  /* 绘画界面标题栏 */
+  .draw-header-new {
+    padding: 8px 12px;
+    flex-wrap: wrap;
+  }
+  
+  .header-left, .header-right {
+    flex: 0 0 auto;
+  }
+  
+  .header-center {
+    flex: 1;
+    min-width: 0;
+  }
+  
+  .draw-title {
+    font-size: 1.1em;
+  }
+  
+  .draw-subtitle {
+    font-size: 0.75em;
+    display: none; /* 在小屏幕上隐藏副标题 */
+  }
+  
+  .btn-back-new,
+  .btn-submit-new {
+    padding: 6px 12px;
+    font-size: 0.85em;
+    gap: 4px;
+  }
+  
+  .btn-back-new .icon,
+  .btn-submit-new .icon {
+    font-size: 1em;
+  }
+  
+  /* 工具栏 */
+  .draw-toolbar {
+    padding: 8px 12px;
+    gap: 12px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  .toolbar-section {
+    padding: 6px 10px;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+  
+  .section-header {
+    gap: 4px;
+  }
+  
+  .section-icon {
+    font-size: 1em;
+  }
+  
+  .section-label {
+    font-size: 0.8em;
+  }
+  
+  /* 颜色选择 */
+  .color-item {
+    width: 28px;
+    height: 28px;
+  }
+  
+  /* 画笔控制 */
+  .brush-size-control {
+    gap: 6px;
+  }
+  
+  .control-label {
+    font-size: 0.8em;
+  }
+  
+  .size-slider-wrapper {
+    gap: 6px;
+  }
+  
+  .size-slider {
+    width: 60px;
+  }
+  
+  .size-preview {
+    min-width: 16px;
+    min-height: 16px;
+  }
+  
+  .size-value {
+    font-size: 0.75em;
+  }
+  
+  /* 操作按钮 */
+  .tool-btn {
+    padding: 6px 10px;
+    font-size: 0.8em;
+    gap: 4px;
+  }
+  
+  .btn-icon {
+    font-size: 1em;
+  }
+  
+  .btn-label {
+    font-size: 0.8em;
+  }
+  
+  /* 统计信息 */
+  .canvas-stats {
+    gap: 8px;
+  }
+  
+  .stat-item {
+    gap: 4px;
+  }
+  
+  .stat-label,
+  .stat-value {
+    font-size: 0.75em;
+  }
+  
+  /* 画布区域 */
+  .draw-canvas-area {
+    padding: 12px;
+  }
+  
+  .canvas-hint p {
+    font-size: 0.8em;
+  }
+  
+  /* 欢迎界面 */
+  .welcome-container {
+    padding: 40px 30px;
+    margin: 20px;
+  }
+  
+  .title {
+    font-size: 2.5em;
+  }
+  
+  .subtitle {
+    font-size: 1.2em;
+  }
+  
+  .intro {
+    font-size: 1em;
+  }
+  
+  .btn-primary, .btn-secondary {
+    padding: 12px 30px;
+    font-size: 1em;
+  }
+}
+
+/* 手机设备 (≤480px) */
+@media (max-width: 480px) {
+  /* 容器调整 */
+  .draw-container-new {
+    padding-top: 60px; /* 确保不被顶部导航遮挡 */
+  }
+  
+  /* 标题栏 - 紧凑设计 */
+  .draw-header-new {
+    padding: 6px 8px;
+    min-height: 50px;
+  }
+  
+  .header-left {
+    order: 1;
+  }
+  
+  .header-center {
+    order: 3;
+    flex: 1 1 100%;
+    text-align: center;
+    margin-top: 4px;
+  }
+  
+  .header-right {
+    order: 2;
+  }
+  
+  .draw-title {
+    font-size: 0.95em;
+    margin: 0;
+  }
+  
+  .draw-subtitle {
+    display: none;
+  }
+  
+  .btn-back-new,
+  .btn-submit-new {
+    padding: 5px 10px;
+    font-size: 0.75em;
+    min-width: auto;
+  }
+  
+  .btn-back-new span:last-child,
+  .btn-submit-new span:last-child {
+    display: none; /* 只显示图标 */
+  }
+  
+  /* 工具栏 - 超紧凑 */
+  .draw-toolbar {
+    padding: 6px 8px;
+    gap: 8px;
+  }
+  
+  .toolbar-section {
+    padding: 4px 8px;
+    gap: 6px;
+  }
+  
+  .section-label {
+    display: none; /* 只显示图标 */
+  }
+  
+  /* 颜色选择 */
+  .color-palette-new {
+    gap: 4px;
+  }
+  
+  .color-item {
+    width: 24px;
+    height: 24px;
+  }
+  
+  .check-mark {
+    font-size: 10px;
+  }
+  
+  /* 画笔控制 */
+  .size-slider {
+    width: 50px;
+  }
+  
+  .size-value {
+    display: none;
+  }
+  
+  /* 操作按钮 */
+  .tool-btn {
+    padding: 5px 8px;
+    font-size: 0.75em;
+  }
+  
+  .btn-label {
+    display: none; /* 只显示图标 */
+  }
+  
+  /* 统计信息 - 隐藏或最小化 */
+  .stats-section {
+    display: none;
+  }
+  
+  /* 画布区域 */
+  .draw-canvas-area {
+    padding: 8px;
+    flex: 1;
+  }
+  
+  .canvas-frame {
+    border-radius: 8px;
+  }
+  
+  .canvas-hint {
+    padding: 4px 12px;
+  }
+  
+  .canvas-hint p {
+    font-size: 0.7em;
+  }
+  
+  /* 欢迎界面 */
+  .welcome-container {
+    padding: 30px 20px;
+    margin: 15px;
+    border-radius: 20px;
+  }
+  
+  .title {
+    font-size: 2em;
+    margin-bottom: 15px;
+  }
+  
+  .subtitle {
+    font-size: 1em;
+    margin-bottom: 25px;
+  }
+  
+  .intro {
+    font-size: 0.9em;
+    margin: 20px 0;
+  }
+  
+  .intro p {
+    margin: 8px 0;
+  }
+  
+  .btn-primary, .btn-secondary {
+    padding: 10px 25px;
+    font-size: 0.9em;
+    margin: 8px;
+  }
+  
+  /* 车库界面 */
+  .garage-header {
+    padding: 10px 15px;
+  }
+  
+  .garage-title {
+    font-size: 1.4em;
+  }
+  
+  .btn-back {
+    padding: 8px 16px;
+    font-size: 0.9em;
+  }
+  
+  .garage-header-bottom {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  
+  .vehicle-count {
+    font-size: 0.9em;
+  }
+  
+  .display-limit-label {
+    font-size: 0.85em;
+  }
+  
+  .display-limit-select {
+    padding: 4px 8px;
+    font-size: 0.85em;
+  }
+  
+  /* 排行榜 */
+  .rank-container {
+    padding: 20px 15px;
+    margin: 10px;
+  }
+  
+  .rank-header h2 {
+    font-size: 1.8em;
+  }
+  
+  .rank-actions {
+    flex-direction: column;
+    gap: 10px;
+  }
+  
+  .rank-sort-group {
+    width: 100%;
+    justify-content: space-between;
+  }
+  
+  .rank-item {
+    padding: 12px;
+    gap: 12px;
+  }
+  
+  .rank-number {
+    width: 30px;
+    height: 30px;
+    font-size: 1em;
+  }
+  
+  .rank-preview {
+    width: 60px;
+    height: 60px;
+  }
+  
+  .rank-name {
+    font-size: 0.9em;
+  }
+  
+  .rank-score {
+    font-size: 0.8em;
+  }
+  
+  /* 载具弹窗 */
+  .vehicle-modal {
+    padding: 10px;
+  }
+  
+  .modal-content {
+    max-width: 95%;
+    padding: 20px 15px;
+  }
+  
+  .modal-title {
+    font-size: 1.3em;
+  }
+  
+  .modal-vehicle-preview canvas {
+    width: 180px;
+    height: 180px;
+  }
+  
+  .info-label,
+  .info-value {
+    font-size: 0.85em;
+  }
+  
+  .vote-btn {
+    padding: 10px 20px;
+  }
+  
+  .vote-icon {
+    font-size: 1.2em;
+  }
+}
+
+/* 超小屏幕设备 (≤360px) */
+@media (max-width: 360px) {
+  .draw-header-new {
+    padding: 4px 6px;
+  }
+  
+  .draw-title {
+    font-size: 0.85em;
+  }
+  
+  .btn-back-new,
+  .btn-submit-new {
+    padding: 4px 8px;
+    font-size: 0.7em;
+  }
+  
+  .color-item {
+    width: 22px;
+    height: 22px;
+  }
+  
+  .tool-btn {
+    padding: 4px 6px;
+  }
+  
+  .welcome-container {
+    padding: 20px 15px;
+  }
+  
+  .title {
+    font-size: 1.8em;
+  }
+  
+  .btn-primary, .btn-secondary {
+    padding: 8px 20px;
+    font-size: 0.85em;
+  }
+}
 </style>
 

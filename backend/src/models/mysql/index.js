@@ -19,6 +19,8 @@ const ImageStat = require('./ImageStat');
 const Tag = require('./Tag');
 const ImageTag = require('./ImageTag');
 const Feedback = require('./Feedback');
+const Vehicle = require('./Vehicle');
+const VehicleVote = require('./VehicleVote');
 
 // 设置模型之间的关联关系，避免循环引用问题
 
@@ -164,6 +166,20 @@ Feedback.belongsTo(User, { foreignKey: 'userId', as: 'User' });
 User.hasMany(Feedback, { foreignKey: 'repliedBy', as: 'RepliedFeedbacks' });
 Feedback.belongsTo(User, { foreignKey: 'repliedBy', as: 'RepliedBy' });
 
+// === 载具模型关联 ===
+
+// 用户和载具的关联
+User.hasMany(Vehicle, { foreignKey: 'userId', as: 'Vehicles' });
+Vehicle.belongsTo(User, { foreignKey: 'userId', as: 'Creator' });
+
+// 载具和投票记录的关联
+Vehicle.hasMany(VehicleVote, { foreignKey: 'vehicleId', as: 'Votes' });
+VehicleVote.belongsTo(Vehicle, { foreignKey: 'vehicleId' });
+
+// 用户和投票记录的关联
+User.hasMany(VehicleVote, { foreignKey: 'userId', as: 'VehicleVotes' });
+VehicleVote.belongsTo(User, { foreignKey: 'userId', as: 'Voter' });
+
 module.exports = {
   Brand,
   Model,
@@ -185,5 +201,7 @@ module.exports = {
   ImageCuration,
   Tag,
   ImageTag,
-  Feedback
+  Feedback,
+  Vehicle,
+  VehicleVote
 }; 

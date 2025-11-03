@@ -74,8 +74,8 @@ router.post('/brands/:id/logo', authenticateToken, restrictTo('admin', 'editor')
 
 // ==================== 车型管理路由 ====================
 router.get('/brands/:brandId/models', uploadController.getModelsByBrand);
-// 车型创建、更新、删除需要管理员或编辑者权限
-router.post('/models', authenticateToken, restrictTo('admin', 'editor'), uploadController.createModel);
+// 车型创建、更新、删除需要认证用户权限（允许所有登录用户创建车型）
+router.post('/models', authenticateToken, uploadController.createModel);
 router.put('/models/:id', authenticateToken, restrictTo('admin', 'editor'), uploadController.updateModel);
 router.delete('/models/:id', authenticateToken, restrictTo('admin', 'editor'), uploadController.deleteModel);
 

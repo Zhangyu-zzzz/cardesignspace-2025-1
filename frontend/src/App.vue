@@ -54,21 +54,34 @@
                 <el-menu-item index="/image-gallery" class="nav-item">
                   <span>图片</span>
                 </el-menu-item>
-                <el-menu-item index="/articles" class="nav-item">
-                  <span>资讯</span>
+                <el-menu-item index="/draw-car" class="nav-item">
+                  <span>画了个车</span>
                 </el-menu-item>
-                <el-menu-item index="/inspiration" class="nav-item">
-                  <span>灵感</span>
-                </el-menu-item>
-                <el-menu-item index="/forum" class="nav-item">
-                  <span>论坛</span>
-                </el-menu-item>
-                <el-menu-item index="/upload" class="nav-item">
-                  <span>上传</span>
-                </el-menu-item>
-                <el-menu-item index="/about" class="nav-item">
-                  <span>关于</span>
-                </el-menu-item>
+                <el-submenu index="more" class="nav-item nav-submenu">
+                  <template slot="title">
+                    <span>更多</span>
+                  </template>
+                  <el-menu-item index="/articles" class="nav-dropdown-item">
+                    <i class="el-icon-document"></i>
+                    <span>资讯</span>
+                  </el-menu-item>
+                  <el-menu-item index="/inspiration" class="nav-dropdown-item">
+                    <i class="el-icon-picture"></i>
+                    <span>灵感</span>
+                  </el-menu-item>
+                  <el-menu-item index="/forum" class="nav-dropdown-item">
+                    <i class="el-icon-chat-dot-round"></i>
+                    <span>论坛</span>
+                  </el-menu-item>
+                  <el-menu-item index="/upload" class="nav-dropdown-item">
+                    <i class="el-icon-upload"></i>
+                    <span>上传</span>
+                  </el-menu-item>
+                  <el-menu-item index="/about" class="nav-dropdown-item">
+                    <i class="el-icon-info"></i>
+                    <span>关于</span>
+                  </el-menu-item>
+                </el-submenu>
                 <!-- <el-menu-item v-if="user" index="/articles/edit" class="nav-item">
                   <span>写文章</span>
                 </el-menu-item> -->
@@ -106,6 +119,10 @@
                   <el-dropdown-item command="/upload">
                     <i class="el-icon-upload"></i>
                     上传
+                  </el-dropdown-item>
+                  <el-dropdown-item command="/draw-car">
+                    <i class="el-icon-edit"></i>
+                    画了个车
                   </el-dropdown-item>
                   <el-dropdown-item command="/about">
                     <i class="el-icon-info"></i>
@@ -864,6 +881,92 @@ body:has(.inspiration-modal) .navbar-container {
 .nav-item span {
   font-size: 14px !important;
   font-weight: inherit !important;
+}
+
+/* 导航下拉菜单样式 */
+.nav-submenu.el-submenu {
+  background-color: transparent !important;
+  border: none !important;
+}
+
+.nav-submenu .el-submenu__title {
+  display: flex !important;
+  align-items: center !important;
+  padding: 0 16px !important;
+  height: 36px !important;
+  border-bottom: none !important;
+  transition: all 0.2s ease !important;
+  color: #ffffff !important;
+  font-weight: 500 !important;
+  border-radius: 6px !important;
+  background-color: transparent !important;
+  border: none !important;
+}
+
+.nav-submenu .el-submenu__title:hover {
+  color: #e03426 !important;
+  background-color: transparent !important;
+}
+
+.nav-submenu .el-submenu__title i {
+  color: inherit !important;
+}
+
+/* 下拉菜单弹出框样式 */
+.el-menu--popup {
+  background: #1a1a1a !important;
+  border: 1px solid rgba(224, 52, 38, 0.3) !important;
+  border-radius: 8px !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5) !important;
+  margin-top: 8px !important;
+  padding: 8px 0 !important;
+  min-width: 180px !important;
+}
+
+.el-menu--popup .el-menu-item {
+  padding: 0 20px !important;
+  height: 40px !important;
+  line-height: 40px !important;
+  color: #ffffff !important;
+  transition: all 0.2s ease !important;
+  background-color: transparent !important;
+  border-radius: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+}
+
+.el-menu--popup .el-menu-item:hover {
+  color: #e03426 !important;
+  background-color: rgba(224, 52, 38, 0.1) !important;
+}
+
+.el-menu--popup .el-menu-item.is-active {
+  color: #e03426 !important;
+  background-color: rgba(224, 52, 38, 0.15) !important;
+  font-weight: 600 !important;
+}
+
+.el-menu--popup .el-menu-item i {
+  font-size: 16px !important;
+  color: inherit !important;
+}
+
+.el-menu--popup .el-menu-item span {
+  font-size: 14px !important;
+  color: inherit !important;
+}
+
+/* 确保下拉箭头正确显示 */
+.nav-submenu .el-submenu__icon-arrow {
+  color: #ffffff !important;
+  transition: all 0.2s ease !important;
+  font-size: 12px !important;
+  margin-left: 4px !important;
+}
+
+.nav-submenu:hover .el-submenu__icon-arrow {
+  color: #e03426 !important;
 }
 
 /* 右侧用户区域 */

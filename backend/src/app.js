@@ -143,6 +143,9 @@ app.use('/api/ingest', require('./routes/ingestRoutes'));
 // 反馈API路由
 app.use('/api/feedback', require('./routes/feedback'));
 
+// 画了个车API路由
+app.use('/api/draw-car', require('./routes/vehicle'));
+
 console.log('所有API路由已加载完成');
 
 // 在路由之后添加全局错误处理中间件

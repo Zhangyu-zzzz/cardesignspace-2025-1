@@ -98,6 +98,12 @@ const routes = [
     component: () => import('../views/Inspiration.vue')
   },
   {
+    path: '/draw-car',
+    name: 'DrawCar',
+    component: () => import('../views/DrawCar.vue'),
+    meta: { requiresAuth: false }
+  },
+  {
     path: '/articles/edit/:id?',
     name: 'ArticleEditor',
     component: () => import('../views/ArticleEditor.vue'),

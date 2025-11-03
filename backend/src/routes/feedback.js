@@ -26,3 +26,4 @@ router.delete('/:id', authenticateToken, restrictTo('admin'), feedbackController
 router.get('/stats/summary', authenticateToken, restrictTo('admin'), feedbackController.getFeedbackStats);
 
 module.exports = router;
+

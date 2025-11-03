@@ -1460,6 +1460,13 @@ export default {
       
       try {
         await this.$refs.modelFormRef.validate()
+        
+        // 验证品牌ID
+        if (!this.selectedBrandId) {
+          this.$message.error('请先选择品牌')
+          return
+        }
+        
         this.modelDialog.saving = true
         
         const modelData = {
@@ -1499,7 +1506,13 @@ export default {
         }
       } catch (error) {
         console.error('保存车型失败:', error)
-        this.$message.error('保存车型失败')
+        
+        // 检查是否有具体的错误信息
+        if (error.response && error.response.data && error.response.data.message) {
+          this.$message.error(error.response.data.message)
+        } else {
+          this.$message.error('保存车型失败')
+        }
       } finally {
         this.modelDialog.saving = false
       }

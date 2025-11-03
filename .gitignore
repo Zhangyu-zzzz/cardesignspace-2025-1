@@ -133,3 +133,10 @@ backend/backup-scheduler-status.json
 
 **.gz
 .env.dev
+# 敏感文件
+*.env.backup*
+*.env.production.backup*
+*-summary.md
+backend/.env.backup*
+backend/.env.production.backup*
+fix-server-*.sh

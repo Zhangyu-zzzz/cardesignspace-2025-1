@@ -2565,57 +2565,152 @@ export default {
     display: none; /* 只显示图标 */
   }
   
-  /* 工具栏 - 超紧凑 */
+  /* ⭐ 工具栏 - 改为两行紧凑网格布局，无需滚动 */
   .draw-toolbar {
-    padding: 6px 8px;
-    gap: 8px;
+    padding: 8px 8px;
+    gap: 6px;
+    display: grid;
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto;
+    overflow-x: visible; /* 移除横向滚动 */
+    -webkit-overflow-scrolling: auto;
   }
   
-  .toolbar-section {
-    padding: 4px 8px;
+  /* ⭐ 第一行：颜色选择（占满一行） */
+  .toolbar-section.color-section {
+    padding: 6px 8px;
     gap: 6px;
+    flex-shrink: 1;
+    grid-column: 1;
+    grid-row: 1;
+    border-radius: 8px;
+  }
+  
+  /* ⭐ 第二行：画笔和操作按钮（并排） */
+  .toolbar-section.brush-section,
+  .toolbar-section.actions-section {
+    padding: 6px 8px;
+    gap: 6px;
+    flex-shrink: 1;
+    border-radius: 8px;
+  }
+  
+  .toolbar-section.brush-section {
+    grid-column: 1;
+    grid-row: 2;
+  }
+  
+  .toolbar-section.actions-section {
+    grid-column: 1;
+    grid-row: 3;
+  }
+  
+  /* ⭐ 统计信息 - 完全隐藏 */
+  .toolbar-section.stats-section {
+    display: none;
+  }
+  
+  /* ⭐ 改进布局：横向排列子元素 */
+  .toolbar-section {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+  
+  .section-header {
+    flex-shrink: 0;
+    margin-right: 6px;
   }
   
   .section-label {
     display: none; /* 只显示图标 */
   }
   
-  /* 颜色选择 */
+  .section-icon {
+    font-size: 1.1em;
+  }
+  
+  /* 颜色选择 - 紧凑排列 */
   .color-palette-new {
-    gap: 4px;
+    display: flex;
+    gap: 3px;
+    flex-wrap: nowrap;
+    flex: 1;
+    justify-content: space-between;
   }
   
   .color-item {
-    width: 24px;
-    height: 24px;
+    width: 28px;
+    height: 28px;
+    flex-shrink: 0;
   }
   
   .check-mark {
-    font-size: 10px;
+    font-size: 12px;
   }
   
-  /* 画笔控制 */
+  /* 画笔控制 - 紧凑横向布局 */
+  .brush-controls {
+    flex: 1;
+    display: flex;
+    align-items: center;
+  }
+  
+  .brush-size-control {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  
+  .control-label {
+    display: none;
+  }
+  
+  .size-slider-wrapper {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  
   .size-slider {
-    width: 50px;
+    flex: 1;
+    min-width: 80px;
+  }
+  
+  .size-preview {
+    flex-shrink: 0;
   }
   
   .size-value {
     display: none;
   }
   
-  /* 操作按钮 */
+  /* 操作按钮 - 横向紧凑排列 */
+  .action-btns {
+    flex: 1;
+    display: flex;
+    gap: 6px;
+    justify-content: flex-end;
+  }
+  
   .tool-btn {
-    padding: 5px 8px;
-    font-size: 0.75em;
+    padding: 6px 12px;
+    font-size: 0.8em;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  
+  .btn-icon {
+    font-size: 1.1em;
   }
   
   .btn-label {
-    display: none; /* 只显示图标 */
-  }
-  
-  /* 统计信息 - 隐藏或最小化 */
-  .stats-section {
-    display: none;
+    font-size: 0.8em;
   }
   
   /* 画布区域 */
@@ -2794,13 +2889,43 @@ export default {
     font-size: 0.7em;
   }
   
-  .color-item {
-    width: 22px;
-    height: 22px;
+  /* ⭐ 工具栏进一步压缩 */
+  .draw-toolbar {
+    padding: 6px 6px;
+    gap: 4px;
   }
   
-  .tool-btn {
+  .toolbar-section {
     padding: 4px 6px;
+  }
+  
+  /* 颜色选择器缩小 */
+  .color-item {
+    width: 26px;
+    height: 26px;
+  }
+  
+  .check-mark {
+    font-size: 11px;
+  }
+  
+  /* 画笔滑块缩小 */
+  .size-slider {
+    min-width: 60px;
+  }
+  
+  /* 操作按钮缩小 */
+  .tool-btn {
+    padding: 5px 10px;
+    font-size: 0.75em;
+  }
+  
+  .btn-icon {
+    font-size: 1em;
+  }
+  
+  .btn-label {
+    font-size: 0.75em;
   }
   
   .welcome-container {

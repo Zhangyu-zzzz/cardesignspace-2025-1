@@ -101,6 +101,10 @@
                 <span class="btn-icon">↶</span>
                 <span class="btn-label">撤销</span>
               </button>
+              <button @click="resetCanvasTransform" class="tool-btn reset-btn" v-if="scale !== 1 || translateX !== 0 || translateY !== 0">
+                <span class="btn-icon">🔍</span>
+                <span class="btn-label">重置视图</span>
+              </button>
               <button @click="clearCanvas" class="tool-btn clear-btn">
                 <span class="btn-icon">🗑️</span>
                 <span class="btn-label">清空</span>
@@ -134,7 +138,8 @@
               <canvas ref="drawCanvas"></canvas>
             </div>
             <div class="canvas-hint">
-              <p>💡 提示：在画布上自由绘画，创作属于你的独特载具</p>
+              <p class="hint-desktop">💡 提示：在画布上自由绘画，创作属于你的独特载具</p>
+              <p class="hint-mobile">💡 单指绘画 | 双指缩放平移 | 画出精彩细节</p>
             </div>
           </div>
         </div>
@@ -318,7 +323,15 @@ export default {
       canvasWidth: 850, // ⭐ 画布宽度
       canvasHeight: 550, // ⭐ 画布高度（稍微减小，确保完整显示）
       nameCheckMessage: '', // ⭐ 名称检测提示信息
-      nameCheckStatus: '' // ⭐ 名称检测状态：'available' 或 'taken'
+      nameCheckStatus: '', // ⭐ 名称检测状态：'available' 或 'taken'
+      // ⭐ 双指缩放和平移相关
+      scale: 1, // 当前缩放比例
+      translateX: 0, // X轴平移
+      translateY: 0, // Y轴平移
+      lastTouchDistance: 0, // 上次两指距离
+      lastTouchMidpoint: null, // 上次触摸中点
+      isPinching: false, // 是否正在缩放
+      isPanning: false // 是否正在平移（单指）
     }
   },
   computed: {
@@ -377,11 +390,11 @@ export default {
       canvas.addEventListener('mouseup', this.stopDrawing)
       canvas.addEventListener('mouseleave', this.stopDrawing)
       
-      // ⭐ 绑定触摸事件（移动设备支持）
-      canvas.addEventListener('touchstart', this.handleTouchStart, { passive: false })
-      canvas.addEventListener('touchmove', this.handleTouchMove, { passive: false })
-      canvas.addEventListener('touchend', this.stopDrawing)
-      canvas.addEventListener('touchcancel', this.stopDrawing)
+      // ⭐ 绑定触摸事件（移动设备支持 + 双指缩放）
+      canvas.addEventListener('touchstart', this.handleCanvasTouchStart, { passive: false })
+      canvas.addEventListener('touchmove', this.handleCanvasTouchMove, { passive: false })
+      canvas.addEventListener('touchend', this.handleCanvasTouchEnd, { passive: false })
+      canvas.addEventListener('touchcancel', this.handleCanvasTouchEnd, { passive: false })
       
       // ⭐ 清空画布（透明背景）
       this.drawCtx.clearRect(0, 0, canvas.width, canvas.height)
@@ -414,9 +427,9 @@ export default {
       const scaleX = this.drawCanvas.width / rect.width
       const scaleY = this.drawCanvas.height / rect.height
       
-      // ⭐ 应用缩放比例计算正确的canvas坐标
-      const x = (e.clientX - rect.left) * scaleX
-      const y = (e.clientY - rect.top) * scaleY
+      // ⭐ 应用缩放比例和视口变换计算正确的canvas坐标
+      const x = ((e.clientX - rect.left) * scaleX - this.translateX) / this.scale
+      const y = ((e.clientY - rect.top) * scaleY - this.translateY) / this.scale
       
       // ⭐ 开始新的笔画
       this.currentStroke = [{
@@ -446,9 +459,9 @@ export default {
       const scaleX = this.drawCanvas.width / rect.width
       const scaleY = this.drawCanvas.height / rect.height
       
-      // ⭐ 应用缩放比例计算正确的canvas坐标
-      const x = (e.clientX - rect.left) * scaleX
-      const y = (e.clientY - rect.top) * scaleY
+      // ⭐ 应用缩放比例和视口变换计算正确的canvas坐标
+      const x = ((e.clientX - rect.left) * scaleX - this.translateX) / this.scale
+      const y = ((e.clientY - rect.top) * scaleY - this.translateY) / this.scale
       
       // ⭐ 保存笔画点
       this.currentStroke.push({
@@ -484,27 +497,137 @@ export default {
       this.isDrawing = false
     },
     
-    // ⭐ 触摸事件处理（移动设备支持）
-    handleTouchStart(e) {
+    // ⭐ 画布触摸事件处理（支持单指绘画 + 双指缩放平移）
+    handleCanvasTouchStart(e) {
       e.preventDefault()
-      if (e.touches.length > 0) {
-        const touch = e.touches[0]
-        this.startDrawing({
-          clientX: touch.clientX,
-          clientY: touch.clientY
-        })
+      
+      if (e.touches.length === 1) {
+        // 单指：开始绘画
+        if (!this.isPinching) {
+          const touch = e.touches[0]
+          this.startDrawing({
+            clientX: touch.clientX,
+            clientY: touch.clientY
+          })
+        }
+      } else if (e.touches.length === 2) {
+        // 双指：准备缩放
+        this.isPinching = true
+        this.isDrawing = false // 停止绘画
+        
+        // 计算两指距离
+        const touch1 = e.touches[0]
+        const touch2 = e.touches[1]
+        this.lastTouchDistance = this.getTouchDistance(touch1, touch2)
+        this.lastTouchMidpoint = this.getTouchMidpoint(touch1, touch2)
       }
     },
     
-    handleTouchMove(e) {
+    handleCanvasTouchMove(e) {
       e.preventDefault()
-      if (e.touches.length > 0) {
+      
+      if (e.touches.length === 1 && !this.isPinching) {
+        // 单指：绘画
         const touch = e.touches[0]
         this.draw({
           clientX: touch.clientX,
           clientY: touch.clientY
         })
+      } else if (e.touches.length === 2) {
+        // 双指：缩放和平移
+        const touch1 = e.touches[0]
+        const touch2 = e.touches[1]
+        
+        // 计算新的两指距离和中点
+        const newDistance = this.getTouchDistance(touch1, touch2)
+        const newMidpoint = this.getTouchMidpoint(touch1, touch2)
+        
+        // 缩放
+        if (this.lastTouchDistance > 0) {
+          const scaleDelta = newDistance / this.lastTouchDistance
+          const newScale = Math.max(0.5, Math.min(5, this.scale * scaleDelta)) // 限制在0.5x-5x
+          
+          // 以触摸中点为中心缩放
+          const rect = this.drawCanvas.getBoundingClientRect()
+          const scaleX = this.drawCanvas.width / rect.width
+          const scaleY = this.drawCanvas.height / rect.height
+          
+          const canvasX = (newMidpoint.x - rect.left) * scaleX
+          const canvasY = (newMidpoint.y - rect.top) * scaleY
+          
+          // 调整平移以保持缩放中心不变
+          this.translateX = canvasX - (canvasX - this.translateX) * (newScale / this.scale)
+          this.translateY = canvasY - (canvasY - this.translateY) * (newScale / this.scale)
+          
+          this.scale = newScale
+        }
+        
+        // 平移
+        if (this.lastTouchMidpoint) {
+          const rect = this.drawCanvas.getBoundingClientRect()
+          const scaleX = this.drawCanvas.width / rect.width
+          const scaleY = this.drawCanvas.height / rect.height
+          
+          const dx = (newMidpoint.x - this.lastTouchMidpoint.x) * scaleX
+          const dy = (newMidpoint.y - this.lastTouchMidpoint.y) * scaleY
+          
+          this.translateX += dx
+          this.translateY += dy
+        }
+        
+        this.lastTouchDistance = newDistance
+        this.lastTouchMidpoint = newMidpoint
+        
+        // 应用变换
+        this.applyCanvasTransform()
       }
+    },
+    
+    handleCanvasTouchEnd(e) {
+      if (e.touches.length === 0) {
+        // 所有手指离开
+        this.isPinching = false
+        this.lastTouchDistance = 0
+        this.lastTouchMidpoint = null
+        this.stopDrawing()
+      } else if (e.touches.length === 1) {
+        // 还有一个手指
+        this.isPinching = false
+        this.lastTouchDistance = 0
+        this.lastTouchMidpoint = null
+      }
+    },
+    
+    // ⭐ 辅助方法：计算两个触摸点之间的距离
+    getTouchDistance(touch1, touch2) {
+      const dx = touch2.clientX - touch1.clientX
+      const dy = touch2.clientY - touch1.clientY
+      return Math.sqrt(dx * dx + dy * dy)
+    },
+    
+    // ⭐ 辅助方法：计算两个触摸点的中点
+    getTouchMidpoint(touch1, touch2) {
+      return {
+        x: (touch1.clientX + touch2.clientX) / 2,
+        y: (touch1.clientY + touch2.clientY) / 2
+      }
+    },
+    
+    // ⭐ 应用画布变换
+    applyCanvasTransform() {
+      if (!this.drawCanvas) return
+      
+      this.drawCanvas.style.transform = `translate(${this.translateX / this.scale}px, ${this.translateY / this.scale}px) scale(${this.scale})`
+      this.drawCanvas.style.transformOrigin = '0 0'
+    },
+    
+    // ⭐ 重置缩放和平移
+    resetCanvasTransform() {
+      this.scale = 1
+      this.translateX = 0
+      this.translateY = 0
+      this.applyCanvasTransform()
+      this.$message.success('已重置视图')
     },
     
     undo() {
@@ -1900,6 +2023,14 @@ export default {
   font-weight: 500;
 }
 
+.canvas-hint .hint-mobile {
+  display: none;
+}
+
+.canvas-hint .hint-desktop {
+  display: block;
+}
+
 /* 车库界面 */
 .garage-container {
   width: 100%;
@@ -2490,6 +2621,14 @@ export default {
   
   .canvas-hint p {
     font-size: 0.8em;
+  }
+  
+  .canvas-hint .hint-desktop {
+    display: none;
+  }
+  
+  .canvas-hint .hint-mobile {
+    display: block;
   }
   
   /* 欢迎界面 */

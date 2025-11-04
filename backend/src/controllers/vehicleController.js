@@ -61,9 +61,7 @@ exports.createVehicle = async (req, res) => {
     if (finalName !== '未命名载具') {
       const existingVehicle = await Vehicle.findOne({
         where: {
-          name: {
-            [Op.iLike]: finalName // PostgreSQL 不区分大小写匹配，MySQL 使用 COLLATE
-          },
+          name: finalName, // MySQL 默认不区分大小写
           status: 'active'
         }
       });

@@ -172,9 +172,24 @@ const detectAnomalousRequests = (req, res, next) => {
   
   // 只检测非API路径的可疑模式
   const suspiciousPatterns = [
-    /wp-admin/i, /wp-login/i, /wp-signup/i, /admin/i, /administrator/i,
-    /phpmyadmin/i, /mysql/i, /database/i, /db/i, /config/i, /setup/i,
-    /install/i, /test/i, /debug/i, /api-docs/i, /swagger/i
+    // WordPress相关
+    /wp-admin/i, /wp-login/i, /wp-signup/i, /wp-content/i, /wp-includes/i, /xmlrpc\.php/i,
+    // 管理后台
+    /admin/i, /administrator/i, /console/i, /cpanel/i, /webmail/i,
+    // 数据库管理
+    /phpmyadmin/i, /pma/i, /mysql/i, /database/i, /db/i,
+    // 敏感配置文件
+    /\.env/i, /\.git/i, /config/i, /\.htaccess/i, /web\.config/i,
+    /composer\.json/i, /package\.json/i,
+    // PHP探测
+    /phpinfo/i, /info\.php/i, /test\.php/i, /php\.ini/i,
+    // Laravel特定漏洞
+    /_ignition/i, /telescope/i, /horizon/i, /debugbar/i,
+    // 通用攻击路径
+    /setup/i, /install/i, /test/i, /debug/i, /wiki/i,
+    /api-docs/i, /swagger/i, /cgi-bin/i,
+    // Shell和后门
+    /shell/i, /backdoor/i, /webshell/i, /phpshell/i, /c99/i, /r57/i
   ];
   
   const isSuspicious = suspiciousPatterns.some(pattern => pattern.test(url));

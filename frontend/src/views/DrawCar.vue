@@ -151,7 +151,7 @@
       <div class="garage-container">
         <div class="garage-header">
           <div class="garage-header-top">
-            <h2 class="garage-title">🏁 全球车库</h2>
+            <h2 class="garage-title">🏁 全球载具</h2>
             <button @click="goToScreen('welcome')" class="btn-back">← 返回</button>
           </div>
           <div class="garage-header-bottom">
@@ -186,16 +186,46 @@
       <div class="rank-container">
         <div class="rank-header">
           <h2>🏆 排行榜</h2>
-          <p class="hint">按得分（点赞-拉踩）从高到低排序</p>
+          <p class="hint">按得分（点赞-踩）从高到低排序</p>
         </div>
         <div class="rank-actions">
-          <button @click="goToScreen('welcome')" class="btn-back">← 返回</button>
-          <button @click="goToScreen('garage')" class="btn-secondary">返回车库</button>
+          <div class="rank-nav-group">
+            <button @click="goToScreen('welcome')" class="rank-btn rank-btn-back">
+              <span>←</span> 返回首页
+            </button>
+            <button @click="goToScreen('garage')" class="rank-btn rank-btn-secondary">
+              🚗 返回车库
+            </button>
+          </div>
           <div class="rank-sort-group">
-            <button @click="sortRank('hot')" class="btn-secondary">按热度</button>
-            <button @click="sortRank('score')" class="btn-secondary">按得分</button>
-            <button @click="sortRank('date')" class="btn-secondary">按日期</button>
-            <button @click="sortRank('random')" class="btn-secondary">随机排序</button>
+            <button 
+              @click="sortRank('score')" 
+              class="rank-sort-btn"
+              :class="{ 'active': currentSortType === 'score' }"
+            >
+              ⭐ 按得分
+            </button>
+            <button 
+              @click="sortRank('hot')" 
+              class="rank-sort-btn"
+              :class="{ 'active': currentSortType === 'hot' }"
+            >
+              🔥 按热度
+            </button>
+            <button 
+              @click="sortRank('date')" 
+              class="rank-sort-btn"
+              :class="{ 'active': currentSortType === 'date' }"
+            >
+              📅 按日期
+            </button>
+            <button 
+              @click="sortRank('random')" 
+              class="rank-sort-btn"
+              :class="{ 'active': currentSortType === 'random' }"
+            >
+              🎲 随机
+            </button>
           </div>
         </div>
         <div class="rank-grid">
@@ -274,11 +304,19 @@
         </div>
         
         <div class="modal-footer">
-          <button @click="voteVehicle('like')" class="vote-btn like-btn">
+          <button 
+            @click="voteVehicle('like')" 
+            class="vote-btn like-btn"
+            :class="{ 'active': selectedVehicle.userVoteStatus === 'like' }"
+          >
             <span class="vote-icon">👍</span>
             <span class="vote-count">{{ selectedVehicle.likes || 0 }}</span>
           </button>
-          <button @click="voteVehicle('dislike')" class="vote-btn dislike-btn">
+          <button 
+            @click="voteVehicle('dislike')" 
+            class="vote-btn dislike-btn"
+            :class="{ 'active': selectedVehicle.userVoteStatus === 'dislike' }"
+          >
             <span class="vote-icon">👎</span>
             <span class="vote-count">{{ selectedVehicle.dislikes || 0 }}</span>
           </button>
@@ -313,6 +351,7 @@ export default {
       vehicleName: '',
       currentDrawingData: null,
       rankedVehicles: [],
+      currentSortType: 'score', // ⭐ 当前排序类型
       drawCanvas: null,
       drawCtx: null,
       garageCanvas: null,
@@ -782,7 +821,9 @@ export default {
     async loadVehicles() {
       try {
         const response = await getVehicles()
+        // ⭐ 响应拦截器已经返回了response.data，所以直接使用response.data
         this.vehicles = response.data || []
+        console.log('✅ 载具数据已加载:', this.vehicles.length, '个载具')
       } catch (error) {
         console.error('加载载具失败:', error)
       }
@@ -1126,8 +1167,13 @@ export default {
     },
     
     selectVehicleInRank(vehicle) {
-      // ⭐ 直接打开弹窗，不需要跳转到车库
-      this.selectVehicle(vehicle)
+      // ⭐ 从vehicles数组中找到对应的载具，确保引用一致
+      const originalVehicle = this.vehicles.find(v => v.id === vehicle.id)
+      if (originalVehicle) {
+        this.selectVehicle(originalVehicle)
+      } else {
+        this.selectVehicle(vehicle)
+      }
     },
     
     closeModal() {
@@ -1138,21 +1184,68 @@ export default {
       if (!this.selectedVehicle) return
       
       try {
-        await apiVoteVehicle(this.selectedVehicle.id, type)
+        const vehicleId = this.selectedVehicle.id
+        const response = await apiVoteVehicle(vehicleId, type)
         
-        // 更新本地数据
-        if (type === 'like') {
-          this.selectedVehicle.likes++
-          this.selectedVehicle.score++
-        } else {
-          this.selectedVehicle.dislikes++
-          this.selectedVehicle.score--
+        // ⭐ 调试：打印完整的响应数据
+        console.log('🔍 投票API响应:', response)
+        console.log('🔍 response.data:', response.data)
+        
+        // ⭐ 关键修复：响应拦截器已经返回了response.data，所以这里直接用response
+        if (response && response.data) {
+          const updatedVehicle = response.data
+          
+          // 1. 实时更新vehicles数组中的数据（使用$set确保响应式）
+          const vehicleIndex = this.vehicles.findIndex(v => v.id === vehicleId)
+          if (vehicleIndex !== -1) {
+            // ⭐ 使用$set确保Vue能检测到变化
+            const vehicle = this.vehicles[vehicleIndex]
+            this.$set(vehicle, 'likes', updatedVehicle.likes)
+            this.$set(vehicle, 'dislikes', updatedVehicle.dislikes)
+            this.$set(vehicle, 'score', updatedVehicle.score)
+            this.$set(vehicle, 'userVoteStatus', updatedVehicle.userVoteStatus)
+            
+            // 2. 立即更新selectedVehicle（如果是同一个载具）
+            if (this.selectedVehicle.id === vehicleId) {
+              this.$set(this.selectedVehicle, 'likes', updatedVehicle.likes)
+              this.$set(this.selectedVehicle, 'dislikes', updatedVehicle.dislikes)
+              this.$set(this.selectedVehicle, 'score', updatedVehicle.score)
+              this.$set(this.selectedVehicle, 'userVoteStatus', updatedVehicle.userVoteStatus)
+            }
+          }
+          
+          // 3. 更新车库中的vehicleSprites数据（如果在车库页面）
+          if (this.currentScreen === 'garage') {
+            // ⭐ 找到对应的sprite并更新其数据属性，保留物理属性（位置、速度等）
+            const sprite = this.vehicleSprites.find(s => s.id === vehicleId)
+            if (sprite) {
+              this.$set(sprite, 'likes', updatedVehicle.likes)
+              this.$set(sprite, 'dislikes', updatedVehicle.dislikes)
+              this.$set(sprite, 'score', updatedVehicle.score)
+              this.$set(sprite, 'userVoteStatus', updatedVehicle.userVoteStatus)
+            }
+          }
+          
+          // 4. 实时更新排行榜数据（必须在$nextTick之后调用）
+          this.$nextTick(() => {
+            this.updateRankList()
+            
+            // 5. 重新渲染排行榜canvas（如果在排行榜页面）
+            if (this.currentScreen === 'rank') {
+              this.renderRankPreviews()
+            }
+          })
+          
+          console.log('✅ 投票数据已实时更新:', {
+            vehicleId,
+            likes: updatedVehicle.likes,
+            dislikes: updatedVehicle.dislikes,
+            score: updatedVehicle.score,
+            userVoteStatus: updatedVehicle.userVoteStatus
+          })
         }
         
-        this.$message.success(type === 'like' ? '点赞成功！' : '已记录')
-        
-        // 重新加载数据
-        await this.loadVehicles()
+        this.$message.success(response.message || (type === 'like' ? '点赞成功！' : '已记录'))
       } catch (error) {
         console.error('投票失败:', error)
         this.$message.error('投票失败，请稍后重试')
@@ -1206,6 +1299,9 @@ export default {
     },
     
     sortRank(type) {
+      // ⭐ 更新当前排序类型
+      this.currentSortType = type
+      
       if (type === 'hot') {
         this.rankedVehicles = [...this.vehicles].sort((a, b) => (b.likes + b.dislikes) - (a.likes + a.dislikes))
       } else if (type === 'score') {
@@ -2304,6 +2400,43 @@ export default {
   transform: translateY(0);
 }
 
+/* ⭐ 已投票按钮的高亮样式 */
+.vote-btn.active {
+  border-color: #667eea;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+}
+
+.vote-btn.active .vote-icon {
+  animation: pulse 0.5s ease;
+}
+
+.vote-btn.active .vote-count {
+  color: white;
+}
+
+.vote-btn.like-btn.active {
+  background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+  border-color: #4CAF50;
+  box-shadow: 0 4px 15px rgba(76, 175, 80, 0.4);
+}
+
+.vote-btn.dislike-btn.active {
+  background: linear-gradient(135deg, #f44336 0%, #d32f2f 100%);
+  border-color: #f44336;
+  box-shadow: 0 4px 15px rgba(244, 67, 54, 0.4);
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.2);
+  }
+}
+
 .vote-icon {
   font-size: 1.5em;
 }
@@ -2366,11 +2499,87 @@ export default {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 30px;
+  flex-wrap: wrap;
+  gap: 15px;
 }
 
-.rank-sort-group {
+/* 排行榜导航按钮组 */
+.rank-nav-group {
   display: flex;
   gap: 10px;
+}
+
+/* 排行榜按钮样式 */
+.rank-btn {
+  padding: 8px 16px;
+  font-size: 0.9em;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.rank-btn-back {
+  background: white;
+  color: #667eea;
+  border: 2px solid #667eea;
+}
+
+.rank-btn-back:hover {
+  background: #667eea;
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.rank-btn-secondary {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+}
+
+.rank-btn-secondary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.5);
+}
+
+/* 排序按钮组 */
+.rank-sort-group {
+  display: flex;
+  gap: 8px;
+  background: #f8f9fa;
+  padding: 4px;
+  border-radius: 10px;
+}
+
+.rank-sort-btn {
+  padding: 6px 14px;
+  font-size: 0.85em;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-weight: 500;
+  background: transparent;
+  color: #666;
+}
+
+.rank-sort-btn:hover {
+  background: white;
+  color: #667eea;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.rank-sort-btn.active {
+  background: white;
+  color: #667eea;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2);
+  font-weight: 600;
 }
 
 .rank-grid {
@@ -2947,12 +3156,29 @@ export default {
   
   .rank-actions {
     flex-direction: column;
-    gap: 10px;
+    gap: 12px;
+    align-items: stretch;
+  }
+  
+  .rank-nav-group {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .rank-btn {
+    font-size: 0.85em;
+    padding: 7px 14px;
   }
   
   .rank-sort-group {
     width: 100%;
     justify-content: space-between;
+    padding: 3px;
+  }
+  
+  .rank-sort-btn {
+    font-size: 0.75em;
+    padding: 5px 10px;
   }
   
   .rank-item {

@@ -502,3 +502,4 @@ mysql -u root -p auto_gallery < backend/migrations/add_drawing_data_to_vehicles.
 **所有问题已修复！可以开始测试了！** 🚀
 
 
+

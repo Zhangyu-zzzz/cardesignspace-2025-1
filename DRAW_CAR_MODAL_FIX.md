@@ -318,3 +318,4 @@ ctx.drawImage(img, x, y, img.width * scale, img.height * scale)
 **注意**: 此次优化不仅修复了图片不显示的bug，还全面提升了弹窗的视觉效果和用户体验！
 
 
+

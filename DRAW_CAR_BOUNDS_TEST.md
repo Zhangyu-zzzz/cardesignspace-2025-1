@@ -163,3 +163,4 @@ console.log(app.$children[0].handleCollisions.toString())
 **提示**: 如果所有测试通过，可以关闭调试模式，正常使用了！
 
 
+

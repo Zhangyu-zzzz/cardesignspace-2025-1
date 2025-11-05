@@ -7,6 +7,8 @@ const { Op } = require('sequelize');
 exports.getVehicles = async (req, res) => {
   try {
     const { limit = 100, offset = 0, sortBy = 'createdAt', order = 'DESC' } = req.query;
+    const userId = req.user ? req.user.id : null;
+    const ipAddress = req.ip || req.connection.remoteAddress;
 
     const vehicles = await Vehicle.findAll({
       where: {
@@ -24,9 +26,37 @@ exports.getVehicles = async (req, res) => {
       ]
     });
 
+    // ⭐ 为每个载具添加当前用户的投票状态
+    const vehiclesWithVoteStatus = await Promise.all(vehicles.map(async (vehicle) => {
+      const vehicleData = vehicle.toJSON();
+      
+      // 查询当前用户对该载具的投票记录
+      let voteQuery = {
+        vehicleId: vehicle.id
+      };
+      
+      if (userId) {
+        voteQuery[Op.or] = [
+          { userId: userId },
+          { ipAddress: ipAddress }
+        ];
+      } else {
+        voteQuery.ipAddress = ipAddress;
+        voteQuery.userId = null;
+      }
+      
+      const userVote = await VehicleVote.findOne({
+        where: voteQuery,
+        attributes: ['voteType']
+      });
+      
+      vehicleData.userVoteStatus = userVote ? userVote.voteType : null;
+      return vehicleData;
+    }));
+
     res.json({
       status: 'success',
-      data: vehicles,
+      data: vehiclesWithVoteStatus,
       total: await Vehicle.count({ where: { status: 'active' } })
     });
   } catch (error) {
@@ -177,14 +207,25 @@ exports.voteVehicle = async (req, res) => {
     }
 
     // 检查是否已经投过票
+    // ⭐ 修复：根据用户状态构建不同的查询条件
+    let voteQuery = {
+      vehicleId: id
+    };
+    
+    if (userId) {
+      // 已登录用户：优先匹配userId，也匹配ipAddress（防止同一用户不同设备）
+      voteQuery[Op.or] = [
+        { userId: userId },
+        { ipAddress: ipAddress }
+      ];
+    } else {
+      // 匿名用户：只匹配ipAddress
+      voteQuery.ipAddress = ipAddress;
+      voteQuery.userId = null;
+    }
+    
     const existingVote = await VehicleVote.findOne({
-      where: {
-        vehicleId: id,
-        [Op.or]: [
-          { userId: userId },
-          { ipAddress: ipAddress }
-        ]
-      }
+      where: voteQuery
     });
 
     if (existingVote) {
@@ -238,10 +279,26 @@ exports.voteVehicle = async (req, res) => {
 
     await vehicle.save();
 
+    // ⭐ 添加日志确认数据已保存
+    console.log('投票成功并已保存到数据库:', {
+      vehicleId: vehicle.id,
+      vehicleName: vehicle.name,
+      likes: vehicle.likes,
+      dislikes: vehicle.dislikes,
+      score: vehicle.score,
+      voteType: type,
+      userId: userId,
+      ipAddress: ipAddress
+    });
+
+    // ⭐ 返回载具数据，并包含用户的投票状态
+    const vehicleData = vehicle.toJSON();
+    vehicleData.userVoteStatus = existingVote ? existingVote.voteType : type;
+
     res.json({
       status: 'success',
       message: '投票成功',
-      data: vehicle
+      data: vehicleData
     });
   } catch (error) {
     console.error('投票失败:', error);

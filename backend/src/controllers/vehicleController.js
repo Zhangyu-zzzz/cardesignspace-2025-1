@@ -200,10 +200,12 @@ exports.voteVehicle = async (req, res) => {
     }
 
     // ⭐ 投票检查逻辑：只使用userId（所有用户必须登录）
+    // 查询时只使用vehicleId和userId，不限制deviceId
     const existingVote = await VehicleVote.findOne({
       where: {
         vehicleId: id,
         userId: userId
+        // ⭐ 不限制deviceId，因为现在所有用户都登录，deviceId应该为null或任意值
       }
     });
 
@@ -239,12 +241,72 @@ exports.voteVehicle = async (req, res) => {
       }
     } else {
       // 创建新的投票记录
-      await VehicleVote.create({
-        vehicleId: id,
-        userId,
-        ipAddress, // 保留IP地址用于日志和安全
-        voteType: type
-      });
+      try {
+        await VehicleVote.create({
+          vehicleId: id,
+          userId,
+          ipAddress, // 保留IP地址用于日志和安全
+          deviceId: null, // ⭐ 明确设置为null，确保唯一索引正确工作
+          voteType: type
+        });
+      } catch (createError) {
+        // 如果是唯一约束错误，说明已经有投票记录（可能是并发请求）
+        if (createError.name === 'SequelizeUniqueConstraintError') {
+          console.warn('⚠️ 投票记录已存在（可能是并发请求）:', {
+            vehicleId: id,
+            userId: userId
+          });
+          // 重新查询现有投票记录
+          const existingVote = await VehicleVote.findOne({
+            where: {
+              vehicleId: id,
+              userId: userId
+            }
+          });
+          
+          if (existingVote && existingVote.voteType !== type) {
+            // 如果投票类型不同，更新投票类型
+            if (existingVote.voteType === 'like') {
+              vehicle.likes = Math.max(0, vehicle.likes - 1);
+              vehicle.score--;
+            } else {
+              vehicle.dislikes = Math.max(0, vehicle.dislikes - 1);
+              vehicle.score++;
+            }
+            
+            if (type === 'like') {
+              vehicle.likes++;
+              vehicle.score++;
+            } else {
+              vehicle.dislikes++;
+              vehicle.score--;
+            }
+            
+            existingVote.voteType = type;
+            await existingVote.save();
+            await vehicle.save();
+            
+            const vehicleData = vehicle.toJSON();
+            vehicleData.userVoteStatus = type;
+            
+            return res.json({
+              status: 'success',
+              message: '投票成功',
+              data: vehicleData
+            });
+          } else {
+            // 如果投票类型相同，直接返回
+            return res.json({
+              status: 'success',
+              message: '您已经投过这个票了',
+              data: vehicle
+            });
+          }
+        } else {
+          // 其他错误，重新抛出
+          throw createError;
+        }
+      }
 
       // 更新载具的投票统计
       if (type === 'like') {
@@ -281,10 +343,23 @@ exports.voteVehicle = async (req, res) => {
     });
   } catch (error) {
     console.error('投票失败:', error);
+    console.error('错误详情:', {
+      name: error.name,
+      message: error.message,
+      stack: error.stack,
+      vehicleId: id,
+      userId: userId,
+      voteType: type
+    });
     res.status(500).json({
       status: 'error',
       message: '投票失败',
-      details: error.message
+      details: error.message,
+      // ⭐ 开发环境返回完整错误信息
+      ...(process.env.NODE_ENV !== 'production' && { 
+        errorName: error.name,
+        stack: error.stack 
+      })
     });
   }
 };

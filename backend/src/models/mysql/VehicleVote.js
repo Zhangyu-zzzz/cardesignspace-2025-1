@@ -40,7 +40,7 @@ const VehicleVote = sequelize.define('VehicleVote', {
   indexes: [
     {
       unique: true,
-      fields: ['vehicleId', 'userId', 'deviceId'],
+      fields: ['vehicleId', 'userId'],
       name: 'unique_vote'
     },
     {
@@ -48,9 +48,6 @@ const VehicleVote = sequelize.define('VehicleVote', {
     },
     {
       fields: ['userId']
-    },
-    {
-      fields: ['deviceId']
     }
   ]
 });

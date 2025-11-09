@@ -101,7 +101,7 @@ const routes = [
     path: '/draw-car',
     name: 'DrawCar',
     component: () => import('../views/DrawCar.vue'),
-    meta: { requiresAuth: false }
+    meta: { requiresAuth: true } // ⭐ 要求登录才能访问
   },
   {
     path: '/articles/edit/:id?',

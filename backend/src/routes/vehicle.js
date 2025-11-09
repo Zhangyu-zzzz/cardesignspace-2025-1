@@ -1,22 +1,20 @@
 const express = require('express');
 const router = express.Router();
 const vehicleController = require('../controllers/vehicleController');
-
-// 注意：这里不需要强制登录，允许匿名创作
-// 但保留 authenticateToken 的中间件导入，以便需要时使用
-// const { authenticateToken } = require('../middleware/auth');
+// ⭐ 添加认证中间件
+const { authenticateToken } = require('../middleware/auth');
 
 /**
- * 获取所有载具列表
+ * 获取所有载具列表（需要登录）
  * GET /api/draw-car/vehicles
  */
-router.get('/vehicles', vehicleController.getVehicles);
+router.get('/vehicles', authenticateToken, vehicleController.getVehicles);
 
 /**
- * 创建新载具（允许匿名）
+ * 创建新载具（需要登录）
  * POST /api/draw-car/vehicles
  */
-router.post('/vehicles', vehicleController.createVehicle);
+router.post('/vehicles', authenticateToken, vehicleController.createVehicle);
 
 /**
  * 获取单个载具详情
@@ -25,10 +23,10 @@ router.post('/vehicles', vehicleController.createVehicle);
 router.get('/vehicles/:id', vehicleController.getVehicleById);
 
 /**
- * 投票（点赞/拉踩）
+ * 投票（点赞/拉踩）（需要登录）
  * POST /api/draw-car/vehicles/:id/vote
  */
-router.post('/vehicles/:id/vote', vehicleController.voteVehicle);
+router.post('/vehicles/:id/vote', authenticateToken, vehicleController.voteVehicle);
 
 /**
  * 举报载具

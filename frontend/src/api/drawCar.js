@@ -23,10 +23,10 @@ export function saveVehicle(data) {
 /**
  * 投票（点赞/拉踩）
  */
-export function voteVehicle(vehicleId, type, deviceId) {
+export function voteVehicle(vehicleId, type) {
   return apiClient.post(`/draw-car/vehicles/${vehicleId}/vote`, { 
-    type,
-    deviceId // ⭐ 发送设备ID用于匿名用户识别
+    type
+    // ⭐ 用户已登录，后端会自动从token中获取userId
   })
 }
 

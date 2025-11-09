@@ -20,7 +20,12 @@ const VehicleVote = sequelize.define('VehicleVote', {
   ipAddress: {
     type: DataTypes.STRING(45),
     allowNull: true,
-    comment: 'IP地址'
+    comment: 'IP地址（用于日志和安全）'
+  },
+  deviceId: {
+    type: DataTypes.STRING(255),
+    allowNull: true,
+    comment: '设备唯一标识（用于匿名用户识别）'
   },
   voteType: {
     type: DataTypes.ENUM('like', 'dislike'),
@@ -35,7 +40,7 @@ const VehicleVote = sequelize.define('VehicleVote', {
   indexes: [
     {
       unique: true,
-      fields: ['vehicleId', 'userId', 'ipAddress'],
+      fields: ['vehicleId', 'userId', 'deviceId'],
       name: 'unique_vote'
     },
     {
@@ -43,6 +48,9 @@ const VehicleVote = sequelize.define('VehicleVote', {
     },
     {
       fields: ['userId']
+    },
+    {
+      fields: ['deviceId']
     }
   ]
 });

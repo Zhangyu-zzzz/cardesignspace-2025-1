@@ -363,6 +363,7 @@ export default {
       canvasHeight: 550, // ⭐ 画布高度（稍微减小，确保完整显示）
       nameCheckMessage: '', // ⭐ 名称检测提示信息
       nameCheckStatus: '', // ⭐ 名称检测状态：'available' 或 'taken'
+      deviceId: null, // ⭐ 设备唯一标识（用于匿名用户投票）
       // ⭐ 双指缩放和平移相关
       scale: 1, // 当前缩放比例
       translateX: 0, // X轴平移
@@ -383,6 +384,9 @@ export default {
     }
   },
   mounted() {
+    // ⭐ 初始化设备ID（用于匿名用户投票）
+    this.initDeviceId()
+    
     this.initializeDrawCanvas()
     this.loadVehicles()
     
@@ -398,6 +402,28 @@ export default {
     window.removeEventListener('keydown', this.handleDebugToggle)
   },
   methods: {
+    // ⭐ 初始化设备ID（用于匿名用户投票）
+    initDeviceId() {
+      const STORAGE_KEY = 'drawCar_deviceId'
+      let deviceId = localStorage.getItem(STORAGE_KEY)
+      
+      if (!deviceId) {
+        // 生成唯一设备ID：时间戳 + 随机数 + 用户代理信息
+        const timestamp = Date.now()
+        const random = Math.random().toString(36).substring(2, 15)
+        const userAgent = navigator.userAgent.substring(0, 20)
+        deviceId = `device_${timestamp}_${random}_${btoa(userAgent).substring(0, 10)}`
+        
+        // 存储到localStorage
+        localStorage.setItem(STORAGE_KEY, deviceId)
+        console.log('✅ 生成新的设备ID:', deviceId)
+      } else {
+        console.log('✅ 使用已存在的设备ID:', deviceId)
+      }
+      
+      this.deviceId = deviceId
+    },
+    
     goToScreen(screen) {
       // ⭐ 切换屏幕时关闭弹窗
       this.selectedVehicle = null
@@ -820,7 +846,8 @@ export default {
     
     async loadVehicles() {
       try {
-        const response = await getVehicles()
+        // ⭐ 发送deviceId用于查询投票状态
+        const response = await getVehicles({ deviceId: this.deviceId })
         // ⭐ 响应拦截器已经返回了response.data，所以直接使用response.data
         this.vehicles = response.data || []
         console.log('✅ 载具数据已加载:', this.vehicles.length, '个载具')
@@ -1218,7 +1245,8 @@ export default {
       
       try {
         const vehicleId = this.selectedVehicle.id
-        const response = await apiVoteVehicle(vehicleId, type)
+        // ⭐ 发送设备ID用于匿名用户识别
+        const response = await apiVoteVehicle(vehicleId, type, this.deviceId)
         
         // ⭐ 调试：打印完整的响应数据
         console.log('🔍 投票API响应:', response)

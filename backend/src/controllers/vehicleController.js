@@ -6,7 +6,7 @@ const { Op } = require('sequelize');
  */
 exports.getVehicles = async (req, res) => {
   try {
-    const { limit = 100, offset = 0, sortBy = 'createdAt', order = 'DESC' } = req.query;
+    const { limit = 100, offset = 0, sortBy = 'createdAt', order = 'DESC', deviceId } = req.query;
     const userId = req.user ? req.user.id : null;
     const ipAddress = req.ip || req.connection.remoteAddress;
 
@@ -30,17 +30,21 @@ exports.getVehicles = async (req, res) => {
     const vehiclesWithVoteStatus = await Promise.all(vehicles.map(async (vehicle) => {
       const vehicleData = vehicle.toJSON();
       
-      // 查询当前用户对该载具的投票记录
+      // ⭐ 查询当前用户对该载具的投票记录
+      // 使用userId（已登录）或deviceId（匿名）来查询投票状态
       let voteQuery = {
         vehicleId: vehicle.id
       };
       
       if (userId) {
-        voteQuery[Op.or] = [
-          { userId: userId },
-          { ipAddress: ipAddress }
-        ];
+        // 已登录用户：只检查userId
+        voteQuery.userId = userId;
+      } else if (deviceId) {
+        // 匿名用户：使用deviceId（如果提供了）
+        voteQuery.deviceId = deviceId;
+        voteQuery.userId = null;
       } else {
+        // 降级：如果没有deviceId，使用IP地址（向后兼容）
         voteQuery.ipAddress = ipAddress;
         voteQuery.userId = null;
       }
@@ -182,7 +186,7 @@ exports.getVehicleById = async (req, res) => {
 exports.voteVehicle = async (req, res) => {
   try {
     const { id } = req.params;
-    const { type } = req.body; // 'like' or 'dislike'
+    const { type, deviceId } = req.body; // 'like' or 'dislike', deviceId用于匿名用户
     const userId = req.user ? req.user.id : null;
     const ipAddress = req.ip || req.connection.remoteAddress;
 
@@ -206,22 +210,25 @@ exports.voteVehicle = async (req, res) => {
       });
     }
 
-    // 检查是否已经投过票
-    // ⭐ 修复：根据用户状态构建不同的查询条件
+    // ⭐ 修复投票检查逻辑：使用userId（已登录）或deviceId（匿名），不再使用IP地址
     let voteQuery = {
       vehicleId: id
     };
     
     if (userId) {
-      // 已登录用户：优先匹配userId，也匹配ipAddress（防止同一用户不同设备）
-      voteQuery[Op.or] = [
-        { userId: userId },
-        { ipAddress: ipAddress }
-      ];
+      // 已登录用户：只检查userId（同一用户在不同设备上可以投票）
+      voteQuery.userId = userId;
     } else {
-      // 匿名用户：只匹配ipAddress
-      voteQuery.ipAddress = ipAddress;
-      voteQuery.userId = null;
+      // 匿名用户：检查deviceId（如果提供了）
+      if (deviceId) {
+        voteQuery.deviceId = deviceId;
+        voteQuery.userId = null; // 确保是匿名用户
+      } else {
+        // 如果没有deviceId，降级使用IP地址（向后兼容）
+        voteQuery.ipAddress = ipAddress;
+        voteQuery.userId = null;
+        console.warn('⚠️ 匿名用户投票未提供deviceId，使用IP地址作为降级方案');
+      }
     }
     
     const existingVote = await VehicleVote.findOne({
@@ -263,7 +270,8 @@ exports.voteVehicle = async (req, res) => {
       await VehicleVote.create({
         vehicleId: id,
         userId,
-        ipAddress,
+        ipAddress, // 保留IP地址用于日志和安全
+        deviceId: deviceId || null, // 设备ID（匿名用户）
         voteType: type
       });
 
@@ -288,6 +296,7 @@ exports.voteVehicle = async (req, res) => {
       score: vehicle.score,
       voteType: type,
       userId: userId,
+      deviceId: deviceId,
       ipAddress: ipAddress
     });
 

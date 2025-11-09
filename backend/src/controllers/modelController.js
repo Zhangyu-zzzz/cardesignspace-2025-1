@@ -98,26 +98,139 @@ exports.getAllModels = async (req, res) => {
       const decodedSearch = decodeURIComponent(search);
       const searchTerm = `%${decodedSearch}%`;
       
+      // 生成去除空格的搜索词，用于更灵活的匹配（如"RS7"可以匹配"RS 7"）
+      const searchTermNoSpace = `%${decodedSearch.replace(/\s+/g, '')}%`;
+      
       console.log(`原始搜索参数: ${search}`);
       console.log(`解码后搜索关键词: ${decodedSearch}`);
+      console.log(`去除空格搜索词: ${searchTermNoSpace}`);
       
-      // 先查找匹配的品牌ID
-      const matchingBrands = await Brand.findAll({
-        where: {
-          name: { [Op.like]: searchTerm }
-        },
-        attributes: ['id']
+      // 先查找匹配的品牌ID（支持英文名和中文名搜索）
+      // 改进：支持部分匹配，如"奥迪RS7"中的"奥迪"可以匹配到品牌
+      const allBrands = await Brand.findAll({
+        attributes: ['id', 'name', 'chineseName']
+      });
+      
+      // 查找匹配的品牌（支持完整匹配和部分匹配）
+      const matchingBrands = allBrands.filter(brand => {
+        const brandName = (brand.name || '').toLowerCase();
+        const brandChineseName = (brand.chineseName || '').toLowerCase();
+        const searchLower = decodedSearch.toLowerCase();
+        const searchNoSpace = searchLower.replace(/\s+/g, '');
+        
+        // 如果品牌名或中文名为空，跳过
+        if (!brandName && !brandChineseName) return false;
+        
+        // 检查搜索词是否包含品牌名，或品牌名是否包含在搜索词中
+        // 优先检查中文名（因为用户可能输入中文品牌名）
+        if (brandChineseName && brandChineseName.length > 0) {
+          if (searchLower.includes(brandChineseName) || brandChineseName.includes(searchLower)) {
+            return true;
+          }
+          // 去除空格后匹配
+          const brandChineseNoSpace = brandChineseName.replace(/\s+/g, '');
+          if (searchNoSpace.includes(brandChineseNoSpace) || brandChineseNoSpace.includes(searchNoSpace)) {
+            return true;
+          }
+        }
+        
+        // 检查英文名
+        if (brandName && brandName.length > 0) {
+          if (searchLower.includes(brandName) || brandName.includes(searchLower)) {
+            return true;
+          }
+          // 去除空格后匹配
+          const brandNameNoSpace = brandName.replace(/\s+/g, '');
+          if (searchNoSpace.includes(brandNameNoSpace) || brandNameNoSpace.includes(searchNoSpace)) {
+            return true;
+          }
+        }
+        
+        return false;
       });
       
       const brandIds = matchingBrands.map(brand => brand.id);
       
-      // 构建搜索条件：车型名称匹配 或 品牌ID匹配
-      whereCondition[Op.or] = [
-        { name: { [Op.like]: searchTerm } },
-        ...(brandIds.length > 0 ? [{ brandId: { [Op.in]: brandIds } }] : [])
-      ];
+      // 如果找到了匹配的品牌，提取品牌名后的剩余部分作为车型搜索词
+      let modelSearchTerm = decodedSearch;
+      let modelSearchTermNoSpace = searchTermNoSpace;
+      
+      if (matchingBrands.length > 0) {
+        // 尝试从搜索词中移除品牌名，获取车型部分
+        // 优先使用中文名匹配（因为用户可能输入中文品牌名）
+        for (const brand of matchingBrands) {
+          const brandName = brand.name || '';
+          const brandChineseName = brand.chineseName || '';
+          
+          let remaining = decodedSearch;
+          
+          // 优先移除中文品牌名（因为用户可能输入中文）
+          if (brandChineseName && brandChineseName.length > 0 && decodedSearch.includes(brandChineseName)) {
+            remaining = decodedSearch.replace(brandChineseName, '').trim();
+          }
+          // 如果没有中文名匹配，尝试移除英文品牌名
+          else if (brandName && brandName.length > 0 && decodedSearch.toLowerCase().includes(brandName.toLowerCase())) {
+            remaining = decodedSearch.replace(new RegExp(brandName, 'gi'), '').trim();
+          }
+          
+          // 如果移除品牌名后还有内容，使用剩余部分作为车型搜索词
+          if (remaining && remaining.length > 0 && remaining !== decodedSearch) {
+            modelSearchTerm = remaining;
+            modelSearchTermNoSpace = `%${remaining.replace(/\s+/g, '')}%`;
+            console.log(`从搜索词"${decodedSearch}"中提取品牌"${brandChineseName || brandName}"，剩余车型搜索词: "${modelSearchTerm}"`);
+            break; // 使用第一个匹配的品牌
+          }
+        }
+      }
       
       console.log(`搜索关键词: ${decodedSearch}, 匹配的品牌数量: ${brandIds.length}`);
+      console.log(`车型搜索词: ${modelSearchTerm}`);
+      
+      // 构建搜索条件：车型名称匹配（支持空格灵活匹配）或 品牌ID匹配
+      const modelSearchConditions = [];
+      
+      // 如果有车型搜索词，添加车型名称匹配条件
+      if (modelSearchTerm && modelSearchTerm.length > 0) {
+        const modelTerm = `%${modelSearchTerm}%`;
+        modelSearchConditions.push(
+          { name: { [Op.like]: modelTerm } },
+          // 使用REPLACE函数移除空格后匹配，这样"RS7"可以匹配到"RS 7"
+          sequelize.where(
+            sequelize.fn('REPLACE', sequelize.col('Model.name'), ' ', ''),
+            { [Op.like]: modelSearchTermNoSpace }
+          )
+        );
+      }
+      
+      // 如果找到了匹配的品牌，添加品牌ID条件
+      if (brandIds.length > 0) {
+        // 如果有车型搜索词，需要同时匹配品牌和车型
+        if (modelSearchTerm && modelSearchTerm.length > 0 && modelSearchTerm !== decodedSearch) {
+          // 品牌匹配 + 车型匹配（AND关系）
+          // 注意：需要保留isActive条件
+          const searchConditions = [
+            { brandId: { [Op.in]: brandIds } },
+            {
+              [Op.or]: modelSearchConditions
+            }
+          ];
+          // 合并到whereCondition，保留isActive
+          whereCondition[Op.and] = [
+            { isActive: true },
+            ...searchConditions
+          ];
+          // 移除单独的isActive，因为已经在Op.and中了
+          delete whereCondition.isActive;
+        } else {
+          // 只有品牌匹配
+          whereCondition.brandId = { [Op.in]: brandIds };
+        }
+      } else {
+        // 没有匹配的品牌，只搜索车型名称
+        if (modelSearchConditions.length > 0) {
+          whereCondition[Op.or] = modelSearchConditions;
+        }
+      }
     }
     
     // 添加分页支持

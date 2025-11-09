@@ -11,6 +11,11 @@ const Brand = sequelize.define('Brand', {
     type: DataTypes.STRING(100),
     allowNull: false
   },
+  chineseName: {
+    type: DataTypes.STRING(100),
+    allowNull: true,
+    comment: '品牌中文名称'
+  },
   country: {
     type: DataTypes.STRING(50)
   },

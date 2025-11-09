@@ -246,7 +246,6 @@ exports.voteVehicle = async (req, res) => {
           vehicleId: id,
           userId,
           ipAddress, // 保留IP地址用于日志和安全
-          deviceId: null, // ⭐ 明确设置为null，确保唯一索引正确工作
           voteType: type
         });
       } catch (createError) {

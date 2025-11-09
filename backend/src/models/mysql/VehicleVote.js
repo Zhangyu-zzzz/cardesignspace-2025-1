@@ -22,11 +22,7 @@ const VehicleVote = sequelize.define('VehicleVote', {
     allowNull: true,
     comment: 'IP地址（用于日志和安全）'
   },
-  deviceId: {
-    type: DataTypes.STRING(255),
-    allowNull: true,
-    comment: '设备唯一标识（用于匿名用户识别）'
-  },
+  // ⭐ deviceId字段已移除：所有用户必须登录，不再需要设备ID
   voteType: {
     type: DataTypes.ENUM('like', 'dislike'),
     allowNull: false,

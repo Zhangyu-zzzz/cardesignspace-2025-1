@@ -916,7 +916,6 @@ export default {
       
       this.vehicleSprites = displayedVehicles.map(vehicle => {
         const img = new Image()
-        img.src = vehicle.imageData
         
         // ⭐ 动态尺寸：基于计算的基础尺寸 ± 随机变化
         const size = clampedBaseSize - sizeVariation / 2 + Math.random() * sizeVariation
@@ -945,6 +944,9 @@ export default {
           radius: 0,
           normRadius: 0.35,
           collisionCooldown: 0,
+          // ⭐ 新增：图片加载状态
+          imgLoaded: false,
+          imgError: false,
           // ⭐ 新增：精确的矩形边界（基于像素检测）
           boundingBox: {
             width: size * 0.7,  // 初始估计
@@ -955,8 +957,22 @@ export default {
         // ⭐ 计算初始碰撞半径（向后兼容）
         sprite.radius = Math.max(12, sprite.size * 0.35 + 2)
         
-        // ⭐ 异步细化边界（基于图像像素 - 矩形）
-        this.refineBoundingBoxFromImage(sprite)
+        // ⭐ 设置图片加载事件处理
+        img.onload = () => {
+          sprite.imgLoaded = true
+          sprite.imgError = false
+          // ⭐ 图片加载完成后，异步细化边界
+          this.refineBoundingBoxFromImage(sprite)
+        }
+        
+        img.onerror = () => {
+          sprite.imgLoaded = false
+          sprite.imgError = true
+          console.error(`载具图片加载失败: ${vehicle.name || vehicle.id}`)
+        }
+        
+        // ⭐ 最后设置 src，触发加载
+        img.src = vehicle.imageData
         
         return sprite
       })
@@ -1032,7 +1048,8 @@ export default {
         }
         
         // ⭐ 绘制载具（保持原始宽高比，不旋转）
-        if (sprite.img.complete && sprite.img.naturalWidth > 0) {
+        // ⭐ 修复：只有当图片真正加载完成时才绘制
+        if (sprite.imgLoaded && sprite.img.complete && sprite.img.naturalWidth > 0 && sprite.img.naturalHeight > 0) {
           const aspectRatio = sprite.img.naturalWidth / sprite.img.naturalHeight
           let drawWidth, drawHeight
           
@@ -1047,9 +1064,25 @@ export default {
           }
           
           this.garageCtx.drawImage(sprite.img, -drawWidth / 2, -drawHeight / 2, drawWidth, drawHeight)
+        } else if (!sprite.imgError) {
+          // ⭐ 图片正在加载中，显示占位符（灰色矩形）
+          this.garageCtx.fillStyle = 'rgba(200, 200, 200, 0.5)'
+          this.garageCtx.fillRect(-sprite.size / 2, -sprite.size / 2, sprite.size, sprite.size)
+          
+          // ⭐ 显示加载提示文字
+          this.garageCtx.fillStyle = 'rgba(100, 100, 100, 0.7)'
+          this.garageCtx.font = '12px Arial'
+          this.garageCtx.textAlign = 'center'
+          this.garageCtx.textBaseline = 'middle'
+          this.garageCtx.fillText('加载中...', 0, 0)
         } else {
-          // 降级：如果图片未加载，使用正方形
-          this.garageCtx.drawImage(sprite.img, -sprite.size / 2, -sprite.size / 2, sprite.size, sprite.size)
+          // ⭐ 图片加载失败，显示错误占位符
+          this.garageCtx.fillStyle = 'rgba(255, 100, 100, 0.3)'
+          this.garageCtx.fillRect(-sprite.size / 2, -sprite.size / 2, sprite.size, sprite.size)
+          
+          this.garageCtx.strokeStyle = 'rgba(255, 100, 100, 0.6)'
+          this.garageCtx.lineWidth = 2
+          this.garageCtx.strokeRect(-sprite.size / 2, -sprite.size / 2, sprite.size, sprite.size)
         }
         this.garageCtx.restore()
         

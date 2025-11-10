@@ -46,6 +46,11 @@ const Model = sequelize.define('Model', {
     type: DataTypes.JSON,
     defaultValue: [],
     comment: '风格标签数组，支持三层标签体系'
+  },
+  viewCount: {
+    type: DataTypes.INTEGER,
+    defaultValue: 0,
+    comment: '车型详情页面访问次数'
   }
 }, {
   tableName: 'models',

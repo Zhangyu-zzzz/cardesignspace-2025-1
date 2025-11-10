@@ -336,8 +336,15 @@ exports.getModelById = async (req, res) => {
       });
     }
     
+    // 增加访问次数（使用原子性操作）
+    await model.increment('viewCount');
+    
+    // 重新加载模型以获取更新后的 viewCount
+    await model.reload();
+    
     console.log(`成功找到车型: ${model.name}`);
     console.log(`相关图片数量: ${model.Images ? model.Images.length : 0}`);
+    console.log(`访问次数: ${model.viewCount}`);
     
     res.status(200).json({
       success: true,

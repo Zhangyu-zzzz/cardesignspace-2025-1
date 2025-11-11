@@ -57,6 +57,11 @@ const Image = sequelize.define('Image', {
     type: DataTypes.JSON,
     defaultValue: [],
     comment: '图片标签数组'
+  },
+  sortOrder: {
+    type: DataTypes.INTEGER,
+    defaultValue: 0,
+    comment: '排序顺序，用于图片在页面中的显示顺序'
   }
 }, {
   tableName: 'images',

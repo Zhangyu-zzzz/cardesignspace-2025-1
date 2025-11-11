@@ -126,7 +126,8 @@ export const imageAPI = {
   getByModelId: (modelId, params = {}) => apiClient.get(`/models/${modelId}/images`, { params }),
   getThumbnailsByModelId: (modelId, params = {}) => apiClient.get(`/images/model/${modelId}/thumbnails`, { params }),
   upload: (data) => apiClient.post('/images/upload', data),
-  delete: (id) => apiClient.delete(`/images/${id}`)
+  delete: (id) => apiClient.delete(`/images/${id}`),
+  updateOrder: (modelId, imageOrders) => apiClient.post('/images/update-order', { modelId, imageOrders })
 };
 
 export const seriesAPI = {

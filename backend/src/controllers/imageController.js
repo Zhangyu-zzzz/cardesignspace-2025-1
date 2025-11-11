@@ -360,12 +360,13 @@ exports.getImagesByModelId = async (req, res, next) => {
       whereCondition.category = category;
     }
     
-    // 查询图片（精选优先 + 数字排序）
+    // 查询图片（精选优先 + sortOrder排序 + 数字排序）
     const { count, rows: images } = await Image.findAndCountAll({
       where: whereCondition,
       order: [
         [{ model: ImageCuration, as: 'Curation' }, 'isCurated', 'DESC'],
         [{ model: ImageCuration, as: 'Curation' }, 'curationScore', 'DESC'],
+        ['sortOrder', 'ASC'], // 按sortOrder排序
         ['createdAt', 'DESC'],
         ['id', 'ASC'],
       ],
@@ -554,6 +555,65 @@ exports.getThumbnailsByModelId = async (req, res, next) => {
     res.status(500).json({
       success: false,
       message: '获取车型缩略图失败',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * 批量更新图片顺序
+ * POST /api/images/update-order
+ * Body: { modelId: number, imageOrders: [{ id: number, sortOrder: number }] }
+ */
+exports.updateImageOrder = async (req, res) => {
+  try {
+    const { modelId, imageOrders } = req.body;
+
+    if (!modelId || !Array.isArray(imageOrders)) {
+      return res.status(400).json({
+        success: false,
+        message: '参数错误：需要提供modelId和imageOrders数组'
+      });
+    }
+
+    // 验证所有图片都属于该车型
+    const imageIds = imageOrders.map(item => item.id);
+    const images = await Image.findAll({
+      where: {
+        id: imageIds,
+        modelId: modelId
+      }
+    });
+
+    if (images.length !== imageIds.length) {
+      return res.status(400).json({
+        success: false,
+        message: '部分图片不属于该车型'
+      });
+    }
+
+    // 批量更新图片顺序
+    const updatePromises = imageOrders.map(({ id, sortOrder }) => {
+      return Image.update(
+        { sortOrder: sortOrder },
+        { where: { id: id } }
+      );
+    });
+
+    await Promise.all(updatePromises);
+
+    res.json({
+      success: true,
+      message: '图片顺序更新成功',
+      data: {
+        updatedCount: imageOrders.length
+      }
+    });
+  } catch (error) {
+    console.error('更新图片顺序失败:', error);
+    res.status(500).json({
+      success: false,
+      message: '更新图片顺序失败',
       error: error.message
     });
   }

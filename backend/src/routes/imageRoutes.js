@@ -32,6 +32,9 @@ router.get('/popular', imageController.getPopularImages);
 // 通用图片列表（支持排序：curated/latest/default）
 router.get('/', imagesQueryController.listImages);
 
+// 批量更新图片顺序 (需要登录)
+router.post('/update-order', authenticateToken, imageController.updateImageOrder);
+
 // === 标签相关路由已移至 imageTagRoutes.js ===
 
 module.exports = router; 

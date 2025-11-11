@@ -84,11 +84,12 @@
           <div v-if="filteredImages.length === 0" class="no-images">
             暂无符合条件的图片
           </div>
-          <div v-else class="images-grid">
+          <div v-else class="images-grid" ref="imagesGrid">
             <div
               v-for="(image, index) in filteredImages"
               :key="image.id || index"
               class="image-card"
+              :data-id="image.id"
               @click="openImageViewer(index)"
             >
                           <img 
@@ -187,6 +188,7 @@
   import { brandAPI, modelAPI, imageAPI, apiClient } from '@/services/api';
 import ImageViewer from '@/components/ImageViewer.vue';
 import imageContextMenu from '@/utils/imageContextMenu';
+import Sortable from 'sortablejs';
   
   export default {
     name: 'ModelDetail',
@@ -205,7 +207,10 @@ import imageContextMenu from '@/utils/imageContextMenu';
         selectedImageIndex: 0,
         typeUpdating: false,
         originalType: null,
-        modelTypeOptions: ['轿车', 'SUV', 'MPV', 'WAGON', 'SHOOTINGBRAKE', '皮卡', '跑车', 'Hatchback', '其他']
+        modelTypeOptions: ['轿车', 'SUV', 'MPV', 'WAGON', 'SHOOTINGBRAKE', '皮卡', '跑车', 'Hatchback', '其他'],
+        sortableInstance: null,
+        isSavingOrder: false,
+        isDragging: false
       };
     },
     computed: {
@@ -502,7 +507,12 @@ import imageContextMenu from '@/utils/imageContextMenu';
           try {
             const imagesResponse = await imageAPI.getByModelId(modelId);
             if (imagesResponse.success && imagesResponse.data) {
-              this.images = imagesResponse.data;
+              // 按sortOrder排序，如果没有sortOrder则按原有顺序
+              this.images = imagesResponse.data.sort((a, b) => {
+                const orderA = a.sortOrder !== undefined ? a.sortOrder : 999999;
+                const orderB = b.sortOrder !== undefined ? b.sortOrder : 999999;
+                return orderA - orderB;
+              });
               console.log('获取到图片数量:', this.images.length);
             }
           } catch (imageError) {
@@ -515,11 +525,97 @@ import imageContextMenu from '@/utils/imageContextMenu';
           }
           
           console.log('成功加载车型:', this.model.name);
+          
+          // 初始化拖拽排序
+          this.$nextTick(() => {
+            this.initSortable();
+          });
         } catch (error) {
           console.error('获取车型详情失败:', error);
           this.error = `获取车型数据失败: ${error.message}`;
         } finally {
           this.loading = false;
+        }
+      },
+      // 初始化拖拽排序
+      initSortable() {
+        this.$nextTick(() => {
+          const gridElement = this.$refs.imagesGrid;
+          if (!gridElement || this.sortableInstance) {
+            return;
+          }
+
+          this.sortableInstance = Sortable.create(gridElement, {
+            animation: 150,
+            handle: '.image-card', // 整个卡片可拖拽
+            ghostClass: 'sortable-ghost',
+            chosenClass: 'sortable-chosen',
+            dragClass: 'sortable-drag',
+            forceFallback: false, // 使用HTML5拖拽
+            fallbackOnBody: true,
+            swapThreshold: 0.65,
+            onStart: () => {
+              // 拖拽开始时禁用点击事件
+              this.isDragging = true;
+            },
+            onEnd: (evt) => {
+              // 拖拽结束后更新数组顺序
+              const oldIndex = evt.oldIndex;
+              const newIndex = evt.newIndex;
+              
+              // 延迟恢复点击事件，避免误触发
+              setTimeout(() => {
+                this.isDragging = false;
+              }, 100);
+              
+              if (oldIndex !== newIndex) {
+                // 更新本地数组顺序
+                const movedItem = this.filteredImages.splice(oldIndex, 1)[0];
+                this.filteredImages.splice(newIndex, 0, movedItem);
+                
+                // 保存新的顺序到服务器
+                this.saveImageOrder();
+              }
+            }
+          });
+        });
+      },
+      // 保存图片顺序
+      async saveImageOrder() {
+        if (this.isSavingOrder || !this.model.id) {
+          return;
+        }
+
+        this.isSavingOrder = true;
+        try {
+          // 构建图片顺序数组
+          const imageOrders = this.filteredImages.map((image, index) => ({
+            id: image.id,
+            sortOrder: index
+          }));
+
+          const response = await imageAPI.updateOrder(this.model.id, imageOrders);
+          
+          if (response.success) {
+            // 更新本地图片数据的sortOrder
+            this.filteredImages.forEach((image, index) => {
+              if (this.images.find(img => img.id === image.id)) {
+                const originalImage = this.images.find(img => img.id === image.id);
+                if (originalImage) {
+                  this.$set(originalImage, 'sortOrder', index);
+                }
+              }
+            });
+            
+            this.$message.success('图片顺序已保存');
+          } else {
+            this.$message.error(response.message || '保存图片顺序失败');
+          }
+        } catch (error) {
+          console.error('保存图片顺序失败:', error);
+          this.$message.error('保存图片顺序失败，请重试');
+        } finally {
+          this.isSavingOrder = false;
         }
       },
       // 获取车型参数图标
@@ -572,6 +668,10 @@ import imageContextMenu from '@/utils/imageContextMenu';
         this.$router.push(`/user/${userId}`);
       },
       openImageViewer(index) {
+        // 如果正在拖拽，不打开查看器
+        if (this.isDragging) {
+          return;
+        }
         this.selectedImageIndex = index;
         this.imageViewerVisible = true;
       },
@@ -686,10 +786,31 @@ import imageContextMenu from '@/utils/imageContextMenu';
     mounted() {
       this.fetchModelDetails();
     },
+    beforeDestroy() {
+      // 销毁Sortable实例
+      if (this.sortableInstance) {
+        this.sortableInstance.destroy();
+        this.sortableInstance = null;
+      }
+    },
     // 当路由参数变化时重新加载数据
     watch: {
       '$route.params.id': function() {
         this.fetchModelDetails();
+      },
+      // 当图片数据加载完成后初始化拖拽排序
+      filteredImages: {
+        handler() {
+          if (this.filteredImages.length > 0) {
+            this.$nextTick(() => {
+              // 如果还没有初始化，则初始化
+              if (!this.sortableInstance) {
+                this.initSortable();
+              }
+            });
+          }
+        },
+        immediate: false
       }
     }
   };
@@ -881,8 +1002,29 @@ import imageContextMenu from '@/utils/imageContextMenu';
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
     background-color: #fff;
     position: relative;
-    cursor: pointer; /* Added cursor pointer for clickability */
+    cursor: move; /* 拖拽时显示移动光标 */
     aspect-ratio: 1;
+  }
+  
+  .image-card:hover {
+    cursor: move;
+  }
+  
+  /* 拖拽排序样式 */
+  .sortable-ghost {
+    opacity: 0.4;
+    background: #f0f0f0;
+  }
+  
+  .sortable-chosen {
+    cursor: grabbing !important;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+    transform: scale(1.05);
+    z-index: 1000;
+  }
+  
+  .sortable-drag {
+    opacity: 0.8;
   }
   
   .image-card:hover {

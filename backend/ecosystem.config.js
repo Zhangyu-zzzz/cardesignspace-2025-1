@@ -1,8 +1,18 @@
+// 加载环境变量
+require('dotenv').config({ path: require('path').join(__dirname, '../.env') });
+// 如果上面的路径不存在，尝试backend目录下的.env
+if (!process.env.TENCENT_SECRET_ID && !process.env.COS_BUCKET) {
+  require('dotenv').config({ path: require('path').join(__dirname, '.env') });
+}
+
 module.exports = {
   apps: [{
     name: 'cardesignspace-backend',
     script: 'src/app.js',
-    cwd: '/root/cardesignspace-2025/backend',
+    // 支持多个可能的部署路径
+    cwd: process.env.PM2_CWD || '/opt/auto-gallery/backend' || '/root/cardesignspace-2025/backend',
+    // 使用env_file让PM2自动加载.env文件
+    env_file: '.env',
     env: {
       NODE_ENV: 'production',
       PORT: 3000,
@@ -13,6 +23,7 @@ module.exports = {
       DB_PASSWORD: process.env.DB_PASSWORD,
       JWT_SECRET: process.env.JWT_SECRET,
       JWT_EXPIRES_IN: '7d',
+      // COS配置 - 从环境变量读取
       TENCENT_SECRET_ID: process.env.TENCENT_SECRET_ID,
       TENCENT_SECRET_KEY: process.env.TENCENT_SECRET_KEY,
       COS_BUCKET: process.env.COS_BUCKET,

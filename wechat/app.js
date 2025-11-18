@@ -57,7 +57,14 @@ App({
   getSystemInfo() {
     const systemInfo = wx.getSystemInfoSync();
     this.globalData.systemInfo = systemInfo;
-    console.log('系统信息:', systemInfo);
+    // 只记录关键信息，避免输出整个对象
+    console.log('系统信息:', {
+      platform: systemInfo.platform,
+      system: systemInfo.system,
+      version: systemInfo.version,
+      screenWidth: systemInfo.screenWidth,
+      screenHeight: systemInfo.screenHeight
+    });
     return systemInfo;
   },
 

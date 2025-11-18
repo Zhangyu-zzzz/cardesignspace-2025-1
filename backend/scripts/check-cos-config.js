@@ -5,7 +5,41 @@
  * 用于诊断COS配置问题
  */
 
-require('dotenv').config({ path: '../../.env' });
+// 尝试多个可能的.env文件路径
+const path = require('path');
+const fs = require('fs');
+
+// 可能的.env文件路径（按优先级）
+const envPaths = [
+  path.join(process.cwd(), '.env'),               // 当前工作目录（最重要）
+  path.join(__dirname, '../.env'),                 // backend目录
+  path.join(__dirname, '../../.env'),              // 项目根目录
+  path.join(__dirname, '../../../.env'),          // 项目根目录（从scripts目录）
+  '/opt/auto-gallery/backend/.env',               // 生产环境backend路径
+  '/opt/auto-gallery/.env'                        // 生产环境根目录路径
+];
+
+// 查找并加载.env文件
+let envLoaded = false;
+let loadedPath = null;
+for (const envPath of envPaths) {
+  if (fs.existsSync(envPath)) {
+    require('dotenv').config({ path: envPath });
+    loadedPath = envPath;
+    envLoaded = true;
+    break;
+  }
+}
+
+if (!envLoaded) {
+  console.warn('⚠️  未找到.env文件，将使用系统环境变量');
+  console.warn('   尝试的路径:');
+  envPaths.forEach(p => console.warn(`   - ${p}`));
+  console.warn('');
+  require('dotenv').config(); // 尝试从系统环境变量加载
+} else {
+  console.log(`✅ 已加载环境变量文件: ${loadedPath}\n`);
+}
 
 console.log('=== COS配置检查 ===\n');
 

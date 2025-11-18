@@ -27,10 +27,11 @@
             <!-- 车型图片 -->
             <img 
               v-if="item.type === 'model' && item.Images && item.Images.length > 0" 
-              :src="getOptimizedImageUrl(item.Images[0], 1600, 900, 'fullscreen')"
+              :src="getOptimizedImageUrl(item.Images[0], 1600, 900, 'original')"
               :alt="item.name"
               @load="handleModelImageLoad"
               @error="handleModelImageError"
+              @contextmenu.stop="handleImageContextMenu($event, item.Images[0], item.name)"
               class="slide-image"
             >
 
@@ -295,6 +296,7 @@
                 :alt="model.name"
                 @load="handleModelImageLoad"
                 @error="handleModelImageError"
+                @contextmenu.stop="handleImageContextMenu($event, model.Images[0], model.name)"
                 class="model-display-img lazy-load"
                 src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='200'%3E%3Crect width='100%25' height='100%25' fill='%23f8f9fa'/%3E%3C/svg%3E"
               >
@@ -351,6 +353,7 @@ import chineseToPinyin from 'chinese-to-pinyin'
 import scrollPositionMixin from '@/utils/scrollPositionMixin';
 import scrollPositionManager from '@/utils/scrollPositionManager';
 import axios from 'axios';
+import imageContextMenu from '@/utils/imageContextMenu';
 
 export default {
   name: 'Home',
@@ -1153,11 +1156,22 @@ export default {
     getOptimizedImageUrl(imageInput, width = 300, height = 200, context = 'card') {
       // 检查组件是否仍然活跃
       if (!this.isComponentActive) {
+        // 如果请求原图，直接返回原图URL，不添加压缩参数
+        if (context === 'original') {
+          return imageInput?.url || '';
+        }
         return this.buildFallbackImageUrl(imageInput?.url || '', width, height);
       }
       
       const { imageId, url, image } = this.normalizeImageInput(imageInput);
       if (!url) return '';
+
+      // 如果请求原图，直接返回原图URL，不经过变体系统
+      if (context === 'original') {
+        // 移除URL中的压缩参数（如果有）
+        const cleanUrl = url.split('?')[0].split('&')[0];
+        return cleanUrl;
+      }
 
       // 移除路由检查，允许图片变体请求功能
       // if (this.$route.path !== '/') {
@@ -1258,6 +1272,8 @@ export default {
           return 'medium';
         case 'fullscreen':
           return 'large';
+        case 'original':
+          return 'original'; // 原图
         default:
           return 'webp';
       }
@@ -1332,6 +1348,17 @@ export default {
         return;
       }
 
+      // 如果请求的是原图，直接使用原图URL
+      if (context === 'original') {
+        const originalUrl = fallbackUrl; // fallbackUrl 就是原图URL
+        if (cacheKey) {
+          this.$set(this.imageVariantCache, cacheKey, originalUrl);
+        }
+        this.applyOptimizedUrlToImage(imageId, originalUrl, imageRef);
+        this.pendingVariantRequests.delete(cacheKey);
+        return;
+      }
+
       // 创建取消令牌
       const cancelToken = axios.CancelToken.source();
       
@@ -1346,11 +1373,14 @@ export default {
           cancelToken: cancelToken.token
         });
 
-        if (response && response.success && response.data && response.data.bestUrl) {
-          const bestUrl = response.data.bestUrl;
-          this.$set(this.imageVariantCache, cacheKey, bestUrl);
-          this.applyOptimizedUrlToImage(imageId, bestUrl, imageRef);
-          return;
+        if (response && response.success && response.data) {
+          // 优先使用 bestUrl，如果没有则使用 originalUrl
+          const bestUrl = response.data.bestUrl || response.data.originalUrl;
+          if (bestUrl) {
+            this.$set(this.imageVariantCache, cacheKey, bestUrl);
+            this.applyOptimizedUrlToImage(imageId, bestUrl, imageRef);
+            return;
+          }
         }
       } catch (error) {
         // 如果是取消的请求，不显示警告
@@ -1932,6 +1962,32 @@ export default {
       if (modelId) {
         this.$set(this.modelImageLoadError, modelId, true);
       }
+    },
+
+    // 处理图片右键菜单 - 使用浏览器默认菜单
+    handleImageContextMenu(event, image, title) {
+      // 获取图片URL - 优先使用原图URL
+      let imageUrl = '';
+      if (typeof image === 'string') {
+        // 如果传入的是字符串，直接使用
+        imageUrl = image;
+      } else if (image) {
+        // 优先使用原图URL，如果没有则使用其他URL
+        imageUrl = image.url || image.originalUrl || image.displayUrl || image.optimizedUrl || '';
+      }
+      
+      // 如果还是没有URL，尝试从事件目标获取
+      if (!imageUrl && event.target) {
+        imageUrl = event.target.src || event.target.getAttribute('src') || '';
+      }
+      
+      const imageTitle = title || image?.title || '图片';
+      
+      // 使用浏览器默认菜单
+      imageContextMenu.show(event, imageUrl, {
+        title: imageTitle,
+        useBrowserMenu: true
+      });
     },
 
     // 从图片元素获取车型ID

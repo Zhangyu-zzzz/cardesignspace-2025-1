@@ -51,7 +51,17 @@ exports.getModelsForUpload = async (req, res) => {
  */
 exports.uploadSingleImage = async (req, res) => {
   try {
+    console.log('=== 开始处理单文件上传 ===');
+    console.log('请求体字段:', Object.keys(req.body));
+    console.log('文件信息:', req.file ? {
+      originalname: req.file.originalname,
+      mimetype: req.file.mimetype,
+      size: req.file.size,
+      hasBuffer: !!req.file.buffer
+    } : '无文件');
+    
     if (!req.file) {
+      console.error('上传失败: 没有上传文件');
       return res.status(400).json({
         status: 'error',
         message: '没有上传文件'
@@ -67,8 +77,11 @@ exports.uploadSingleImage = async (req, res) => {
       path
     } = req.body;
 
+    console.log('解析的参数:', { modelId, title, category, isFeatured, path });
+
     // 验证必填字段
     if (!modelId) {
+      console.error('上传失败: 缺少车型ID');
       return res.status(400).json({
         status: 'error',
         message: '请选择车型'
@@ -78,22 +91,38 @@ exports.uploadSingleImage = async (req, res) => {
     // 检查车型是否存在
     const model = await Model.findByPk(modelId);
     if (!model) {
+      console.error('上传失败: 车型不存在, modelId:', modelId);
       return res.status(404).json({
         status: 'error',
         message: '指定的车型不存在'
       });
     }
 
+    console.log('车型信息验证通过:', { modelId: model.id, modelName: model.name });
+
     // 生成COS存储路径
-    const cosKey = await generateUploadPath(req.file.originalname, modelId, category, path);
+    let cosKey;
+    try {
+      cosKey = await generateUploadPath(req.file.originalname, modelId, category, path);
+      console.log('生成的COS路径:', cosKey);
+    } catch (pathError) {
+      console.error('生成COS路径失败:', pathError);
+      return res.status(500).json({
+        status: 'error',
+        message: '生成文件路径失败',
+        details: process.env.NODE_ENV === 'production' ? undefined : pathError.message
+      });
+    }
 
     try {
+      console.log('开始上传到COS...');
       // 上传到腾讯云COS
       const cosResult = await uploadToCOS(
         req.file.buffer,
         cosKey,
         req.file.mimetype
       );
+      console.log('COS上传成功:', { url: cosResult.url, key: cosResult.key });
 
       // 保存到数据库
       const imageData = {

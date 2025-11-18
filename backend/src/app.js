@@ -157,6 +157,7 @@ app.use((err, req, res, next) => {
   if (err.type === 'entity.too.large') {
     return res.status(413).json({
       success: false,
+      status: 'error',
       message: '请求内容过大，请减少内容大小后重试',
       error: 'Payload too large'
     });
@@ -165,8 +166,20 @@ app.use((err, req, res, next) => {
   if (err.name === 'PayloadTooLargeError') {
     return res.status(413).json({
       success: false,
+      status: 'error',
       message: '请求内容过大，请减少内容大小后重试',
       error: 'Payload too large'
+    });
+  }
+  
+  // 处理Multer错误
+  if (err.name === 'MulterError' || err.code === 'LIMIT_FILE_SIZE' || err.code === 'LIMIT_FILE_COUNT') {
+    return res.status(400).json({
+      success: false,
+      status: 'error',
+      message: err.code === 'LIMIT_FILE_SIZE' ? '文件大小超过限制（最大10MB）' : '文件上传失败',
+      error: err.code || 'MulterError',
+      details: process.env.NODE_ENV === 'production' ? undefined : err.message
     });
   }
   

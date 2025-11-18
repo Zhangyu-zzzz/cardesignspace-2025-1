@@ -39,11 +39,46 @@ const logoUpload = multer({
   }
 });
 
+// Multer错误处理中间件
+const handleMulterError = (err, req, res, next) => {
+  if (err instanceof multer.MulterError) {
+    console.error('Multer错误:', err);
+    if (err.code === 'LIMIT_FILE_SIZE') {
+      return res.status(400).json({
+        status: 'error',
+        message: '文件大小超过限制（最大10MB）',
+        error: 'File too large'
+      });
+    }
+    if (err.code === 'LIMIT_FILE_COUNT') {
+      return res.status(400).json({
+        status: 'error',
+        message: '文件数量超过限制',
+        error: 'Too many files'
+      });
+    }
+    return res.status(400).json({
+      status: 'error',
+      message: '文件上传失败: ' + err.message,
+      error: err.code || 'MulterError'
+    });
+  }
+  if (err) {
+    // 处理fileFilter中的错误
+    return res.status(400).json({
+      status: 'error',
+      message: err.message || '文件上传失败',
+      error: 'FileFilterError'
+    });
+  }
+  next();
+};
+
 // 获取车型列表（用于上传页面选择）
 router.get('/models', uploadController.getModelsForUpload);
 
-// 单文件上传（需要认证）- 添加multer中间件
-router.post('/single', authenticateToken, imageUpload.single('image'), uploadController.uploadSingleImage);
+// 单文件上传（需要认证）- 添加multer中间件和错误处理
+router.post('/single', authenticateToken, imageUpload.single('image'), handleMulterError, uploadController.uploadSingleImage);
 
 // 文章封面上传（简化版本）
 router.post('/cover', authenticateToken, imageUpload.single('file'), uploadController.uploadCoverImage);
@@ -51,8 +86,8 @@ router.post('/cover', authenticateToken, imageUpload.single('file'), uploadContr
 // 文章内容图片上传（用于文章编辑器）
 router.post('/article-image', authenticateToken, imageUpload.single('image'), uploadController.uploadArticleImage);
 
-// 多文件上传（需要认证）- 添加multer中间件
-router.post('/multiple', authenticateToken, imageUpload.array('images', 10), uploadController.uploadMultipleImages);
+// 多文件上传（需要认证）- 添加multer中间件和错误处理
+router.post('/multiple', authenticateToken, imageUpload.array('images', 10), handleMulterError, uploadController.uploadMultipleImages);
 
 // 更新图片信息
 router.put('/image/:id', uploadController.updateImage);
@@ -70,7 +105,7 @@ router.post('/brands', authenticateToken, restrictTo('admin', 'editor'), uploadC
 router.put('/brands/:id', authenticateToken, restrictTo('admin', 'editor'), uploadController.updateBrand);
 router.delete('/brands/:id', authenticateToken, restrictTo('admin', 'editor'), uploadController.deleteBrand);
 // 品牌Logo上传路由 - 使用独立的multer配置，需要管理员或编辑者权限
-router.post('/brands/:id/logo', authenticateToken, restrictTo('admin', 'editor'), logoUpload.single('logo'), uploadController.uploadBrandLogo);
+router.post('/brands/:id/logo', authenticateToken, restrictTo('admin', 'editor'), logoUpload.single('logo'), handleMulterError, uploadController.uploadBrandLogo);
 
 // ==================== 车型管理路由 ====================
 router.get('/brands/:brandId/models', uploadController.getModelsByBrand);

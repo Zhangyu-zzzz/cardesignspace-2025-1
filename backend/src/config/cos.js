@@ -1,13 +1,8 @@
 // 确保正确加载环境变量（与app.js保持一致）
 const path = require('path');
-// 优先从backend目录加载.env（与app.js保持一致）
-require('dotenv').config({ path: path.join(__dirname, '../.env') });
-// 如果上面的路径不存在，尝试项目根目录
-if (!process.env.TENCENT_SECRET_ID && !process.env.COS_BUCKET) {
-  require('dotenv').config({ path: path.join(__dirname, '../../../.env') });
-}
-// 最后尝试当前目录
-if (!process.env.TENCENT_SECRET_ID && !process.env.COS_BUCKET) {
+require('dotenv').config({ path: path.join(__dirname, '../../../.env') });
+// 如果上面的路径不存在，尝试当前目录
+if (!process.env.TENCENT_SECRET_ID && !process.env.TENCENT_SECRET_KEY) {
   require('dotenv').config();
 }
 

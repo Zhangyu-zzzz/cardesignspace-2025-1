@@ -11,13 +11,15 @@
       current="{{currentSlide}}"
       bindchange="goToSlide"
     >
-      <swiper-item wx:for="{{carouselItems}}" wx:key="id">
+      <swiper-item wx:for="{{carouselItems}}" wx:key="_key">
         <view class="carousel-item" bindtap="viewModelDetail" data-id="{{item.id}}">
           <image 
             class="carousel-image" 
-            src="{{item.Images && item.Images[0] ? item.Images[0].url : ''}}"
+            src="{{item._fallbackImage || item._imageUrl || (item.Brand && item.Brand.logo) || ''}}"
             mode="aspectFill"
             lazy-load="{{true}}"
+            binderror="onCarouselImageError"
+            data-index="{{index}}"
           />
           <view class="carousel-overlay">
             <view class="carousel-content">
@@ -52,25 +54,30 @@
       <text class="section-title">中国品牌</text>
       <text class="section-more" bindtap="onSearch">查看更多</text>
     </view>
-    <scroll-view class="brands-scroll" scroll-x="{{true}}" show-scrollbar="{{false}}">
+    <scroll-view class="brands-scroll" scroll-x="{{true}}" show-scrollbar="{{false}}" wx:if="{{chineseBrands.length > 0}}">
       <view class="brands-list">
         <view 
           class="brand-item" 
           wx:for="{{chineseBrands}}" 
-          wx:key="id"
+          wx:key="_key"
           bindtap="viewBrandDetail"
           data-id="{{item.id}}"
         >
           <image 
             class="brand-logo" 
-            src="{{item.logo || '/images/default-brand.png'}}"
+            src="{{item.logo || ''}}"
             mode="aspectFit"
             lazy-load="{{true}}"
+            binderror="onBrandImageError"
+            data-index="{{index}}"
           />
           <text class="brand-name">{{item.name}}</text>
         </view>
       </view>
     </scroll-view>
+    <view class="empty-container" wx:else>
+      <text class="empty-text">暂无品牌数据</text>
+    </view>
   </view>
 
   <!-- 最新车型 -->
@@ -79,25 +86,30 @@
       <text class="section-title">最新车型</text>
       <text class="section-more" bindtap="onSearch">查看更多</text>
     </view>
-    <view class="models-grid">
+    <view class="models-grid" wx:if="{{latestModels.length > 0}}">
       <view 
         class="model-card" 
         wx:for="{{latestModels}}" 
-        wx:key="id"
+        wx:key="_key"
         bindtap="viewModelDetail"
         data-id="{{item.id}}"
       >
         <image 
           class="model-image" 
-          src="{{item.Images && item.Images[0] ? item.Images[0].url : '/images/default-model.png'}}"
+          src="{{item._fallbackImage || item._imageUrl || (item.Brand && item.Brand.logo) || ''}}"
           mode="aspectFill"
           lazy-load="{{true}}"
+          binderror="onModelImageError"
+          data-index="{{index}}"
         />
         <view class="model-info">
           <text class="model-name">{{item.name}}</text>
           <text class="model-brand">{{item.Brand ? item.Brand.name : '未知品牌'}}</text>
         </view>
       </view>
+    </view>
+    <view class="empty-container" wx:else>
+      <text class="empty-text">暂无车型数据</text>
     </view>
   </view>
 </view>

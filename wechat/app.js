@@ -1,11 +1,16 @@
 // app.js
 App({
   onLaunch() {
+    console.log('小程序启动');
+    
     // 检查登录状态
     this.checkAuth();
     
     // 获取系统信息
     this.getSystemInfo();
+    
+    // 检查网络状态
+    this.checkNetworkStatus();
   },
 
   globalData: {
@@ -52,7 +57,26 @@ App({
   getSystemInfo() {
     const systemInfo = wx.getSystemInfoSync();
     this.globalData.systemInfo = systemInfo;
+    console.log('系统信息:', systemInfo);
     return systemInfo;
+  },
+
+  // 检查网络状态
+  checkNetworkStatus() {
+    wx.getNetworkType({
+      success: (res) => {
+        console.log('网络类型:', res.networkType);
+        if (res.networkType === 'none') {
+          wx.showToast({
+            title: '网络未连接',
+            icon: 'none'
+          });
+        }
+      },
+      fail: (err) => {
+        console.error('获取网络状态失败:', err);
+      }
+    });
   }
 });
 

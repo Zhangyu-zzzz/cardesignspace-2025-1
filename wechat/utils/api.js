@@ -59,7 +59,26 @@ const request = (options) => {
         }
       },
       fail: (err) => {
-        reject(err);
+        // 真机上网络请求失败时的详细错误信息
+        console.error('网络请求失败:', {
+          errMsg: err.errMsg,
+          url: getBaseURL() + options.url,
+          method: options.method || 'GET'
+        });
+        
+        // 提供更友好的错误提示
+        let errorMessage = '网络请求失败';
+        if (err.errMsg) {
+          if (err.errMsg.includes('fail')) {
+            errorMessage = '网络连接失败，请检查网络设置';
+          } else if (err.errMsg.includes('timeout')) {
+            errorMessage = '请求超时，请稍后重试';
+          } else if (err.errMsg.includes('domain')) {
+            errorMessage = '域名未配置，请在微信公众平台配置合法域名';
+          }
+        }
+        
+        reject(new Error(errorMessage));
       }
     });
   });

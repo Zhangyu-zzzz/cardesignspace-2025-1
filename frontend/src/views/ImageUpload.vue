@@ -1492,8 +1492,10 @@ export default {
               await this.uploadModelImages(newModel.id)
               this.$message.success('车型创建成功，图片上传成功！')
             } catch (uploadError) {
-              this.$message.warning('车型创建成功，但图片上传失败，您可以稍后重新上传')
               console.error('图片上传失败:', uploadError)
+              // 显示详细的错误信息
+              const errorMessage = uploadError.message || uploadError.response?.data?.message || '图片上传失败'
+              this.$message.warning(`车型创建成功，但图片上传失败：${errorMessage}。您可以稍后重新上传图片。`)
             }
           } else {
             this.$message.success(response.message)
@@ -2529,38 +2531,21 @@ export default {
     },
     
     async uploadSingleModelImage(modelId) {
-      const formData = new FormData()
-      formData.append('image', this.modelDialog.imageFile)
-      formData.append('title', this.modelDialog.imageTitle || this.modelDialog.imageFile.name)
-      formData.append('description', '')
-      formData.append('modelId', modelId)
-      formData.append('category', this.modelDialog.imageCategory)
-      formData.append('isFeatured', this.modelDialog.isFeatured)
-      
-      const response = await apiClient.post('/upload/single', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        }
-      })
-      
-      if (response.status !== 'success') {
-        throw new Error(response.message || '图片上传失败')
-      }
-    },
-    
-    async uploadMultipleModelImages(modelId) {
-      const files = this.modelDialog.fileList
-      
-      for (let i = 0; i < files.length; i++) {
-        const fileItem = files[i]
-        
+      try {
         const formData = new FormData()
-        formData.append('image', fileItem.file)
-        formData.append('title', fileItem.name)
+        formData.append('image', this.modelDialog.imageFile)
+        formData.append('title', this.modelDialog.imageTitle || this.modelDialog.imageFile.name)
         formData.append('description', '')
         formData.append('modelId', modelId)
-        formData.append('category', this.modelDialog.batchCategory)
-        formData.append('isFeatured', i === 0 && this.modelDialog.batchFeatured)
+        formData.append('category', this.modelDialog.imageCategory || 'general')
+        formData.append('isFeatured', this.modelDialog.isFeatured || false)
+        
+        console.log('上传单张车型图片:', {
+          modelId,
+          filename: this.modelDialog.imageFile.name,
+          size: this.modelDialog.imageFile.size,
+          type: this.modelDialog.imageFile.type
+        })
         
         const response = await apiClient.post('/upload/single', formData, {
           headers: {
@@ -2569,7 +2554,64 @@ export default {
         })
         
         if (response.status !== 'success') {
-          throw new Error(`文件 ${fileItem.name} 上传失败: ${response.message}`)
+          throw new Error(response.message || '图片上传失败')
+        }
+        
+        console.log('单张图片上传成功:', response)
+      } catch (error) {
+        console.error('单张图片上传失败:', error)
+        if (error.response) {
+          const errorMsg = error.response.data?.message || error.response.data?.error || error.message
+          throw new Error(errorMsg)
+        }
+        throw error
+      }
+    },
+    
+    async uploadMultipleModelImages(modelId) {
+      const files = this.modelDialog.fileList
+      
+      if (!files || files.length === 0) {
+        throw new Error('没有选择要上传的文件')
+      }
+      
+      for (let i = 0; i < files.length; i++) {
+        const fileItem = files[i]
+        
+        try {
+          const formData = new FormData()
+          formData.append('image', fileItem.file)
+          formData.append('title', fileItem.name)
+          formData.append('description', '')
+          formData.append('modelId', modelId)
+          formData.append('category', this.modelDialog.batchCategory || 'general')
+          formData.append('isFeatured', i === 0 && (this.modelDialog.batchFeatured || false))
+          
+          console.log(`上传批量图片 ${i + 1}/${files.length}:`, {
+            modelId,
+            filename: fileItem.name,
+            size: fileItem.file.size,
+            type: fileItem.file.type
+          })
+          
+          const response = await apiClient.post('/upload/single', formData, {
+            headers: {
+              'Content-Type': 'multipart/form-data'
+            }
+          })
+          
+          if (response.status !== 'success') {
+            throw new Error(`文件 ${fileItem.name} 上传失败: ${response.message || '未知错误'}`)
+          }
+          
+          console.log(`文件 ${fileItem.name} 上传成功`)
+        } catch (error) {
+          console.error(`文件 ${fileItem.name} 上传失败:`, error)
+          if (error.response) {
+            const errorMsg = error.response.data?.message || error.response.data?.error || error.message
+            throw new Error(`文件 ${fileItem.name} 上传失败: ${errorMsg}`)
+          }
+          throw error
         }
       }
     }

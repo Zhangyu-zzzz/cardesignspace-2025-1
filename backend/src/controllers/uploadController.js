@@ -4,6 +4,7 @@ const { uploadToCOS, generateUploadPath, deleteFromCOS } = require('../config/co
 const authController = require('./authController');
 const activityService = require('../services/activityService');
 const { generateAndSaveAssets, chooseBestUrl } = require('../services/assetService');
+const logger = require('../config/logger');
 
 // 导入模型并确保关联关系
 const { Brand, Model, Image, ArticleImage } = require('../models/mysql');
@@ -202,19 +203,37 @@ exports.uploadSingleImage = async (req, res) => {
 
     } catch (cosError) {
       console.error('COS上传失败:', cosError);
+      logger.error('COS上传失败:', {
+        error: cosError.message,
+        stack: cosError.stack,
+        modelId,
+        filename: req.file ? req.file.originalname : 'unknown',
+        cosKey: cosKey || 'unknown'
+      });
       return res.status(500).json({
         status: 'error',
         message: '图片上传到云存储失败',
-        details: cosError.message
+        details: process.env.NODE_ENV === 'production' ? undefined : cosError.message
       });
     }
 
   } catch (error) {
     console.error('图片上传处理失败:', error);
+    logger.error('图片上传处理失败:', {
+      error: error.message,
+      stack: error.stack,
+      body: req.body,
+      hasFile: !!req.file,
+      fileInfo: req.file ? {
+        originalname: req.file.originalname,
+        mimetype: req.file.mimetype,
+        size: req.file.size
+      } : null
+    });
     res.status(500).json({
       status: 'error',
       message: '图片上传处理失败',
-      details: error.message
+      details: process.env.NODE_ENV === 'production' ? undefined : error.message
     });
   }
 };

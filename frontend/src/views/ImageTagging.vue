@@ -410,7 +410,7 @@ export default {
     async loadTagStats() {
       try {
         const response = await apiClient.get('/image-tags/stats/tags')
-        this.tagStats = response.data
+        this.tagStats = response.data.data || response.data || []
       } catch (error) {
         console.error('加载标签统计失败:', error)
       }
@@ -610,7 +610,7 @@ export default {
     async loadStyleTagOptions() {
       try {
         const response = await apiClient.get('/image-tags/style-tag-options')
-        this.styleTagOptions = response.data
+        this.styleTagOptions = response.data.data || response.data || { options: [] }
       } catch (error) {
         console.error('加载风格标签选项失败:', error)
         this.$message.error('加载风格标签选项失败')

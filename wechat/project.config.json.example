@@ -50,7 +50,7 @@
   },
   "compileType": "miniprogram",
   "libVersion": "2.19.4",
-  "appid": "wx331e3b70c847605b",
+  "appid": "YOUR_APPID_HERE",
   "projectname": "cardesignspace-miniprogram",
   "isGameTourist": false,
   "condition": {
@@ -76,3 +76,4 @@
   "simulatorPluginLibVersion": {},
   "editorSetting": {}
 }
+

@@ -96,6 +96,10 @@ coverage/
 .expo/
 .expo-shared/
 
+# 🔐 微信小程序敏感配置
+wechat/project.private.config.json
+wechat/project.config.json
+
 # 🌐 前端构建
 .nuxt/
 .next/

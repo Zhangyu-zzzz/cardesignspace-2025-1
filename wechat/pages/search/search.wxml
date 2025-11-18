@@ -31,7 +31,7 @@
         <view 
           class="brand-item" 
           wx:for="{{results.brands}}" 
-          wx:key="{{item.brand_id || item.id}}"
+          wx:key="_key"
           bindtap="viewBrandDetail"
           data-id="{{item.brand_id || item.id}}"
         >
@@ -52,14 +52,16 @@
         <view 
           class="model-item" 
           wx:for="{{results.models}}" 
-          wx:key="{{item.model_id || item.id}}"
+          wx:key="_key"
           bindtap="viewModelDetail"
           data-id="{{item.model_id || item.id}}"
         >
           <image 
             class="model-image" 
-            src="{{item.Images && item.Images[0] ? (item.Images[0].url || item.Images[0].image_url) : '/images/default-model.png'}}"
+            src="{{item._imageUrl || (item.Brand && item.Brand.logo) || ''}}"
             mode="aspectFill"
+            binderror="onImageError"
+            data-index="{{index}}"
           />
           <view class="model-info">
             <text class="model-name">{{item.name}}</text>
@@ -77,7 +79,7 @@
         <view 
           class="image-item" 
           wx:for="{{results.images}}" 
-          wx:key="{{item.image_id || item.id}}"
+          wx:key="_key"
           bindtap="previewImage"
           data-url="{{item.url || item.image_url}}"
         >

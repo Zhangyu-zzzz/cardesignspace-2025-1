@@ -126,8 +126,8 @@
         
         <div class="image-info">
           <div class="model-info">
-            <strong>{{ image.Model?.Brand?.name }} {{ image.Model?.name }}</strong>
-            <span class="model-type">{{ image.Model?.type || '未分类' }}</span>
+            <strong>{{ image.model?.brand?.name || '' }} {{ image.model?.name || '' }}</strong>
+            <span class="model-type">{{ image.model?.type || '未分类' }}</span>
           </div>
           
           <div class="filename">{{ image.filename }}</div>
@@ -187,11 +187,11 @@
           </div>
           
           <!-- 车型分类 -->
-          <div class="model-type-section">
+          <div class="model-type-section" v-if="image.model">
             <label>车型分类:</label>
             <select 
-              v-model="image.Model.type" 
-              @change="updateModelType(image.Model.id, image.Model.type)"
+              v-model="image.model.type" 
+              @change="updateModelType(image.model.id, image.model.type)"
             >
               <option value="">未分类</option>
               <option value="轿车">轿车</option>
@@ -207,20 +207,20 @@
           </div>
 
           <!-- 风格标签 -->
-          <div class="style-tags-section">
+          <div class="style-tags-section" v-if="image.model">
             <div class="style-tags-header">
               <label>风格标签:</label>
-              <button @click="openStyleTagModal(image.Model)" class="btn-style-tags">
+              <button @click="openStyleTagModal(image.model)" class="btn-style-tags">
                 <i class="el-icon-edit"></i> 编辑风格
               </button>
             </div>
             <div class="style-tags-display">
-              <span v-if="!image.Model.styleTags || image.Model.styleTags.length === 0" class="no-style-tags">
+              <span v-if="!image.model.styleTags || image.model.styleTags.length === 0" class="no-style-tags">
                 暂无风格标签
               </span>
               <div v-else class="style-tags-list">
                 <span 
-                  v-for="tag in image.Model.styleTags" 
+                  v-for="tag in image.model.styleTags" 
                   :key="tag" 
                   class="style-tag-item"
                 >
@@ -385,8 +385,10 @@ export default {
         }
         
         const response = await apiClient.get('/image-tags/images', { params })
-        this.images = response.data.images
-        this.pagination = response.data.pagination
+        // 兼容不同的响应结构
+        const responseData = response.data.data || response.data
+        this.images = responseData.images || []
+        this.pagination = responseData.pagination || this.pagination
         
         // 为每个图片添加newTag字段
         this.images.forEach(image => {

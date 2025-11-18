@@ -1,4 +1,10 @@
-require('dotenv').config({ path: '../.env' });
+// 加载环境变量 - 优先从backend目录加载.env
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '../.env') });
+// 如果上面的路径不存在，尝试项目根目录
+if (!process.env.DB_HOST && !process.env.JWT_SECRET) {
+  require('dotenv').config({ path: path.join(__dirname, '../../.env') });
+}
 const express = require('express');
 const cors = require('cors');
 const morgan = require('morgan');

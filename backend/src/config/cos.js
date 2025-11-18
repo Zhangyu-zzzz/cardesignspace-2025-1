@@ -1,4 +1,11 @@
-require('dotenv').config();
+// 确保正确加载环境变量（与app.js保持一致）
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '../../../.env') });
+// 如果上面的路径不存在，尝试当前目录
+if (!process.env.TENCENT_SECRET_ID && !process.env.TENCENT_SECRET_KEY) {
+  require('dotenv').config();
+}
+
 const COS = require('cos-nodejs-sdk-v5');
 
 const cos = new COS({
@@ -30,43 +37,115 @@ const isDevelopment = process.env.NODE_ENV !== 'production';
  */
 const uploadToCOS = (fileBuffer, key, contentType) => {
   return new Promise((resolve, reject) => {
-    // 动态获取最新的COS配置
-    const currentCosConfig = getCosConfig();
-    
-    console.log('开始上传到腾讯云COS:', {
-      bucket: currentCosConfig.Bucket,
-      region: currentCosConfig.Region,
-      key: key,
-      contentType: contentType
-    });
-    
-    // 使用腾讯云COS存储
-    cos.putObject({
-      Bucket: currentCosConfig.Bucket,
-      Region: currentCosConfig.Region,
-      Key: key,
-      Body: fileBuffer,
-      ContentType: contentType,
-      StorageClass: 'STANDARD',
-      onProgress: function(progressData) {
-        console.log('上传进度:', JSON.stringify(progressData));
+    try {
+      // 验证文件缓冲区
+      if (!fileBuffer || !Buffer.isBuffer(fileBuffer)) {
+        const error = new Error('无效的文件缓冲区');
+        console.error('COS上传失败 - 文件缓冲区验证失败:', error);
+        return reject(error);
       }
-    }, function(err, data) {
-      if (err) {
-        console.error('COS上传失败:', err);
-        reject(err);
-      } else {
-        console.log('COS上传成功:', data);
-        // 构建完整的访问URL，确保正确的URL编码
-        const encodedKey = encodeURIComponent(key).replace(/%2F/g, '/');
-        const url = `${currentCosConfig.BucketDomain}/${encodedKey}`;
-        resolve({
-          url,
-          location: data.Location,
-          key: key
-        });
+
+      // 验证文件大小
+      if (fileBuffer.length === 0) {
+        const error = new Error('文件大小为0');
+        console.error('COS上传失败 - 文件大小验证失败:', error);
+        return reject(error);
       }
-    });
+
+      // 动态获取最新的COS配置
+      const currentCosConfig = getCosConfig();
+      
+      // 验证COS配置
+      if (!currentCosConfig.Bucket || currentCosConfig.Bucket === 'test-1250000000') {
+        const error = new Error('COS存储桶配置无效，请检查环境变量COS_BUCKET');
+        console.error('COS上传失败 - 配置验证失败:', error);
+        return reject(error);
+      }
+
+      if (!currentCosConfig.Region) {
+        const error = new Error('COS区域配置无效，请检查环境变量COS_REGION');
+        console.error('COS上传失败 - 配置验证失败:', error);
+        return reject(error);
+      }
+
+      // 验证密钥配置
+      const secretId = process.env.TENCENT_SECRET_ID;
+      const secretKey = process.env.TENCENT_SECRET_KEY;
+      if (!secretId || secretId === 'your-secret-id' || !secretKey || secretKey === 'your-secret-key') {
+        const error = new Error('COS密钥配置无效，请检查环境变量TENCENT_SECRET_ID和TENCENT_SECRET_KEY');
+        console.error('COS上传失败 - 密钥验证失败:', error);
+        return reject(error);
+      }
+
+      console.log('开始上传到腾讯云COS:', {
+        bucket: currentCosConfig.Bucket,
+        region: currentCosConfig.Region,
+        key: key,
+        contentType: contentType,
+        fileSize: fileBuffer.length
+      });
+      
+      // 使用腾讯云COS存储
+      cos.putObject({
+        Bucket: currentCosConfig.Bucket,
+        Region: currentCosConfig.Region,
+        Key: key,
+        Body: fileBuffer,
+        ContentType: contentType,
+        StorageClass: 'STANDARD',
+        onProgress: function(progressData) {
+          console.log('上传进度:', JSON.stringify(progressData));
+        }
+      }, function(err, data) {
+        if (err) {
+          console.error('COS上传失败 - 详细错误:', {
+            code: err.code,
+            statusCode: err.statusCode,
+            message: err.message,
+            requestId: err.requestId,
+            resource: err.resource,
+            bucket: currentCosConfig.Bucket,
+            region: currentCosConfig.Region,
+            key: key
+          });
+          
+          // 提供更友好的错误信息
+          let errorMessage = '图片上传到云存储失败';
+          if (err.statusCode === 403) {
+            errorMessage = 'COS访问被拒绝，请检查密钥权限';
+          } else if (err.statusCode === 404) {
+            errorMessage = 'COS存储桶不存在，请检查配置';
+          } else if (err.code === 'CredentialsError') {
+            errorMessage = 'COS密钥验证失败，请检查密钥配置';
+          } else if (err.message) {
+            errorMessage = `COS上传失败: ${err.message}`;
+          }
+          
+          const enhancedError = new Error(errorMessage);
+          enhancedError.originalError = err;
+          enhancedError.code = err.code;
+          enhancedError.statusCode = err.statusCode;
+          reject(enhancedError);
+        } else {
+          console.log('COS上传成功:', {
+            location: data.Location,
+            etag: data.ETag,
+            requestId: data.RequestId
+          });
+          // 构建完整的访问URL，确保正确的URL编码
+          const encodedKey = encodeURIComponent(key).replace(/%2F/g, '/');
+          const url = `${currentCosConfig.BucketDomain}/${encodedKey}`;
+          resolve({
+            url,
+            location: data.Location,
+            key: key
+          });
+        }
+      });
+    } catch (error) {
+      console.error('COS上传异常:', error);
+      reject(error);
+    }
   });
 };
 

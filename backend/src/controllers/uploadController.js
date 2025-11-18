@@ -205,15 +205,24 @@ exports.uploadSingleImage = async (req, res) => {
       console.error('COS上传失败:', cosError);
       logger.error('COS上传失败:', {
         error: cosError.message,
+        originalError: cosError.originalError ? {
+          code: cosError.originalError.code,
+          statusCode: cosError.originalError.statusCode,
+          message: cosError.originalError.message
+        } : null,
         stack: cosError.stack,
         modelId,
         filename: req.file ? req.file.originalname : 'unknown',
-        cosKey: cosKey || 'unknown'
+        cosKey: cosKey || 'unknown',
+        fileSize: req.file ? req.file.size : 'unknown'
       });
+      
+      // 使用更友好的错误信息
+      const errorMessage = cosError.message || '图片上传到云存储失败';
       return res.status(500).json({
         status: 'error',
-        message: '图片上传到云存储失败',
-        details: process.env.NODE_ENV === 'production' ? undefined : cosError.message
+        message: errorMessage,
+        details: process.env.NODE_ENV === 'production' ? undefined : (cosError.originalError?.message || cosError.message)
       });
     }
 

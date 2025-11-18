@@ -1,0 +1,59 @@
+<!--pages/image-upload/image-upload.wxml-->
+<view class="upload-page">
+  <view class="upload-form">
+    <view class="form-item">
+      <text class="form-label">选择品牌</text>
+      <picker 
+        mode="selector" 
+        range="{{brands}}" 
+        range-key="name"
+        value="{{selectedBrandIndex}}"
+        bindchange="onBrandChange"
+      >
+        <view class="picker">
+          {{selectedBrandIndex >= 0 ? brands[selectedBrandIndex].name : '请选择品牌'}}
+        </view>
+      </picker>
+    </view>
+
+    <view class="form-item" wx:if="{{selectedBrandId && models.length > 0}}">
+      <text class="form-label">选择车型</text>
+      <picker 
+        mode="selector" 
+        range="{{models}}" 
+        range-key="name"
+        value="{{selectedModelIndex}}"
+        bindchange="onModelChange"
+      >
+        <view class="picker">
+          {{selectedModelIndex >= 0 ? models[selectedModelIndex].name : '请选择车型'}}
+        </view>
+      </picker>
+    </view>
+
+    <view class="form-item">
+      <text class="form-label">选择图片</text>
+      <view class="image-picker" bindtap="chooseImage">
+        <image 
+          wx:if="{{imagePath}}" 
+          class="preview-image" 
+          src="{{imagePath}}"
+          mode="aspectFill"
+        />
+        <view wx:else class="picker-placeholder">
+          <text>点击选择图片</text>
+        </view>
+      </view>
+    </view>
+
+    <button 
+      class="btn-primary upload-btn" 
+      bindtap="uploadImage"
+      loading="{{uploading}}"
+      disabled="{{uploading}}"
+    >
+      上传
+    </button>
+  </view>
+</view>
+

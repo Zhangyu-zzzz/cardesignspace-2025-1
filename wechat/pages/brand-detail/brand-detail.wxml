@@ -1,0 +1,56 @@
+<!--pages/brand-detail/brand-detail.wxml-->
+<view class="brand-detail-page">
+  <!-- 加载状态 -->
+  <view class="loading-container" wx:if="{{loading}}">
+    <view class="loading">
+      <text class="loading-text">加载中...</text>
+    </view>
+  </view>
+
+  <!-- 错误状态 -->
+  <view class="error-container" wx:if="{{error && !loading}}">
+    <view class="error">
+      <text class="error-text">{{error}}</text>
+      <button class="btn-primary mt-20" bindtap="retryLoad">重试</button>
+    </view>
+  </view>
+
+  <!-- 品牌信息 -->
+  <view class="brand-header" wx:if="{{brand && !loading}}">
+    <image 
+      class="brand-logo-large" 
+      src="{{brand.logo || '/images/default-brand.png'}}"
+      mode="aspectFit"
+    />
+    <view class="brand-info">
+      <text class="brand-name">{{brand.name}}</text>
+      <text class="brand-country" wx:if="{{brand.country}}">{{brand.country}}</text>
+      <text class="brand-description" wx:if="{{brand.description}}">{{brand.description}}</text>
+    </view>
+  </view>
+
+  <!-- 车型列表 -->
+  <view class="models-section" wx:if="{{brand && !loading}}">
+    <view class="section-title">车型列表</view>
+    <view class="models-grid">
+      <view 
+        class="model-card" 
+        wx:for="{{models}}" 
+        wx:key="id"
+        bindtap="viewModelDetail"
+        data-id="{{item.id}}"
+      >
+        <image 
+          class="model-image" 
+          src="{{item.Images && item.Images[0] ? item.Images[0].url : '/images/default-model.png'}}"
+          mode="aspectFill"
+          lazy-load="{{true}}"
+        />
+        <view class="model-info">
+          <text class="model-name">{{item.name}}</text>
+        </view>
+      </view>
+    </view>
+  </view>
+</view>
+

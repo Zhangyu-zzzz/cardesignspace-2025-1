@@ -1,0 +1,102 @@
+<!--pages/search/search.wxml-->
+<view class="search-page">
+  <!-- 搜索框 -->
+  <view class="search-section">
+    <view class="search-box">
+      <input 
+        class="search-input" 
+        placeholder="搜索品牌、车型或图片" 
+        value="{{keyword}}"
+        bindinput="onSearchInput"
+        confirm-type="search"
+        bindconfirm="onSearch"
+      />
+      <button class="search-btn" bindtap="onSearch">搜索</button>
+    </view>
+  </view>
+
+  <!-- 加载状态 -->
+  <view class="loading-container" wx:if="{{loading}}">
+    <view class="loading">
+      <text class="loading-text">搜索中...</text>
+    </view>
+  </view>
+
+  <!-- 搜索结果 -->
+  <view class="results-section" wx:if="{{hasSearched && !loading}}">
+    <!-- 品牌结果 -->
+    <view class="result-group" wx:if="{{results.brands.length > 0}}">
+      <view class="group-title">品牌 ({{results.brands.length}})</view>
+      <view class="brands-list">
+        <view 
+          class="brand-item" 
+          wx:for="{{results.brands}}" 
+          wx:key="{{item.brand_id || item.id}}"
+          bindtap="viewBrandDetail"
+          data-id="{{item.brand_id || item.id}}"
+        >
+          <image 
+            class="brand-logo" 
+            src="{{item.logo_url || item.logo || '/images/default-brand.png'}}"
+            mode="aspectFit"
+          />
+          <text class="brand-name">{{item.name}}</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 车型结果 -->
+    <view class="result-group" wx:if="{{results.models.length > 0}}">
+      <view class="group-title">车型 ({{results.models.length}})</view>
+      <view class="models-list">
+        <view 
+          class="model-item" 
+          wx:for="{{results.models}}" 
+          wx:key="{{item.model_id || item.id}}"
+          bindtap="viewModelDetail"
+          data-id="{{item.model_id || item.id}}"
+        >
+          <image 
+            class="model-image" 
+            src="{{item.Images && item.Images[0] ? (item.Images[0].url || item.Images[0].image_url) : '/images/default-model.png'}}"
+            mode="aspectFill"
+          />
+          <view class="model-info">
+            <text class="model-name">{{item.name}}</text>
+            <text class="model-brand" wx:if="{{item.Series && item.Series.Brand}}">{{item.Series.Brand.name}}</text>
+            <text class="model-brand" wx:elif="{{item.Brand}}">{{item.Brand.name}}</text>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 图片结果 -->
+    <view class="result-group" wx:if="{{results.images.length > 0}}">
+      <view class="group-title">图片 ({{results.images.length}})</view>
+      <view class="images-grid">
+        <view 
+          class="image-item" 
+          wx:for="{{results.images}}" 
+          wx:key="{{item.image_id || item.id}}"
+          bindtap="previewImage"
+          data-url="{{item.url || item.image_url}}"
+        >
+          <image 
+            class="image" 
+            src="{{item.url || item.image_url}}"
+            mode="aspectFill"
+            lazy-load="{{true}}"
+          />
+        </view>
+      </view>
+    </view>
+
+    <!-- 空状态 -->
+    <view class="empty-container" wx:if="{{results.brands.length === 0 && results.models.length === 0 && results.images.length === 0}}">
+      <view class="empty">
+        <text class="empty-text">未找到相关结果</text>
+      </view>
+    </view>
+  </view>
+</view>
+

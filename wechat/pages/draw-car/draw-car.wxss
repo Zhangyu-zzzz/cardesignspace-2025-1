@@ -1,0 +1,5 @@
+/* pages/draw-car/draw-car.wxss */
+.draw-car-page {
+  padding: 30rpx;
+}
+

@@ -1,0 +1,46 @@
+<!--pages/model-detail/model-detail.wxml-->
+<view class="model-detail-page">
+  <!-- 加载状态 -->
+  <view class="loading-container" wx:if="{{loading}}">
+    <view class="loading">
+      <text class="loading-text">加载中...</text>
+    </view>
+  </view>
+
+  <!-- 错误状态 -->
+  <view class="error-container" wx:if="{{error && !loading}}">
+    <view class="error">
+      <text class="error-text">{{error}}</text>
+      <button class="btn-primary mt-20" bindtap="retryLoad">重试</button>
+    </view>
+  </view>
+
+  <!-- 车型信息 -->
+  <view class="model-header" wx:if="{{model && !loading}}">
+    <text class="model-name">{{model.name}}</text>
+    <text class="model-brand" wx:if="{{model.Brand}}">{{model.Brand.name}}</text>
+    <text class="model-description" wx:if="{{model.description}}">{{model.description}}</text>
+  </view>
+
+  <!-- 图片列表 -->
+  <view class="images-section" wx:if="{{model && !loading}}">
+    <view class="section-title">图片 ({{images.length}})</view>
+    <view class="images-grid">
+      <view 
+        class="image-item" 
+        wx:for="{{images}}" 
+        wx:key="id"
+        bindtap="previewImage"
+        data-index="{{index}}"
+      >
+        <image 
+          class="image" 
+          src="{{item.url}}"
+          mode="aspectFill"
+          lazy-load="{{true}}"
+        />
+      </view>
+    </view>
+  </view>
+</view>
+

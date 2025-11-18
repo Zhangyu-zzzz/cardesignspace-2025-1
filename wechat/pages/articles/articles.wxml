@@ -1,0 +1,16 @@
+<!--pages/articles/articles.wxml-->
+<view class="articles-page">
+  <view class="articles-list">
+    <view 
+      class="article-item" 
+      wx:for="{{articles}}" 
+      wx:key="id"
+      bindtap="viewArticle"
+      data-id="{{item.id}}"
+    >
+      <text class="article-title">{{item.title}}</text>
+      <text class="article-summary">{{item.summary}}</text>
+    </view>
+  </view>
+</view>
+

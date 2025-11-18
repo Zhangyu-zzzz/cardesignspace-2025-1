@@ -1,0 +1,23 @@
+/* pages/inspiration/inspiration.wxss */
+.inspiration-page {
+  padding: 20rpx;
+}
+
+.images-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20rpx;
+}
+
+.image-item {
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 16rpx;
+  overflow: hidden;
+}
+
+.image {
+  width: 100%;
+  height: 100%;
+}
+

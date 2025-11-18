@@ -1,0 +1,170 @@
+/* pages/home/home.wxss */
+.home-container {
+  min-height: 100vh;
+  background-color: #f5f5f5;
+}
+
+/* 轮播图 */
+.carousel-section {
+  width: 100%;
+  height: 500rpx;
+  margin-bottom: 30rpx;
+}
+
+.carousel-swiper {
+  width: 100%;
+  height: 100%;
+}
+
+.carousel-item {
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+.carousel-image {
+  width: 100%;
+  height: 100%;
+}
+
+.carousel-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.8), transparent);
+  padding: 40rpx 30rpx 30rpx;
+}
+
+.carousel-content {
+  display: flex;
+  flex-direction: column;
+}
+
+.carousel-badge {
+  display: inline-block;
+  padding: 8rpx 16rpx;
+  background-color: #e03426;
+  color: #ffffff;
+  font-size: 22rpx;
+  border-radius: 20rpx;
+  margin-bottom: 10rpx;
+  width: fit-content;
+}
+
+.carousel-title {
+  font-size: 36rpx;
+  font-weight: 600;
+  color: #ffffff;
+  margin-bottom: 10rpx;
+}
+
+.carousel-brand {
+  font-size: 28rpx;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+/* 加载和错误状态 */
+.loading-container,
+.error-container {
+  padding: 100rpx 0;
+}
+
+/* 区块样式 */
+.section {
+  margin-bottom: 40rpx;
+  background-color: #ffffff;
+  padding: 30rpx;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30rpx;
+}
+
+.section-title {
+  font-size: 36rpx;
+  font-weight: 600;
+  color: #333;
+}
+
+.section-more {
+  font-size: 28rpx;
+  color: #999;
+}
+
+/* 品牌列表 */
+.brands-scroll {
+  white-space: nowrap;
+}
+
+.brands-list {
+  display: flex;
+  padding: 20rpx 0;
+}
+
+.brand-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-right: 30rpx;
+  min-width: 120rpx;
+}
+
+.brand-logo {
+  width: 120rpx;
+  height: 120rpx;
+  border-radius: 16rpx;
+  background-color: #f5f5f5;
+  margin-bottom: 10rpx;
+}
+
+.brand-name {
+  font-size: 24rpx;
+  color: #666;
+  text-align: center;
+}
+
+/* 车型网格 */
+.models-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20rpx;
+}
+
+.model-card {
+  background-color: #ffffff;
+  border-radius: 16rpx;
+  overflow: hidden;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.1);
+}
+
+.model-image {
+  width: 100%;
+  height: 300rpx;
+  background-color: #f5f5f5;
+}
+
+.model-info {
+  padding: 20rpx;
+  display: flex;
+  flex-direction: column;
+}
+
+.model-name {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 8rpx;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.model-brand {
+  font-size: 24rpx;
+  color: #999;
+}
+

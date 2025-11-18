@@ -1,0 +1,69 @@
+{
+  "pages": [
+    "pages/home/home",
+    "pages/brands/brands",
+    "pages/brand-detail/brand-detail",
+    "pages/models/models",
+    "pages/model-detail/model-detail",
+    "pages/search/search",
+    "pages/login/login",
+    "pages/register/register",
+    "pages/profile/profile",
+    "pages/image-gallery/image-gallery",
+    "pages/image-upload/image-upload",
+    "pages/articles/articles",
+    "pages/article-detail/article-detail",
+    "pages/inspiration/inspiration",
+    "pages/forum/forum",
+    "pages/draw-car/draw-car",
+    "pages/about/about"
+  ],
+  "window": {
+    "backgroundTextStyle": "light",
+    "navigationBarBackgroundColor": "#000000",
+    "navigationBarTitleText": "CarDesignSpace",
+    "navigationBarTextStyle": "white",
+    "backgroundColor": "#000000"
+  },
+  "tabBar": {
+    "color": "#999999",
+    "selectedColor": "#e03426",
+    "backgroundColor": "#ffffff",
+    "borderStyle": "black",
+    "list": [
+      {
+        "pagePath": "pages/home/home",
+        "text": "首页",
+        "iconPath": "images/home.png",
+        "selectedIconPath": "images/home-active.png"
+      },
+      {
+        "pagePath": "pages/brands/brands",
+        "text": "品牌",
+        "iconPath": "images/brand.png",
+        "selectedIconPath": "images/brand-active.png"
+      },
+      {
+        "pagePath": "pages/image-gallery/image-gallery",
+        "text": "图片",
+        "iconPath": "images/image.png",
+        "selectedIconPath": "images/image-active.png"
+      },
+      {
+        "pagePath": "pages/profile/profile",
+        "text": "我的",
+        "iconPath": "images/profile.png",
+        "selectedIconPath": "images/profile-active.png"
+      }
+    ]
+  },
+  "networkTimeout": {
+    "request": 10000,
+    "downloadFile": 10000
+  },
+  "debug": false,
+  "style": "v2",
+  "sitemapLocation": "sitemap.json",
+  "lazyCodeLoading": "requiredComponents"
+}
+

@@ -1,0 +1,139 @@
+/* pages/search/search.wxss */
+.search-page {
+  min-height: 100vh;
+  background-color: #f5f5f5;
+}
+
+.search-section {
+  padding: 20rpx;
+  background-color: #ffffff;
+  margin-bottom: 20rpx;
+}
+
+.search-box {
+  display: flex;
+  align-items: center;
+  gap: 20rpx;
+}
+
+.search-input {
+  flex: 1;
+  padding: 20rpx;
+  background-color: #f5f5f5;
+  border-radius: 8rpx;
+  font-size: 28rpx;
+}
+
+.search-btn {
+  padding: 20rpx 40rpx;
+  background-color: #e03426;
+  color: #ffffff;
+  border-radius: 8rpx;
+  font-size: 28rpx;
+  border: none;
+}
+
+.results-section {
+  padding: 20rpx;
+}
+
+.result-group {
+  margin-bottom: 40rpx;
+  background-color: #ffffff;
+  padding: 30rpx;
+  border-radius: 16rpx;
+}
+
+.group-title {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 30rpx;
+}
+
+.brands-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20rpx;
+}
+
+.brand-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 150rpx;
+}
+
+.brand-logo {
+  width: 120rpx;
+  height: 120rpx;
+  border-radius: 16rpx;
+  margin-bottom: 10rpx;
+  background-color: #f5f5f5;
+}
+
+.brand-name {
+  font-size: 24rpx;
+  color: #666;
+  text-align: center;
+}
+
+.models-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
+}
+
+.model-item {
+  display: flex;
+  align-items: center;
+  padding: 20rpx;
+  background-color: #f5f5f5;
+  border-radius: 16rpx;
+}
+
+.model-image {
+  width: 120rpx;
+  height: 120rpx;
+  border-radius: 8rpx;
+  margin-right: 20rpx;
+  background-color: #e0e0e0;
+}
+
+.model-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.model-name {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 8rpx;
+}
+
+.model-brand {
+  font-size: 24rpx;
+  color: #999;
+}
+
+.images-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10rpx;
+}
+
+.image-item {
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 8rpx;
+  overflow: hidden;
+  background-color: #f5f5f5;
+}
+
+.image {
+  width: 100%;
+  height: 100%;
+}
+

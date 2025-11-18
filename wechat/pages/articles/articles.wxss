@@ -1,0 +1,26 @@
+/* pages/articles/articles.wxss */
+.articles-page {
+  padding: 30rpx;
+}
+
+.article-item {
+  background-color: #ffffff;
+  padding: 30rpx;
+  margin-bottom: 20rpx;
+  border-radius: 16rpx;
+}
+
+.article-title {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #333;
+  display: block;
+  margin-bottom: 10rpx;
+}
+
+.article-summary {
+  font-size: 28rpx;
+  color: #666;
+  display: block;
+}
+

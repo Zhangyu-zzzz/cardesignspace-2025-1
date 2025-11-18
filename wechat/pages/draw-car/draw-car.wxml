@@ -1,0 +1,12 @@
+<!--pages/draw-car/draw-car.wxml-->
+<view class="draw-car-page">
+  <view class="welcome" wx:if="{{!isAuthenticated}}">
+    <text>请先登录</text>
+  </view>
+  <view class="vehicles-list" wx:else>
+    <view class="vehicle-item" wx:for="{{vehicles}}" wx:key="id">
+      <text>{{item.name}}</text>
+    </view>
+  </view>
+</view>
+

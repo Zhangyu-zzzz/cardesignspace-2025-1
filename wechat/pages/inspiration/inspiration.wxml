@@ -1,0 +1,15 @@
+<!--pages/inspiration/inspiration.wxml-->
+<view class="inspiration-page">
+  <view class="images-grid">
+    <view 
+      class="image-item" 
+      wx:for="{{images}}" 
+      wx:key="id"
+      bindtap="previewImage"
+      data-index="{{index}}"
+    >
+      <image class="image" src="{{item.url}}" mode="aspectFill" lazy-load="{{true}}" />
+    </view>
+  </view>
+</view>
+

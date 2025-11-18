@@ -1,0 +1,42 @@
+/* pages/models/models.wxss */
+.models-page {
+  padding: 20rpx;
+}
+
+.models-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20rpx;
+}
+
+.model-card {
+  background-color: #ffffff;
+  border-radius: 16rpx;
+  overflow: hidden;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.1);
+}
+
+.model-image {
+  width: 100%;
+  height: 300rpx;
+  background-color: #f5f5f5;
+}
+
+.model-info {
+  padding: 20rpx;
+}
+
+.model-name {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #333;
+  display: block;
+  margin-bottom: 8rpx;
+}
+
+.model-brand {
+  font-size: 24rpx;
+  color: #999;
+  display: block;
+}
+

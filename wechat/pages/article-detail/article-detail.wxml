@@ -1,0 +1,8 @@
+<!--pages/article-detail/article-detail.wxml-->
+<view class="article-detail-page">
+  <view class="article-content" wx:if="{{article}}">
+    <text class="article-title">{{article.title}}</text>
+    <text class="article-body">{{article.content}}</text>
+  </view>
+</view>
+

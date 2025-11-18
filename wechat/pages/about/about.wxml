@@ -1,0 +1,8 @@
+<!--pages/about/about.wxml-->
+<view class="about-page">
+  <view class="about-content">
+    <text class="title">CarDesignSpace</text>
+    <text class="description">全球汽车设计爱好者的灵感库与创意社区</text>
+  </view>
+</view>
+

@@ -1,0 +1,68 @@
+<!--pages/register/register.wxml-->
+<view class="register-page">
+  <view class="register-container">
+    <view class="register-header">
+      <text class="register-title">注册</text>
+      <text class="register-subtitle">加入 CarDesignSpace 社区</text>
+    </view>
+
+    <view class="register-form">
+      <view class="form-item">
+        <text class="form-label">用户名</text>
+        <input 
+          class="form-input" 
+          placeholder="请输入用户名" 
+          value="{{username}}"
+          bindinput="onUsernameInput"
+        />
+      </view>
+
+      <view class="form-item">
+        <text class="form-label">邮箱</text>
+        <input 
+          class="form-input" 
+          type="text"
+          placeholder="请输入邮箱" 
+          value="{{email}}"
+          bindinput="onEmailInput"
+        />
+      </view>
+
+      <view class="form-item">
+        <text class="form-label">密码</text>
+        <input 
+          class="form-input" 
+          type="password"
+          placeholder="请输入密码" 
+          value="{{password}}"
+          bindinput="onPasswordInput"
+        />
+      </view>
+
+      <view class="form-item">
+        <text class="form-label">确认密码</text>
+        <input 
+          class="form-input" 
+          type="password"
+          placeholder="请再次输入密码" 
+          value="{{confirmPassword}}"
+          bindinput="onConfirmPasswordInput"
+        />
+      </view>
+
+      <button 
+        class="btn-primary register-btn" 
+        bindtap="onRegister"
+        loading="{{loading}}"
+        disabled="{{loading}}"
+      >
+        注册
+      </button>
+
+      <view class="register-footer">
+        <text class="login-link" bindtap="goToLogin">已有账号？立即登录</text>
+      </view>
+    </view>
+  </view>
+</view>
+

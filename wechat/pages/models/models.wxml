@@ -1,0 +1,24 @@
+<!--pages/models/models.wxml-->
+<view class="models-page">
+  <view class="models-grid">
+    <view 
+      class="model-card" 
+      wx:for="{{models}}" 
+      wx:key="id"
+      bindtap="viewModelDetail"
+      data-id="{{item.id}}"
+    >
+      <image 
+        class="model-image" 
+        src="{{item.Images && item.Images[0] ? item.Images[0].url : '/images/default-model.png'}}"
+        mode="aspectFill"
+        lazy-load="{{true}}"
+      />
+      <view class="model-info">
+        <text class="model-name">{{item.name}}</text>
+        <text class="model-brand" wx:if="{{item.Brand}}">{{item.Brand.name}}</text>
+      </view>
+    </view>
+  </view>
+</view>
+

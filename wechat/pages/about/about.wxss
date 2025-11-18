@@ -1,0 +1,21 @@
+/* pages/about/about.wxss */
+.about-page {
+  padding: 60rpx 30rpx;
+  text-align: center;
+}
+
+.title {
+  font-size: 48rpx;
+  font-weight: 600;
+  color: #333;
+  display: block;
+  margin-bottom: 30rpx;
+}
+
+.description {
+  font-size: 28rpx;
+  color: #666;
+  line-height: 1.8;
+  display: block;
+}
+

@@ -1,5 +1,26 @@
 // pages/search/search.js
-import { searchAPI } from '../../utils/api';
+import { searchAPI, modelAPI } from '../../utils/api';
+
+function getBestImageUrlFromItem(item) {
+  if (!item) return '';
+  if (item.Images && Array.isArray(item.Images) && item.Images.length > 0) {
+    const image = item.Images[0];
+    if (image) {
+      return (
+        image.mediumUrl ||
+        image.medium_url ||
+        image.url ||
+        image.image_url ||
+        image.thumbnailUrl ||
+        image.thumbnail_url ||
+        ''
+      );
+    }
+  }
+  if (item.image) return item.image;
+  if (item.Brand && item.Brand.logo) return item.Brand.logo;
+  return '';
+}
 
 Page({
   data: {
@@ -49,16 +70,29 @@ Page({
         _key: item.brand_id || item.id || `brand_${index}`
       }));
       const models = (results.models?.data || results.models || []).map((item, index) => {
-        // 处理车型图片
-        const imageUrl = item.Images && item.Images[0] 
-          ? (item.Images[0].url || item.Images[0].image_url)
-          : (item.Brand && item.Brand.logo) || '';
+        const imageUrl = getBestImageUrlFromItem(item);
         return {
           ...item,
           _key: item.model_id || item.id || `model_${index}`,
           _imageUrl: imageUrl
         };
       });
+
+      const modelsWithoutImage = models.filter(model => !model._imageUrl && model.id);
+      if (modelsWithoutImage.length > 0) {
+        await Promise.all(modelsWithoutImage.map(async (model) => {
+          try {
+            const resImages = await modelAPI.getImages(model.id, { limit: 1 });
+            const imageList = resImages?.data || resImages || [];
+            if (Array.isArray(imageList) && imageList.length > 0) {
+              const img = imageList[0];
+              model._imageUrl = img.mediumUrl || img.medium_url || img.url || img.image_url || '';
+            }
+          } catch (err) {
+            console.error(`加载车型 ${model.id} 图片失败:`, err);
+          }
+        }));
+      }
       const images = (results.images?.data || results.images || []).map((item, index) => ({
         ...item,
         _key: item.image_id || item.id || `image_${index}`

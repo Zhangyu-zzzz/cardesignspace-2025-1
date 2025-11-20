@@ -51,6 +51,11 @@ const Model = sequelize.define('Model', {
     type: DataTypes.INTEGER,
     defaultValue: 0,
     comment: '车型详情页面访问次数'
+  },
+  coverUrl: {
+    type: DataTypes.STRING(500),
+    allowNull: true,
+    comment: '车型封面图URL，用于车型卡片展示'
   }
 }, {
   tableName: 'models',

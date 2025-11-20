@@ -30,9 +30,14 @@
   </view>
 
   <!-- 车型列表 -->
-  <view class="models-section" wx:if="{{brand && !loading}}">
+  <view class="models-section" wx:if="{{brand}}">
     <view class="section-title">车型列表</view>
-    <view class="models-grid">
+    
+    <view class="loading-hint" wx:if="{{modelsLoading}}">
+      <text class="loading-text">正在加载车型数据...</text>
+    </view>
+    
+    <view class="models-grid" wx:if="{{!modelsLoading && models.length > 0}}">
       <view 
         class="model-card" 
         wx:for="{{models}}" 
@@ -42,7 +47,7 @@
       >
         <image 
           class="model-image" 
-          src="{{item.Images && item.Images[0] ? item.Images[0].url : '/images/default-model.png'}}"
+          src="{{item._imageUrl || (item.Images && item.Images[0] ? item.Images[0].url : '/images/default-model.png')}}"
           mode="aspectFill"
           lazy-load="{{true}}"
         />
@@ -50,6 +55,14 @@
           <text class="model-name">{{item.name}}</text>
         </view>
       </view>
+    </view>
+    
+    <view class="empty-container" wx:if="{{!modelsLoading && models.length === 0}}">
+      <text class="empty-text">暂无车型数据</text>
+    </view>
+    
+    <view class="load-more-container" wx:if="{{models.length > 0 && !modelsLoading}}">
+      <text class="load-more-text">已加载全部车型</text>
     </view>
   </view>
 </view>

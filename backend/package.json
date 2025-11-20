@@ -12,12 +12,14 @@
     "db:tk01:rollback": "node scripts/run-tk01-rollback.js",
     "db:tk04:init-tags": "node scripts/tk04-init-basic-tags.js",
     "db:tk06:backfill-curation": "node scripts/tk06-backfill-curation.js",
-    "db:add-sortOrder": "node scripts/add-sortOrder-to-images.js"
+    "db:add-sortOrder": "node scripts/add-sortOrder-to-images.js",
+    "db:add-coverUrl": "node scripts/add-coverUrl-to-models.js"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.901.0",
     "axios": "^1.10.0",
     "bcryptjs": "^2.4.3",
+    "cheerio": "^1.0.0-rc.12",
     "bullmq": "^5.8.2",
     "compression": "^1.8.1",
     "cors": "^2.8.5",

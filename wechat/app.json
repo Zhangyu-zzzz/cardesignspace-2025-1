@@ -50,8 +50,8 @@
         "selectedIconPath": "images/image-active.png"
       },
       {
-        "pagePath": "pages/profile/profile",
-        "text": "我的",
+        "pagePath": "pages/about/about",
+        "text": "关于",
         "iconPath": "images/profile.png",
         "selectedIconPath": "images/profile-active.png"
       }
@@ -61,9 +61,14 @@
     "request": 10000,
     "downloadFile": 10000
   },
-  "debug": false,
+  "debug": true,
   "style": "v2",
   "sitemapLocation": "sitemap.json",
-  "lazyCodeLoading": "requiredComponents"
+  "lazyCodeLoading": "requiredComponents",
+  "permission": {
+    "scope.userLocation": {
+      "desc": "你的位置信息将用于小程序位置接口的效果展示"
+    }
+  }
 }
 

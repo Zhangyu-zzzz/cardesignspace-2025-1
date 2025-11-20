@@ -11,6 +11,8 @@ const COS = require('cos-nodejs-sdk-v5');
 const cos = new COS({
   SecretId: process.env.TENCENT_SECRET_ID || 'your-secret-id',
   SecretKey: process.env.TENCENT_SECRET_KEY || 'your-secret-key',
+  // 添加超时和重试配置
+  // 注意：COS SDK v5 可能不支持所有超时参数，我们会在上传时单独设置
 });
 
 // 动态获取COS配置，确保每次都读取最新的环境变量
@@ -29,13 +31,17 @@ const cosConfig = getCosConfig();
 const isDevelopment = process.env.NODE_ENV !== 'production';
 
 /**
- * 上传文件到腾讯云COS
+ * 上传文件到腾讯云COS（带重试机制）
  * @param {Buffer} fileBuffer 文件缓冲区
  * @param {string} key 文件路径/名称
  * @param {string} contentType 文件类型
+ * @param {number} retryCount 当前重试次数
  * @returns {Promise<Object>} 上传结果
  */
-const uploadToCOS = (fileBuffer, key, contentType) => {
+const uploadToCOS = (fileBuffer, key, contentType, retryCount = 0) => {
+  const MAX_RETRIES = 3;
+  const RETRY_DELAY = 2000; // 2秒延迟
+  
   return new Promise((resolve, reject) => {
     try {
       // 验证文件缓冲区
@@ -77,7 +83,7 @@ const uploadToCOS = (fileBuffer, key, contentType) => {
         return reject(error);
       }
 
-      console.log('开始上传到腾讯云COS:', {
+      console.log(`开始上传到腾讯云COS (尝试 ${retryCount + 1}/${MAX_RETRIES + 1}):`, {
         bucket: currentCosConfig.Bucket,
         region: currentCosConfig.Region,
         key: key,
@@ -85,7 +91,7 @@ const uploadToCOS = (fileBuffer, key, contentType) => {
         fileSize: fileBuffer.length
       });
       
-      // 使用腾讯云COS存储
+      // 使用腾讯云COS存储，添加超时配置
       cos.putObject({
         Bucket: currentCosConfig.Bucket,
         Region: currentCosConfig.Region,
@@ -93,6 +99,8 @@ const uploadToCOS = (fileBuffer, key, contentType) => {
         Body: fileBuffer,
         ContentType: contentType,
         StorageClass: 'STANDARD',
+        // 添加超时配置
+        Timeout: 60000, // 60秒超时
         onProgress: function(progressData) {
           console.log('上传进度:', JSON.stringify(progressData));
         }
@@ -106,8 +114,29 @@ const uploadToCOS = (fileBuffer, key, contentType) => {
             resource: err.resource,
             bucket: currentCosConfig.Bucket,
             region: currentCosConfig.Region,
-            key: key
+            key: key,
+            retryCount: retryCount
           });
+          
+          // 判断是否应该重试
+          const shouldRetry = retryCount < MAX_RETRIES && (
+            err.code === 'ECONNRESET' ||
+            err.code === 'ETIMEDOUT' ||
+            err.code === 'ENOTFOUND' ||
+            err.message?.includes('ECONNRESET') ||
+            err.message?.includes('timeout') ||
+            err.message?.includes('ETIMEDOUT')
+          );
+          
+          if (shouldRetry) {
+            console.log(`网络错误，将在 ${RETRY_DELAY}ms 后重试 (${retryCount + 1}/${MAX_RETRIES})...`);
+            setTimeout(() => {
+              uploadToCOS(fileBuffer, key, contentType, retryCount + 1)
+                .then(resolve)
+                .catch(reject);
+            }, RETRY_DELAY * (retryCount + 1)); // 递增延迟
+            return;
+          }
           
           // 提供更友好的错误信息
           let errorMessage = '图片上传到云存储失败';
@@ -117,6 +146,10 @@ const uploadToCOS = (fileBuffer, key, contentType) => {
             errorMessage = 'COS存储桶不存在，请检查配置';
           } else if (err.code === 'CredentialsError') {
             errorMessage = 'COS密钥验证失败，请检查密钥配置';
+          } else if (err.code === 'ECONNRESET' || err.message?.includes('ECONNRESET')) {
+            errorMessage = 'COS上传失败: 网络连接被重置，请检查网络连接或稍后重试';
+          } else if (err.code === 'ETIMEDOUT' || err.message?.includes('timeout')) {
+            errorMessage = 'COS上传失败: 上传超时，请检查网络连接或稍后重试';
           } else if (err.message) {
             errorMessage = `COS上传失败: ${err.message}`;
           }
@@ -130,7 +163,8 @@ const uploadToCOS = (fileBuffer, key, contentType) => {
           console.log('COS上传成功:', {
             location: data.Location,
             etag: data.ETag,
-            requestId: data.RequestId
+            requestId: data.RequestId,
+            retryCount: retryCount
           });
           // 构建完整的访问URL，确保正确的URL编码
           const encodedKey = encodeURIComponent(key).replace(/%2F/g, '/');

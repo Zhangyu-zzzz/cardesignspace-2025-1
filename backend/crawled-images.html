@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>抓取到的图片 - Motor1 - 概念车新闻</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        h1 {
+            color: #333;
+            border-bottom: 3px solid #4CAF50;
+            padding-bottom: 10px;
+        }
+        .info {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .image-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        .image-card {
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            transition: transform 0.2s;
+        }
+        .image-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        .image-card img {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            cursor: pointer;
+        }
+        .image-card .info {
+            padding: 15px;
+            margin: 0;
+        }
+        .image-card .url {
+            font-size: 12px;
+            color: #666;
+            word-break: break-all;
+            margin-top: 10px;
+        }
+        .image-card .alt {
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 5px;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.9);
+            cursor: pointer;
+        }
+        .modal-content {
+            margin: auto;
+            display: block;
+            max-width: 90%;
+            max-height: 90%;
+            margin-top: 50px;
+        }
+        .close {
+            position: absolute;
+            top: 15px;
+            right: 35px;
+            color: #f1f1f1;
+            font-size: 40px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .stats {
+            display: flex;
+            gap: 20px;
+            margin-top: 10px;
+        }
+        .stat {
+            padding: 8px 15px;
+            background: #4CAF50;
+            color: white;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>🖼️ 抓取到的图片</h1>
+    
+    <div class="info">
+        <h2>Motor1 - 概念车新闻</h2>
+        <p><strong>URL:</strong> <a href="https://www.motor1.com/news/category/concept-car/" target="_blank">https://www.motor1.com/news/category/concept-car/</a></p>
+        <p><strong>抓取时间:</strong> 2025/11/19 14:35:40</p>
+        <div class="stats">
+            <div class="stat">发现图片: 23 张</div>
+        </div>
+    </div>
+
+    <div class="image-grid">
+
+        <div class="image-card">
+            <img src="https://cdn.motor1.com/images/mgl/xqPr4P/s4/hyundai-crater-suv-concept.jpg" alt="Hyundai's New SUV Concept Looks Like a Serious Off-Roader" onclick="openModal('https://cdn.motor1.com/images/mgl/xqPr4P/s4/hyundai-crater-suv-concept.jpg')" 
+                 onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%27200%27 height=%27200%27%3E%3Ctext x=%2750%25%27 y=%2750%25%27 text-anchor=%27middle%27 dy=%27.3em%27%3E图片加载失败%3C/text%3E%3C/svg%3E'">
+            <div class="info">
+                <div class="alt">Hyundai's New SUV Concept Looks Like a Serious Off-Roader</div>
+                
+                <div style="color: #999; font-size: 12px; margin-top: 5px;">尺寸: 16x9</div>
+                <div class="url">https://cdn.motor1.com/images/mgl/xqPr4P/s4/hyundai-crater-suv-concept.jpg</div>
+            </div>
+        </div>
+
+        <div class="image-card">
+            <img src="https://cdn.motor1.com/images/mgl/eoz1AW/s4/nissan-dune-patrol.jpg" alt="This Off-Road Nissan Armada Has a Ton of Awesome 'Prototype Nismo' Parts" onclick="openModal('https://cdn.motor1.com/images/mgl/eoz1AW/s4/nissan-dune-patrol.jpg')" 
+                 onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%27200%27 height=%27200%27%3E%3Ctext x=%2750%25%27 y=%2750%25%27 text-anchor=%27middle%27 dy=%27.3em%27%3E图片加载失败%3C/text%3E%3C/svg%3E'">
+            <div class="info">
+                <div class="alt">This Off-Road Nissan Armada Has a Ton of Awesome 'Prototype Nismo' Parts</div>
+                
+                <div style="color: #999; font-size: 12px; margin-top: 5px;">尺寸: 16x9</div>
+                <div class="url">https://cdn.motor1.com/images/mgl/eoz1AW/s4/nissan-dune-patrol.jpg</div>
+            </div>
+        </div>
+
+        <div class="image-card">
+            <img src="https://cdn.motor1.com/images/mgl/pb9grg/s4/lexus-sport-concept.jpg" alt="The Lexus Coupe Concept's Interior Looks Beautiful" onclick="openModal('https://cdn.motor1.com/images/mgl/pb9grg/s4/lexus-sport-concept.jpg')" 
+                 onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%27200%27 height=%27200%27%3E%3Ctext x=%2750%25%27 y=%2750%25%27 text-anchor=%27middle%27 dy=%27.3em%27%3E图片加载失败%3C/text%3E%3C/svg%3E'">
+            <div class="info">
+                <div class="alt">The Lexus Coupe Concept's Interior Looks Beautiful</div>
+                
+                <div style="color: #999; font-size: 12px; margin-top: 5px;">尺寸: 16x9</div>
+                <div class="url">https://cdn.motor1.com/images/mgl/pb9grg/s4/lexus-sport-concept.jpg</div>
+            </div>
+        </div>
+
+        <div class="image-card">
+            <img src="https://cdn.motor1.com/images/mgl/W87vXo/s4/ram-1500-the-dude-concept.jpg" alt="Ram's New V-8 Street Truck Concept Is for the Dudes" onclick="openModal('https://cdn.motor1.com/images/mgl/W87vXo/s4/ram-1500-the-dude-concept.jpg')" 
+                 onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%27200%27 height=%27200%27%3E%3Ctext x=%2750%25%27 y=%2750%25%27 text-anchor=%27middle%27 dy=%27.3em%27%3E图片加载失败%3C/text%3E%3C/svg%3E'">
+            <div class="info">
+                <div class="alt">Ram's New V-8 Street Truck Concept Is for the Dudes</div>
+                
+                <div style="color: #999; font-size: 12px; margin-top: 5px;">尺寸: 16x9</div>
+                <div class="url">https://cdn.motor1.com/images/mgl/W87vXo/s4/ram-1500-the-dude-concept.jpg</div>
+            </div>
+        </div>
+
+        <div class="image-card">
+            <img src="https://cdn.motor1.com/images/mgl/mMg89e/s4/subaru-performance-b-sti-concept.jpg" alt="Subaru's New STI Concept Looks Ready for Production" onclick="openModal('https://cdn.motor1.com/images/mgl/mMg89e/s4/subaru-performance-b-sti-concept.jpg')" 
+                 onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%27200%27 height=%27200%27%3E%3Ctext x=%2750%25%27 y=%2750%25%27 text-anchor=%27middle%27 dy=%27.3em%27%3E图片加载失败%3C/text%3E%3C/svg%3E'">
+            <div class="info">
+                <div class="alt">Subaru's New STI Concept Looks Ready for Production</div>
+                
+                <div style="color: #999; font-size: 12px; margin-top: 5px;">尺寸: 16x9</div>
+                <div class="url">https://cdn.motor1.com/images/mgl/mMg89e/s4/subaru-performance-b-sti-concept.jpg</div>
+            </div>
+        </div>
+
+        <div class="image-card">
+            <img src="https://cdn.motor1.com/images/mgl/7Z283J/s4/mitsubishi-elevance-concept.jpg" alt="The Mitsubishi Elevance Concept Is a Quad-Motor SUV With a Gas Engine" onclick="openModal('https://cdn.motor1.com/images/mgl/7Z283J/s4/mitsubishi-elevance-concept.jpg')" 
+                 onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%27200%27 height=%27200%27%3E%3Ctext x=%2750%25%27 y=%2750%25%27 text-anchor=%27middle%27 dy=%27.3em%27%3E图片加载失败%3C/text%3E%3C/svg%3E'">
+            <div class="info">
+                <div class="alt">The Mitsubishi Elevance Concept Is a Quad-Motor SUV With a Gas Engine</div>
+                
+                <div style="color: #999; font-size: 12px; margin-top: 5px;">尺寸: 16x9</div>
+                <div class="url">https://cdn.motor1.com/images/mgl/7Z283J/s4/mitsubishi-elevance-concept.jpg</div>
+            </div>
+        </div>
+
+        <div class="image-card">
+            <img src="https://cdn.motor1.com/images/mgl/W87vq1/s4/daihatsu-k-open-2025-auf-der-japan-mobility-show-2025.jpg" alt="The Daihatsu K-Open Hints at Affordable RWD Sports Car" onclick="openModal('https://cdn.motor1.com/images/mgl/W87vq1/s4/daihatsu-k-open-2025-auf-der-japan-mobility-show-2025.jpg')" 
+                 onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%27200%27 height=%27200%27%3E%3Ctext x=%2750%25%27 y=%2750%25%27 text-anchor=%27middle%27 dy=%27.3em%27%3E图片加载失败%3C/text%3E%3C/svg%3E'">
+            <div class="info">
+                <div class="alt">The Daihatsu K-Open Hints at Affordable RWD Sports Car</div>
+                
+                <div style="color: #999; font-size: 12px; margin-top: 5px;">尺寸: 16x9</div>
+                <div class="url">https://cdn.motor1.com/images/mgl/W87vq1/s4/daihatsu-k-open-2025-auf-der-japan-mobility-show-2025.jpg</div>
+            </div>
+        </div>
+
+        <div class="image-card">
+            <img src="https://cdn.motor1.com/images/mgl/lElxk1/s4/lexus-auf-der-japan-mobility-show-2025.jpg" alt="The Lexus LS Coupe Concept Isn't Really a Coupe But That's Ok" onclick="openModal('https://cdn.motor1.com/images/mgl/lElxk1/s4/lexus-auf-der-japan-mobility-show-2025.jpg')" 
+                 onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%27200%27 height=%27200%27%3E%3Ctext x=%2750%25%27 y=%2750%25%27 text-anchor=%27middle%27 dy=%27.3em%27%3E图片加载失败%3C/text%3E%3C/svg%3E'">
+            <div class="info">
+                <div class="alt">The Lexus LS Coupe Concept Isn't Really a Coupe But That's Ok</div>
+                
+                <div style="color: #999; font-size: 12px; margin-top: 5px;">尺寸: 16x9</div>
+                <div class="url">https://cdn.motor1.com/images/mgl/lElxk1/s4/lexus-auf-der-japan-mobility-show-2025.jpg</div>
+            </div>
+        </div>
+
+        <div class="image-card">
+            <img src="https://cdn.motor1.com/images/mgl/G3Yr3J/s4/mazda-vision-x-coupe.jpg" alt="Mazda's New 'Coupe' Concept Has a Plug-In Hybrid Rotary Engine. And It Looks Gorgeous" onclick="openModal('https://cdn.motor1.com/images/mgl/G3Yr3J/s4/mazda-vision-x-coupe.jpg')" 
+                 onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%27200%27 height=%27200%27%3E%3Ctext x=%2750%25%27 y=%2750%25%27 text-anchor=%27middle%27 dy=%27.3em%27%3E图片加载失败%3C/text%3E%3C/svg%3E'">
+            <div class="info">
+                <div class="alt">Mazda's New 'Coupe' Concept Has a Plug-In Hybrid Rotary Engine. And It Looks Gorgeous</div>
+                
+                <div style="color: #999; font-size: 12px; margin-top: 5px;">尺寸: 16x9</div>
+                <div class="url">https://cdn.motor1.com/images/mgl/G3Yr3J/s4/mazda-vision-x-coupe.jpg</div>
+            </div>
+        </div>
+
+        <div class="image-card">
+            <img src="https://cdn.motor1.com/images/mgl/g4gWy4/s4/century-auf-der-japan-mobility-show-2025.jpg" alt="Toyota's New Century Brand Debuts Extravagant Coupe" onclick="openModal('https://cdn.motor1.com/images/mgl/g4gWy4/s4/century-auf-der-japan-mobility-show-2025.jpg')" 
+                 onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%27200%27 height=%27200%27%3E%3Ctext x=%2750%25%27 y=%2750%25%27 text-anchor=%27middle%27 dy=%27.3em%27%3E图片加载失败%3C/text%3E%3C/svg%3E'">
+            <div class="info">
+                <div class="alt">Toyota's New Century Brand Debuts Extravagant Coupe</div>
+                
+                <div style="color: #999; font-size: 12px; margin-top: 5px;">尺寸: 16x9</div>
+                <div class="url">https://cdn.motor1.com/images/mgl/g4gWy4/s4/century-auf-der-japan-mobility-show-2025.jpg</div>
+            </div>
+        </div>
+
+        <div class="image-card">
+            <img src="https://cdn.motor1.com/images/mgl/nAgogk/s4/lexus-auf-der-japan-mobility-show-2025.jpg" alt="The Lexus LS Concept Reinvents the Flagship as Six-Wheel Minivan" onclick="openModal('https://cdn.motor1.com/images/mgl/nAgogk/s4/lexus-auf-der-japan-mobility-show-2025.jpg')" 
+                 onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%27200%27 height=%27200%27%3E%3Ctext x=%2750%25%27 y=%2750%25%27 text-anchor=%27middle%27 dy=%27.3em%27%3E图片加载失败%3C/text%3E%3C/svg%3E'">
+            <div class="info">
+                <div class="alt">The Lexus LS Concept Reinvents the Flagship as Six-Wheel Minivan</div>
+                
+                <div style="color: #999; font-size: 12px; margin-top: 5px;">尺寸: 16x9</div>
+                <div class="url">https://cdn.motor1.com/images/mgl/nAgogk/s4/lexus-auf-der-japan-mobility-show-2025.jpg</div>
+            </div>
+        </div>
+
+        <div class="image-card">
+            <img src="https://cdn.motor1.com/images/mgl/bgG7Yl/s4/conceito-antecipa-nova-geracao-do-toyota-corolla---fotos-ao-vivo.jpg" alt="The Striking Toyota Corolla Concept Hits Reset on the Sedan" onclick="openModal('https://cdn.motor1.com/images/mgl/bgG7Yl/s4/conceito-antecipa-nova-geracao-do-toyota-corolla---fotos-ao-vivo.jpg')" 
+                 onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%27200%27 height=%27200%27%3E%3Ctext x=%2750%25%27 y=%2750%25%27 text-anchor=%27middle%27 dy=%27.3em%27%3E图片加载失败%3C/text%3E%3C/svg%3E'">
+            <div class="info">
+                <div class="alt">The Striking Toyota Corolla Concept Hits Reset on the Sedan</div>
+                
+                <div style="color: #999; font-size: 12px; margin-top: 5px;">尺寸: 16x9</div>
+                <div class="url">https://cdn.motor1.com/images/mgl/bgG7Yl/s4/conceito-antecipa-nova-geracao-do-toyota-corolla---fotos-ao-vivo.jpg</div>
+            </div>
+        </div>
+
+        <div class="image-card">
+            <img src="https://cdn.motor1.com/images/mgl/OoMLYy/s4/toyota-turbo-trail-cruiser-concept.jpg" alt="This Classic Toyota Land Cruiser Packs a Modern V-6 and a Manual" onclick="openModal('https://cdn.motor1.com/images/mgl/OoMLYy/s4/toyota-turbo-trail-cruiser-concept.jpg')" 
+                 onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%27200%27 height=%27200%27%3E%3Ctext x=%2750%25%27 y=%2750%25%27 text-anchor=%27middle%27 dy=%27.3em%27%3E图片加载失败%3C/text%3E%3C/svg%3E'">
+            <div class="info">
+                <div class="alt">This Classic Toyota Land Cruiser Packs a Modern V-6 and a Manual</div>
+                
+                <div style="color: #999; font-size: 12px; margin-top: 5px;">尺寸: 16x9</div>
+                <div class="url">https://cdn.motor1.com/images/mgl/OoMLYy/s4/toyota-turbo-trail-cruiser-concept.jpg</div>
+            </div>
+        </div>
+
+        <div class="image-card">
+            <img src="https://cdn.motor1.com/images/mgl/mMgNKj/s4/ferrari-f76.jpg" alt="Future Ferrari Models Will Look Like This NFT, Apparently" onclick="openModal('https://cdn.motor1.com/images/mgl/mMgNKj/s4/ferrari-f76.jpg')" 
+                 onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%27200%27 height=%27200%27%3E%3Ctext x=%2750%25%27 y=%2750%25%27 text-anchor=%27middle%27 dy=%27.3em%27%3E图片加载失败%3C/text%3E%3C/svg%3E'">
+            <div class="info">
+                <div class="alt">Future Ferrari Models Will Look Like This NFT, Apparently</div>
+                
+                <div style="color: #999; font-size: 12px; margin-top: 5px;">尺寸: 16x9</div>
+                <div class="url">https://cdn.motor1.com/images/mgl/mMgNKj/s4/ferrari-f76.jpg</div>
+            </div>
+        </div>
+
+        <div class="image-card">
+            <img src="https://cdn.motor1.com/images/mgl/0eEpGW/s4/dacia-hipster-concept.jpg" alt="The Dacia Hipster Is The Ultra-Boxy EV You Weren't Expecting" onclick="openModal('https://cdn.motor1.com/images/mgl/0eEpGW/s4/dacia-hipster-concept.jpg')" 
+                 onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%27200%27 height=%27200%27%3E%3Ctext x=%2750%25%27 y=%2750%25%27 text-anchor=%27middle%27 dy=%27.3em%27%3E图片加载失败%3C/text%3E%3C/svg%3E'">
+            <div class="info">
+                <div class="alt">The Dacia Hipster Is The Ultra-Boxy EV You Weren't Expecting</div>
+                
+                <div style="color: #999; font-size: 12px; margin-top: 5px;">尺寸: 16x9</div>
+                <div class="url">https://cdn.motor1.com/images/mgl/0eEpGW/s4/dacia-hipster-concept.jpg</div>
+            </div>
+        </div>
+
+        <div class="image-card">
+            <img src="https://cdn.motor1.com/images/mgl/P3M0vW/s4/lamborghini-pregunta-concept-car.jpg" alt="You Can Buy One of Lamborghini's Coolest Concept Cars. If You Have $4 Million" onclick="openModal('https://cdn.motor1.com/images/mgl/P3M0vW/s4/lamborghini-pregunta-concept-car.jpg')" 
+                 onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%27200%27 height=%27200%27%3E%3Ctext x=%2750%25%27 y=%2750%25%27 text-anchor=%27middle%27 dy=%27.3em%27%3E图片加载失败%3C/text%3E%3C/svg%3E'">
+            <div class="info">
+                <div class="alt">You Can Buy One of Lamborghini's Coolest Concept Cars. If You Have $4 Million</div>
+                
+                <div style="color: #999; font-size: 12px; margin-top: 5px;">尺寸: 16x9</div>
+                <div class="url">https://cdn.motor1.com/images/mgl/P3M0vW/s4/lamborghini-pregunta-concept-car.jpg</div>
+            </div>
+        </div>
+
+        <div class="image-card">
+            <img src="https://cdn.motor1.com/images/mgl/xqPbP2/s4/2025-cupra-tindaya-concept.jpg" alt="Cupra's Outlandish Concept Rejects Minimalism for Maximum Impact" onclick="openModal('https://cdn.motor1.com/images/mgl/xqPbP2/s4/2025-cupra-tindaya-concept.jpg')" 
+                 onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%27200%27 height=%27200%27%3E%3Ctext x=%2750%25%27 y=%2750%25%27 text-anchor=%27middle%27 dy=%27.3em%27%3E图片加载失败%3C/text%3E%3C/svg%3E'">
+            <div class="info">
+                <div class="alt">Cupra's Outlandish Concept Rejects Minimalism for Maximum Impact</div>
+                
+                <div style="color: #999; font-size: 12px; margin-top: 5px;">尺寸: 16x9</div>
+                <div class="url">https://cdn.motor1.com/images/mgl/xqPbP2/s4/2025-cupra-tindaya-concept.jpg</div>
+            </div>
+        </div>
+
+        <div class="image-card">
+            <img src="https://cdn.motor1.com/images/mgl/E6YPpo/s4/hyundai-three-concept.jpg" alt="The Hyundai Three Concept Looks Like a Futuristic Veloster" onclick="openModal('https://cdn.motor1.com/images/mgl/E6YPpo/s4/hyundai-three-concept.jpg')" 
+                 onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%27200%27 height=%27200%27%3E%3Ctext x=%2750%25%27 y=%2750%25%27 text-anchor=%27middle%27 dy=%27.3em%27%3E图片加载失败%3C/text%3E%3C/svg%3E'">
+            <div class="info">
+                <div class="alt">The Hyundai Three Concept Looks Like a Futuristic Veloster</div>
+                
+                <div style="color: #999; font-size: 12px; margin-top: 5px;">尺寸: 16x9</div>
+                <div class="url">https://cdn.motor1.com/images/mgl/E6YPpo/s4/hyundai-three-concept.jpg</div>
+            </div>
+        </div>
+
+        <div class="image-card">
+            <img src="https://cdn.motor1.com/images/mgl/7Z2mZo/s4/2025-skoda-vision-o-concept.jpg" alt="The Skoda Vision O Concept Is a Love Letter to Big Wagons" onclick="openModal('https://cdn.motor1.com/images/mgl/7Z2mZo/s4/2025-skoda-vision-o-concept.jpg')" 
+                 onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%27200%27 height=%27200%27%3E%3Ctext x=%2750%25%27 y=%2750%25%27 text-anchor=%27middle%27 dy=%27.3em%27%3E图片加载失败%3C/text%3E%3C/svg%3E'">
+            <div class="info">
+                <div class="alt">The Skoda Vision O Concept Is a Love Letter to Big Wagons</div>
+                
+                <div style="color: #999; font-size: 12px; margin-top: 5px;">尺寸: 16x9</div>
+                <div class="url">https://cdn.motor1.com/images/mgl/7Z2mZo/s4/2025-skoda-vision-o-concept.jpg</div>
+            </div>
+        </div>
+
+        <div class="image-card">
+            <img src="https://cdn.motor1.com/images/mgl/6ZeZZk/s4/vw-id.-cross-concept-interieur-detail.jpg" alt="The ID. Cross Shows VW Is Serious About Bringing Back Buttons" onclick="openModal('https://cdn.motor1.com/images/mgl/6ZeZZk/s4/vw-id.-cross-concept-interieur-detail.jpg')" 
+                 onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%27200%27 height=%27200%27%3E%3Ctext x=%2750%25%27 y=%2750%25%27 text-anchor=%27middle%27 dy=%27.3em%27%3E图片加载失败%3C/text%3E%3C/svg%3E'">
+            <div class="info">
+                <div class="alt">The ID. Cross Shows VW Is Serious About Bringing Back Buttons</div>
+                
+                <div style="color: #999; font-size: 12px; margin-top: 5px;">尺寸: 16x9</div>
+                <div class="url">https://cdn.motor1.com/images/mgl/6ZeZZk/s4/vw-id.-cross-concept-interieur-detail.jpg</div>
+            </div>
+        </div>
+
+        <div class="image-card">
+            <img src="https://cdn.motor1.com/images/mgl/7Z2e86/s4/2025-audi-concept-c.jpg" alt="Audi's Stunning New Sports Car Concept Is Here—And It's Headed for Production" onclick="openModal('https://cdn.motor1.com/images/mgl/7Z2e86/s4/2025-audi-concept-c.jpg')" 
+                 onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%27200%27 height=%27200%27%3E%3Ctext x=%2750%25%27 y=%2750%25%27 text-anchor=%27middle%27 dy=%27.3em%27%3E图片加载失败%3C/text%3E%3C/svg%3E'">
+            <div class="info">
+                <div class="alt">Audi's Stunning New Sports Car Concept Is Here—And It's Headed for Production</div>
+                
+                <div style="color: #999; font-size: 12px; margin-top: 5px;">尺寸: 16x9</div>
+                <div class="url">https://cdn.motor1.com/images/mgl/7Z2e86/s4/2025-audi-concept-c.jpg</div>
+            </div>
+        </div>
+
+        <div class="image-card">
+            <img src="https://cdn.motor1.com/images/mgl/KbMnbR/s4/audi-tt-concept-leaked.jpg" alt="This Is Audi's New TT Concept Before You're Supposed To See It" onclick="openModal('https://cdn.motor1.com/images/mgl/KbMnbR/s4/audi-tt-concept-leaked.jpg')" 
+                 onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%27200%27 height=%27200%27%3E%3Ctext x=%2750%25%27 y=%2750%25%27 text-anchor=%27middle%27 dy=%27.3em%27%3E图片加载失败%3C/text%3E%3C/svg%3E'">
+            <div class="info">
+                <div class="alt">This Is Audi's New TT Concept Before You're Supposed To See It</div>
+                
+                <div style="color: #999; font-size: 12px; margin-top: 5px;">尺寸: 16x9</div>
+                <div class="url">https://cdn.motor1.com/images/mgl/KbMnbR/s4/audi-tt-concept-leaked.jpg</div>
+            </div>
+        </div>
+
+        <div class="image-card">
+            <img src="https://cdn.motor1.com/images/mgl/AknB69/s4/2025-skoda-felicia-fun-concept.jpg" alt="Skoda's Forgotten Pickup Truck Is Back—And It Looks Better Than Ever" onclick="openModal('https://cdn.motor1.com/images/mgl/AknB69/s4/2025-skoda-felicia-fun-concept.jpg')" 
+                 onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%27200%27 height=%27200%27%3E%3Ctext x=%2750%25%27 y=%2750%25%27 text-anchor=%27middle%27 dy=%27.3em%27%3E图片加载失败%3C/text%3E%3C/svg%3E'">
+            <div class="info">
+                <div class="alt">Skoda's Forgotten Pickup Truck Is Back—And It Looks Better Than Ever</div>
+                
+                <div style="color: #999; font-size: 12px; margin-top: 5px;">尺寸: 16x9</div>
+                <div class="url">https://cdn.motor1.com/images/mgl/AknB69/s4/2025-skoda-felicia-fun-concept.jpg</div>
+            </div>
+        </div>
+
+    </div>
+
+    <div id="modal" class="modal" onclick="closeModal()">
+        <span class="close">&times;</span>
+        <img class="modal-content" id="modalImg">
+    </div>
+
+    <script>
+        function openModal(url) {
+            const modal = document.getElementById('modal');
+            const modalImg = document.getElementById('modalImg');
+            modal.style.display = 'block';
+            modalImg.src = url;
+        }
+
+        function closeModal() {
+            document.getElementById('modal').style.display = 'none';
+        }
+
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeModal();
+            }
+        });
+    </script>
+</body>
+</html>

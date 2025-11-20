@@ -20,27 +20,34 @@
     <view 
       class="image-item" 
       wx:for="{{images}}" 
-      wx:key="id"
+      wx:key="_key"
       bindtap="previewImage"
       data-index="{{index}}"
     >
       <image 
         class="image" 
-        src="{{item.url}}"
+        src="{{item.url || item.image_url || item.displayUrl || ''}}"
         mode="aspectFill"
         lazy-load="{{true}}"
+        binderror="onImageError"
+        bindload="onImageLoad"
+        data-index="{{index}}"
       />
+      <!-- 加载失败占位符 -->
+      <view class="image-placeholder" wx:if="{{item._error}}">
+        <text class="placeholder-text">加载失败</text>
+      </view>
     </view>
   </view>
 
   <!-- 加载更多 -->
-  <view class="load-more" wx:if="{{loading && images.length > 0}}">
-    <text class="load-more-text">加载中...</text>
-  </view>
-
-  <!-- 没有更多 -->
-  <view class="no-more" wx:if="{{!hasMore && images.length > 0}}">
-    <text class="no-more-text">没有更多了</text>
+  <view class="load-more-container" wx:if="{{images.length > 0}}">
+    <view class="load-more" wx:if="{{loadingMore}}">
+      <text class="load-more-text">加载中...</text>
+    </view>
+    <view class="no-more" wx:elif="{{!hasMore}}">
+      <text class="no-more-text">没有更多了</text>
+    </view>
   </view>
 </view>
 

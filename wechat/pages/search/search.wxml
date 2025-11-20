@@ -58,10 +58,11 @@
         >
           <image 
             class="model-image" 
-            src="{{item._imageUrl || (item.Brand && item.Brand.logo) || ''}}"
+            src="{{item._imageUrl || ''}}"
             mode="aspectFill"
             binderror="onImageError"
             data-index="{{index}}"
+            lazy-load="{{true}}"
           />
           <view class="model-info">
             <text class="model-name">{{item.name}}</text>

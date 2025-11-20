@@ -78,8 +78,8 @@
           >
             <div class="model-image">
               <img 
-                v-if="model.Images && model.Images.length > 0" 
-                :src="getImageUrl(model.Images[0])" 
+                v-if="getModelImageUrl(model)" 
+                :src="getModelImageUrl(model)" 
                 :alt="model.name" 
               />
               <div v-else-if="model.isLoadingImage" class="loading-image">
@@ -135,8 +135,8 @@
             :style="previewStyle"
           >
             <img 
-              v-if="previewModel && previewModel.Images && previewModel.Images.length > 0"
-              :src="getImageUrl(previewModel.Images[0])"
+              v-if="previewModel && getModelImageUrl(previewModel)"
+              :src="getModelImageUrl(previewModel)"
               :alt="previewModel.name"
               class="preview-image"
             />
@@ -207,6 +207,21 @@ export default {
     }
   },
   methods: {
+    // 获取车型图片URL的辅助方法（优先使用coverUrl）
+    getModelImageUrl(model) {
+      // 1. 首先尝试使用模型自身的coverUrl（封面图）
+      if (model.coverUrl && typeof model.coverUrl === 'string' && model.coverUrl.trim() !== '') {
+        return model.coverUrl;
+      }
+      
+      // 2. 检查是否有Images集合并且不为空
+      if (model.Images && Array.isArray(model.Images) && model.Images.length > 0) {
+        return this.getImageUrl(model.Images[0]);
+      }
+      
+      // 3. 如果找不到任何图片，返回null（让模板显示占位符）
+      return null;
+    },
     getImageUrl(image) {
       if (image.url) return image.url;
       if (image.originalUrl) return image.originalUrl;

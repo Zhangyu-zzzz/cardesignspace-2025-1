@@ -26,18 +26,18 @@
           <div class="slide-image-container">
             <!-- 车型图片 -->
             <img 
-              v-if="item.type === 'model' && item.Images && item.Images.length > 0" 
-              :src="getOptimizedImageUrl(item.Images[0], 1600, 900, 'original')"
+              v-if="item.type === 'model' && getModelImageUrl(item)" 
+              :src="getModelImageUrl(item)"
               :alt="item.name"
               @load="handleModelImageLoad"
               @error="handleModelImageError"
-              @contextmenu.stop="handleImageContextMenu($event, item.Images[0], item.name)"
+              @contextmenu.stop="handleImageContextMenu($event, item.Images && item.Images.length > 0 ? item.Images[0] : null, item.name)"
               class="slide-image"
             >
 
                           <!-- 占位符 -->
               <div class="slide-placeholder" :class="{ 
-                show: (!item.Images || item.Images.length === 0) || 
+                show: !getModelImageUrl(item) || 
                       modelImageLoadError[item.id] 
               }">
               <div class="placeholder-content">
@@ -291,16 +291,16 @@
           >
             <div class="model-display-image">
               <img 
-                v-if="model.Images && model.Images.length > 0" 
-                :data-src="getOptimizedImageUrl(model.Images[0], 300, 200)"
+                v-if="getModelImageUrl(model)" 
+                :data-src="getModelImageUrl(model)"
                 :alt="model.name"
                 @load="handleModelImageLoad"
                 @error="handleModelImageError"
-                @contextmenu.stop="handleImageContextMenu($event, model.Images[0], model.name)"
+                @contextmenu.stop="handleImageContextMenu($event, model.Images && model.Images.length > 0 ? model.Images[0] : null, model.name)"
                 class="model-display-img lazy-load"
                 src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='200'%3E%3Crect width='100%25' height='100%25' fill='%23f8f9fa'/%3E%3C/svg%3E"
               >
-              <div class="model-display-placeholder" :class="{ show: !model.Images || model.Images.length === 0 || modelImageLoadError[model.id] }">
+              <div class="model-display-placeholder" :class="{ show: !getModelImageUrl(model) || modelImageLoadError[model.id] }">
                 <div class="placeholder-content">
                   <i class="el-icon-picture"></i>
                   <span>暂无图片</span>
@@ -619,12 +619,17 @@ export default {
         return '/images/default-car.jpg';
       }
       
-      // 1. 首先尝试使用模型自身的thumbnail属性
+      // 1. 首先尝试使用模型自身的coverUrl（封面图）
+      if (model.coverUrl && typeof model.coverUrl === 'string' && model.coverUrl.trim() !== '') {
+        return model.coverUrl;
+      }
+      
+      // 2. 其次尝试使用模型自身的thumbnail属性
       if (model.thumbnail && typeof model.thumbnail === 'string' && model.thumbnail.trim() !== '') {
         return model.thumbnail;
       }
       
-      // 2. 检查是否有Images集合并且不为空
+      // 3. 检查是否有Images集合并且不为空
       if (model.Images && Array.isArray(model.Images) && model.Images.length > 0) {
         // 获取第一张图片的URL
         const image = model.Images[0];
@@ -633,7 +638,7 @@ export default {
         }
       }
       
-      // 3. 如果找不到任何图片，返回默认图片
+      // 4. 如果找不到任何图片，返回默认图片
       return '/images/default-car.jpg';
     },
     // 获取品牌名称拼音首字母

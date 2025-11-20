@@ -19,3 +19,10 @@
   display: block;
 }
 
+.highlight {
+  margin-top: 40rpx;
+  color: #333;
+  font-weight: 500;
+  word-break: break-all;
+}
+

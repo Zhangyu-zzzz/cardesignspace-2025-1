@@ -4,21 +4,21 @@
   <view class="search-section">
     <input 
       class="search-input" 
-      placeholder="搜索品牌" 
+      placeholder="搜索品牌名称"
       value="{{searchKeyword}}"
       bindinput="onSearchInput"
     />
   </view>
 
   <!-- 加载状态 -->
-  <view class="loading-container" wx:if="{{loading}}">
+  <view class="loading-container" wx:if="{{loading && brands.length === 0}}">
     <view class="loading">
       <text class="loading-text">加载中...</text>
     </view>
   </view>
 
   <!-- 错误状态 -->
-  <view class="error-container" wx:if="{{error && !loading}}">
+  <view class="error-container" wx:if="{{error && brands.length === 0}}">
     <view class="error">
       <text class="error-text">{{error}}</text>
       <button class="btn-primary mt-20" bindtap="loadBrands">重试</button>
@@ -26,7 +26,7 @@
   </view>
 
   <!-- 品牌列表 -->
-  <view class="brands-grid" wx:if="{{!loading && !error}}">
+  <view class="brands-grid" wx:if="{{!loading && filteredBrands.length > 0}}">
     <view 
       class="brand-card" 
       wx:for="{{filteredBrands}}" 
@@ -34,24 +34,22 @@
       bindtap="viewBrandDetail"
       data-id="{{item.id}}"
     >
-      <image 
-        class="brand-logo" 
-        src="{{item.logo || '/images/default-brand.png'}}"
-        mode="aspectFit"
-        lazy-load="{{true}}"
-      />
-      <view class="brand-info">
-        <text class="brand-name">{{item.name}}</text>
-        <text class="brand-country" wx:if="{{item.country}}">{{item.country}}</text>
+      <view class="brand-logo-container">
+        <image 
+          class="brand-logo" 
+          src="{{item.logo || item.logo_url || ''}}"
+          mode="aspectFit"
+          lazy-load="{{true}}"
+        />
       </view>
+      <text class="brand-name">{{item.name || item.chinese_name}}</text>
     </view>
   </view>
 
   <!-- 空状态 -->
-  <view class="empty-container" wx:if="{{!loading && !error && filteredBrands.length === 0}}">
+  <view class="empty-container" wx:if="{{!loading && filteredBrands.length === 0 && brands.length > 0}}">
     <view class="empty">
-      <text class="empty-text">暂无品牌</text>
+      <text class="empty-text">未找到相关品牌</text>
     </view>
   </view>
 </view>
-

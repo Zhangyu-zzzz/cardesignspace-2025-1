@@ -10,9 +10,16 @@ const getBaseURL = () => {
 const request = (options) => {
   return new Promise((resolve, reject) => {
     const token = wx.getStorageSync('token');
+    const fullUrl = getBaseURL() + options.url;
+    
+    // 记录请求信息（真机调试时很有用）
+    console.log('=== API 请求 ===');
+    console.log('URL:', fullUrl);
+    console.log('Method:', options.method || 'GET');
+    console.log('Data:', options.data || {});
     
     wx.request({
-      url: getBaseURL() + options.url,
+      url: fullUrl,
       method: options.method || 'GET',
       data: options.data || {},
       header: {
@@ -21,6 +28,10 @@ const request = (options) => {
         ...options.header
       },
       success: (res) => {
+        console.log('=== API 响应 ===');
+        console.log('URL:', fullUrl);
+        console.log('Status Code:', res.statusCode);
+        console.log('Response Data:', res.data);
         if (res.statusCode === 200) {
           // 处理不同的响应格式
           const data = res.data;
@@ -60,24 +71,27 @@ const request = (options) => {
       },
       fail: (err) => {
         // 真机上网络请求失败时的详细错误信息
-        console.error('网络请求失败:', {
-          errMsg: err.errMsg,
-          url: getBaseURL() + options.url,
-          method: options.method || 'GET'
-        });
+        console.error('=== API 请求失败 ===');
+        console.error('URL:', fullUrl);
+        console.error('Method:', options.method || 'GET');
+        console.error('Error Message:', err.errMsg);
+        console.error('Error Object:', err);
         
         // 提供更友好的错误提示
         let errorMessage = '网络请求失败';
         if (err.errMsg) {
-          if (err.errMsg.includes('fail')) {
-            errorMessage = '网络连接失败，请检查网络设置';
+          if (err.errMsg.includes('fail') || err.errMsg.includes('request:fail')) {
+            errorMessage = '网络连接失败，请检查网络设置或域名配置';
           } else if (err.errMsg.includes('timeout')) {
             errorMessage = '请求超时，请稍后重试';
-          } else if (err.errMsg.includes('domain')) {
+          } else if (err.errMsg.includes('domain') || err.errMsg.includes('不在以下 request 合法域名列表中')) {
             errorMessage = '域名未配置，请在微信公众平台配置合法域名';
+          } else {
+            errorMessage = `网络错误: ${err.errMsg}`;
           }
         }
         
+        console.error('最终错误信息:', errorMessage);
         reject(new Error(errorMessage));
       }
     });

@@ -8,8 +8,8 @@
       autoplay="{{true}}"
       interval="{{5000}}"
       duration="{{500}}"
-      current="{{currentSlide}}"
-      bindchange="goToSlide"
+      circular="{{true}}"
+      bindchange="onSwiperChange"
     >
       <swiper-item wx:for="{{carouselItems}}" wx:key="_key">
         <view class="carousel-item" bindtap="viewModelDetail" data-id="{{item.id}}">
@@ -40,43 +40,24 @@
     </view>
   </view>
 
-  <!-- 错误状态 -->
-  <view class="error-container" wx:if="{{error && !loading}}">
+  <!-- 错误状态 - 优先显示，确保用户能看到 -->
+  <view class="error-container" wx:if="{{error && !loading}}" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 9999; background-color: #ffffff;">
     <view class="error">
+      <text class="error-icon">⚠️</text>
       <text class="error-text">{{error}}</text>
+      <text class="error-hint" wx:if="{{isDomainError}}">
+        配置步骤：登录微信公众平台 -> 开发 -> 开发管理 -> 开发设置 -> 服务器域名
+      </text>
       <button class="btn-primary mt-20" bindtap="loadData">重试</button>
     </view>
   </view>
 
-  <!-- 中国品牌 -->
-  <view class="section" wx:if="{{!loading && !error}}">
-    <view class="section-header">
-      <text class="section-title">中国品牌</text>
-      <text class="section-more" bindtap="onSearch">查看更多</text>
-    </view>
-    <scroll-view class="brands-scroll" scroll-x="{{true}}" show-scrollbar="{{false}}" wx:if="{{chineseBrands.length > 0}}">
-      <view class="brands-list">
-        <view 
-          class="brand-item" 
-          wx:for="{{chineseBrands}}" 
-          wx:key="_key"
-          bindtap="viewBrandDetail"
-          data-id="{{item.id}}"
-        >
-          <image 
-            class="brand-logo" 
-            src="{{item.logo || ''}}"
-            mode="aspectFit"
-            lazy-load="{{true}}"
-            binderror="onBrandImageError"
-            data-index="{{index}}"
-          />
-          <text class="brand-name">{{item.name}}</text>
-        </view>
-      </view>
-    </scroll-view>
-    <view class="empty-container" wx:else>
-      <text class="empty-text">暂无品牌数据</text>
+  <!-- 空状态：没有错误但也没有数据 -->
+  <view class="empty-container" wx:if="{{!loading && !error && carouselItems.length === 0 && latestModels.length === 0}}">
+    <view class="empty">
+      <text class="empty-text">暂无数据</text>
+      <text class="empty-desc">请检查网络连接或稍后重试</text>
+      <button class="btn-primary mt-20" bindtap="loadData">重新加载</button>
     </view>
   </view>
 
@@ -110,6 +91,16 @@
     </view>
     <view class="empty-container" wx:else>
       <text class="empty-text">暂无车型数据</text>
+    </view>
+    
+    <!-- 加载更多提示 -->
+    <view class="load-more-container" wx:if="{{latestModels.length > 0}}">
+      <view class="load-more" wx:if="{{loadingMore}}">
+        <text class="load-more-text">加载中...</text>
+      </view>
+      <view class="load-more" wx:elif="{{!hasMoreModels}}">
+        <text class="load-more-text">没有更多了</text>
+      </view>
     </view>
   </view>
 </view>

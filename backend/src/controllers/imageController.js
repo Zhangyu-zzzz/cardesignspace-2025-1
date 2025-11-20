@@ -2,6 +2,7 @@ const Image = require('../models/mysql/Image');
 const ImageCuration = require('../models/mysql/ImageCuration');
 const ImageAsset = require('../models/mysql/ImageAsset');
 const UserFavorite = require('../models/mysql/UserFavorite');
+const Model = require('../models/mysql/Model');
 const { sequelize } = require('../config/mysql');
 const { Op } = require('sequelize');
 const { chooseBestUrl } = require('../services/assetService');
@@ -601,6 +602,20 @@ exports.updateImageOrder = async (req, res) => {
     });
 
     await Promise.all(updatePromises);
+
+    // 找到第一张图片（sortOrder=0），将其设置为车型的封面图
+    const firstImageOrder = imageOrders.find(item => item.sortOrder === 0);
+    if (firstImageOrder) {
+      const firstImage = images.find(img => img.id === firstImageOrder.id);
+      if (firstImage && firstImage.url) {
+        // 更新车型的封面图
+        await Model.update(
+          { coverUrl: firstImage.url },
+          { where: { id: modelId } }
+        );
+        console.log(`已更新车型 ${modelId} 的封面图为: ${firstImage.url}`);
+      }
+    }
 
     res.json({
       success: true,

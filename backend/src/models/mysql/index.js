@@ -21,6 +21,8 @@ const ImageTag = require('./ImageTag');
 const Feedback = require('./Feedback');
 const Vehicle = require('./Vehicle');
 const VehicleVote = require('./VehicleVote');
+const MonitoredPage = require('./MonitoredPage');
+const CrawlHistory = require('./CrawlHistory');
 
 // 设置模型之间的关联关系，避免循环引用问题
 
@@ -180,6 +182,12 @@ VehicleVote.belongsTo(Vehicle, { foreignKey: 'vehicleId' });
 User.hasMany(VehicleVote, { foreignKey: 'userId', as: 'VehicleVotes' });
 VehicleVote.belongsTo(User, { foreignKey: 'userId', as: 'Voter' });
 
+// === 爬虫模型关联 ===
+
+// 监控页面和抓取历史的关联
+MonitoredPage.hasMany(CrawlHistory, { foreignKey: 'pageId', as: 'CrawlHistories' });
+CrawlHistory.belongsTo(MonitoredPage, { foreignKey: 'pageId', as: 'MonitoredPage' });
+
 module.exports = {
   Brand,
   Model,
@@ -203,5 +211,7 @@ module.exports = {
   ImageTag,
   Feedback,
   Vehicle,
-  VehicleVote
+  VehicleVote,
+  MonitoredPage,
+  CrawlHistory
 }; 

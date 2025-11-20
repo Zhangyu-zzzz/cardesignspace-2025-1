@@ -229,6 +229,15 @@ async function searchModels(query, limit, offset = 0) {
         as: 'Brand',
         attributes: ['id', 'name', 'logo'],
         required: false
+      },
+      {
+        model: Image,
+        as: 'Images',
+        attributes: ['id', 'url', 'image_url', 'filename', 'thumbnailUrl', 'mediumUrl', 'originalUrl'],
+        required: false,
+        separate: true,
+        limit: 1,  // 只取第一张图片
+        order: [['createdAt', 'ASC']]  // 按创建时间排序，取最早上传的作为主图
       }
     ],
     order: [

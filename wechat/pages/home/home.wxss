@@ -66,8 +66,67 @@
 
 /* 加载和错误状态 */
 .loading-container,
-.error-container {
+.error-container,
+.empty-container {
   padding: 100rpx 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.loading,
+.error,
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.loading-text,
+.error-text,
+.empty-text {
+  font-size: 32rpx;
+  color: #666;
+  margin-bottom: 20rpx;
+  text-align: center;
+  padding: 0 40rpx;
+  line-height: 1.6;
+}
+
+.error-icon {
+  font-size: 80rpx;
+  display: block;
+  margin-bottom: 30rpx;
+}
+
+.error-hint {
+  font-size: 24rpx;
+  color: #999;
+  margin-top: 20rpx;
+  margin-bottom: 40rpx;
+  text-align: center;
+  padding: 0 40rpx;
+  line-height: 1.6;
+}
+
+.empty-desc {
+  font-size: 28rpx;
+  color: #999;
+  margin-bottom: 40rpx;
+}
+
+.btn-primary {
+  padding: 20rpx 40rpx;
+  background-color: #e03426;
+  color: #ffffff;
+  border-radius: 8rpx;
+  font-size: 28rpx;
+  border: none;
+}
+
+.mt-20 {
+  margin-top: 20rpx;
 }
 
 /* 区块样式 */
@@ -165,6 +224,24 @@
 
 .model-brand {
   font-size: 24rpx;
+  color: #999;
+}
+
+/* 加载更多 */
+.load-more-container {
+  padding: 40rpx 0;
+  text-align: center;
+}
+
+.load-more {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20rpx 0;
+}
+
+.load-more-text {
+  font-size: 28rpx;
   color: #999;
 }
 

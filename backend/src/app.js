@@ -146,6 +146,9 @@ app.use('/api/feedback', require('./routes/feedback'));
 // 画了个车API路由
 app.use('/api/draw-car', require('./routes/vehicle'));
 
+// 爬虫管理API路由
+app.use('/api/crawler', require('./routes/crawlerRoutes'));
+
 console.log('所有API路由已加载完成');
 
 // 在路由之后添加全局错误处理中间件
@@ -218,6 +221,16 @@ connectMySQL().then(() => {
   } catch (err) {
     logger.error('启动变体后台处理器失败:', err);
   }
+
+  // 启动爬虫调度器
+  try {
+    const schedulerService = require('./services/schedulerService');
+    schedulerService.start();
+    logger.info('爬虫调度器已启动');
+  } catch (err) {
+    logger.error('启动爬虫调度器失败:', err);
+  }
+
   app.listen(PORT, () => {
     logger.info(`服务器运行在端口 ${PORT}`);
     console.log(`服务器运行在端口 ${PORT}`);

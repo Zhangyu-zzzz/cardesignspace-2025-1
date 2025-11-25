@@ -498,3 +498,5 @@ mysql -u root -p auto_gallery < backend/migrations/create_vehicles_tables.sql
 
 
 
+
+

@@ -63,3 +63,5 @@ const CrawlHistory = sequelize.define('CrawlHistory', {
 module.exports = CrawlHistory;
 
 
+
+

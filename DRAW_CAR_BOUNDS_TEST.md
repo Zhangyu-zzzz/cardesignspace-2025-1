@@ -168,3 +168,5 @@ console.log(app.$children[0].handleCollisions.toString())
 
 
 
+
+

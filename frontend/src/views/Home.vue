@@ -250,10 +250,32 @@
         <!-- 排序控制 -->
         <div class="sort-control">
           <span class="control-label">排序方式：</span>
-          <button class="sort-btn" @click="toggleSortOrder">
-            <i class="el-icon-sort"></i>
-            {{ sortOrder === 'desc' ? '最新优先' : '最老优先' }}
-          </button>
+          <div class="sort-buttons">
+            <button 
+              class="sort-btn" 
+              :class="{ active: sortType === 'newest' }"
+              @click="selectSortType('newest')"
+            >
+              <i class="el-icon-sort"></i>
+              新车优先
+            </button>
+            <button 
+              class="sort-btn" 
+              :class="{ active: sortType === 'oldest' }"
+              @click="selectSortType('oldest')"
+            >
+              <i class="el-icon-sort"></i>
+              老车优先
+            </button>
+            <button 
+              class="sort-btn" 
+              :class="{ active: sortType === 'latestUpload' }"
+              @click="selectSortType('latestUpload')"
+            >
+              <i class="el-icon-upload2"></i>
+              最新上传
+            </button>
+          </div>
         </div>
       </div>
       
@@ -459,7 +481,7 @@ export default {
       displayModels: [],
       displayModelsLoading: false,
       displayModelsError: null,
-      sortOrder: 'desc', // 'desc' 为最新优先，'asc' 为最老优先
+      sortType: 'newest', // 'newest' 为新车优先，'oldest' 为老车优先，'latestUpload' 为最新上传
       currentDisplayPage: 1,
       displayPageSize: 18, // 减少到18个车型，提升加载速度
       hasMoreDisplayModels: true,
@@ -1661,11 +1683,11 @@ export default {
       
       try {
         console.log('开始获取车型展示数据...');
-        console.log('排序参数:', this.sortOrder);
+        console.log('排序类型:', this.sortType);
         console.log('年代筛选:', this.selectedDecade);
         
         // 检查缓存
-        const cacheKey = `${this.sortOrder}_${this.selectedDecade}_${this.showConceptCars}_${this.currentDisplayPage}`;
+        const cacheKey = `${this.sortType}_${this.selectedDecade}_${this.showConceptCars}_${this.currentDisplayPage}`;
         const now = Date.now();
         const cacheValidTime = 3 * 60 * 1000; // 3分钟缓存
         
@@ -1737,11 +1759,29 @@ export default {
         }
         
         // 构建API请求参数
+        // 根据排序类型设置 sortBy 和 sortOrder
+        let sortBy = 'year';
+        let sortOrder = 'desc';
+        
+        if (this.sortType === 'newest') {
+          // 新车优先：按年份降序
+          sortBy = 'year';
+          sortOrder = 'desc';
+        } else if (this.sortType === 'oldest') {
+          // 老车优先：按年份升序
+          sortBy = 'year';
+          sortOrder = 'asc';
+        } else if (this.sortType === 'latestUpload') {
+          // 最新上传：按创建时间降序，最新上传的在最前面
+          sortBy = 'createdAt';
+          sortOrder = 'desc';
+        }
+        
         const params = {
           limit: this.displayPageSize,
           page: this.currentDisplayPage,
-          sortOrder: this.sortOrder,
-          sortBy: 'year' // 车型展示区域按年份排序
+          sortOrder: sortOrder,
+          sortBy: sortBy
         };
         
         // 如果选择了年代筛选，添加年代参数
@@ -1829,10 +1869,10 @@ export default {
       }
     },
     
-    // 切换排序方式
-    toggleSortOrder() {
-      this.sortOrder = this.sortOrder === 'desc' ? 'asc' : 'desc';
-      console.log('切换排序方式:', this.sortOrder);
+    // 选择排序方式
+    selectSortType(type) {
+      this.sortType = type;
+      console.log('选择排序方式:', type);
       this.currentDisplayPage = 1;
       // 重置图片加载错误状态
       this.modelImageLoadError = {};
@@ -2645,10 +2685,16 @@ export default {
   margin: 0;
 }
 
+.sort-buttons {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
 .sort-btn {
-  background: #e03426;
-  color: white;
-  border: none;
+  background: #fff;
+  color: #666;
+  border: 1px solid #ddd;
   padding: 8px 16px;
   border-radius: 6px;
   font-size: 14px;
@@ -2660,7 +2706,19 @@ export default {
 }
 
 .sort-btn:hover {
+  background: #f5f5f5;
+  border-color: #ccc;
+}
+
+.sort-btn.active {
+  background: #e03426;
+  color: white;
+  border-color: #e03426;
+}
+
+.sort-btn.active:hover {
   background: #d02e20;
+  border-color: #d02e20;
 }
 
 .concept-btn {

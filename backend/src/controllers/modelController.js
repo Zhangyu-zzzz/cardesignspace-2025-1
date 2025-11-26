@@ -80,10 +80,10 @@ exports.getAllModels = async (req, res) => {
       includeConditions.push({
         model: Image, 
         as: 'Images',
-        attributes: ['id', 'url', 'filename', 'title'], // 只选择需要的字段，移除category
+        attributes: ['id', 'url', 'filename', 'title', 'sortOrder'], // 包含sortOrder字段用于排序
         required: false, // 允许没有图片的车型也显示
         limit: 1, // 每个车型只获取第一张图片
-        order: [['createdAt', 'ASC']] // 获取最早的图片作为缩略图
+        order: [['sortOrder', 'ASC'], ['createdAt', 'ASC']] // 按sortOrder排序，获取排序后的第一张图片
       });
     }
     
@@ -323,7 +323,8 @@ exports.getModelById = async (req, res) => {
               attributes: ['id', 'username', 'avatar'],
               required: false
             }
-          ]
+          ],
+          order: [['sortOrder', 'ASC'], ['createdAt', 'ASC']] // 按sortOrder排序
         }
       ]
     });
@@ -491,6 +492,7 @@ exports.getModelImages = async (req, res) => {
       order: [
         [{ model: ImageCuration, as: 'Curation' }, 'isCurated', 'DESC'],
         [{ model: ImageCuration, as: 'Curation' }, 'curationScore', 'DESC'],
+        ['sortOrder', 'ASC'], // 优先按sortOrder排序
         ['uploadDate', 'DESC']
       ]
     });
@@ -506,7 +508,7 @@ exports.getModelImages = async (req, res) => {
       return { ...data, bestUrl: chooseBestUrl(assetsMap, true) || data.url };
     });
     
-    // 按文件名中的数字进行排序（精选图片保持优先）
+    // 按sortOrder和文件名进行排序（精选图片保持优先）
     items.sort((a, b) => {
       // 精选图片优先
       const aCurated = a.Curation?.isCurated || false;
@@ -522,7 +524,14 @@ exports.getModelImages = async (req, res) => {
         if (aScore !== bScore) return bScore - aScore;
       }
       
-      // 按文件名中的数字排序
+      // 优先按sortOrder排序（如果用户重新排序过）
+      const aSortOrder = a.sortOrder !== undefined && a.sortOrder !== null ? a.sortOrder : 999999;
+      const bSortOrder = b.sortOrder !== undefined && b.sortOrder !== null ? b.sortOrder : 999999;
+      if (aSortOrder !== bSortOrder) {
+        return aSortOrder - bSortOrder; // sortOrder升序
+      }
+      
+      // 如果sortOrder相同，按文件名中的数字排序
       const aNum = extractNumberFromFilename(a.filename);
       const bNum = extractNumberFromFilename(b.filename);
       

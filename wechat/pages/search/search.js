@@ -2,8 +2,24 @@
 import { searchAPI, modelAPI } from '../../utils/api';
 
 function getBestImageUrlFromItem(item) {
-  if (!item) return '';
+  // 防御性检查，确保item是对象
+  if (!item || typeof item !== 'object') {
+    return '';
+  }
+  
+  // 1. 首先尝试使用模型自身的coverUrl（封面图）- 与网页端保持一致
+  if (item.coverUrl && typeof item.coverUrl === 'string' && item.coverUrl.trim() !== '') {
+    return item.coverUrl;
+  }
+  
+  // 2. 其次尝试使用模型自身的thumbnail属性 - 与网页端保持一致
+  if (item.thumbnail && typeof item.thumbnail === 'string' && item.thumbnail.trim() !== '') {
+    return item.thumbnail;
+  }
+  
+  // 3. 检查是否有Images集合并且不为空
   if (item.Images && Array.isArray(item.Images) && item.Images.length > 0) {
+    // 获取第一张图片的URL（后端已按sortOrder排序，所以第一张就是sortOrder最小的）
     const image = item.Images[0];
     if (image) {
       return (
@@ -17,8 +33,13 @@ function getBestImageUrlFromItem(item) {
       );
     }
   }
+  
+  // 4. 兼容旧字段
   if (item.image) return item.image;
+  
+  // 5. 最后尝试使用品牌logo作为占位符
   if (item.Brand && item.Brand.logo) return item.Brand.logo;
+  
   return '';
 }
 
@@ -47,7 +68,7 @@ Page({
     this.setData({ keyword: keyword });
   },
 
-  // 执行搜索
+  // 执行搜索 - 与网页端保持一致，只搜索车型
   async performSearch(keyword) {
     if (!keyword.trim()) {
       wx.showToast({
@@ -60,16 +81,25 @@ Page({
     this.setData({ loading: true, hasSearched: true });
     
     try {
-      const res = await searchAPI.search(keyword);
-      // 后端返回格式: { status: 'success', data: { brands, models, images, ... } }
-      const results = res.data || res || {};
+      // 使用 modelAPI.getAll 搜索车型，与网页端保持一致
+      const res = await modelAPI.getAll({ 
+        search: keyword.trim(),
+        page: 1,
+        limit: 20
+      });
       
-      // 处理数据结构：brands/models/images 可能是 { data: [...], pagination: {...} } 格式
-      const brands = (results.brands?.data || results.brands || []).map((item, index) => ({
-        ...item,
-        _key: item.brand_id || item.id || `brand_${index}`
-      }));
-      const models = (results.models?.data || results.models || []).map((item, index) => {
+      // 处理返回数据：可能是 { success: true, data: [...] } 或直接是数组
+      let models = [];
+      if (res.success && Array.isArray(res.data)) {
+        models = res.data;
+      } else if (Array.isArray(res)) {
+        models = res;
+      } else if (Array.isArray(res.data)) {
+        models = res.data;
+      }
+      
+      // 处理每个车型，获取图片URL
+      const processedModels = models.map((item, index) => {
         const imageUrl = getBestImageUrlFromItem(item);
         return {
           ...item,
@@ -78,7 +108,8 @@ Page({
         };
       });
 
-      const modelsWithoutImage = models.filter(model => !model._imageUrl && model.id);
+      // 对于没有图片的车型，尝试获取第一张图片
+      const modelsWithoutImage = processedModels.filter(model => !model._imageUrl && model.id);
       if (modelsWithoutImage.length > 0) {
         await Promise.all(modelsWithoutImage.map(async (model) => {
           try {
@@ -93,16 +124,12 @@ Page({
           }
         }));
       }
-      const images = (results.images?.data || results.images || []).map((item, index) => ({
-        ...item,
-        _key: item.image_id || item.id || `image_${index}`
-      }));
       
       this.setData({
         results: {
-          brands: brands,
-          models: models,
-          images: images
+          brands: [],
+          models: processedModels,
+          images: []
         }
       });
     } catch (error) {

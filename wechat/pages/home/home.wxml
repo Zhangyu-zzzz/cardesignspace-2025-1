@@ -65,7 +65,7 @@
   <view class="section" wx:if="{{!loading && !error}}">
     <view class="section-header">
       <text class="section-title">最新车型</text>
-      <text class="section-more" bindtap="onSearch">查看更多</text>
+      <text class="section-more" bindtap="onSearch">搜索🔍</text>
     </view>
     <view class="models-grid" wx:if="{{latestModels.length > 0}}">
       <view 

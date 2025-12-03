@@ -7,7 +7,7 @@
         <div class="title-section">
           <h1 class="page-title">自然语言搜索</h1>
           <p class="page-description">使用自然语言描述你想要的汽车信息，我们将为你找到最相关的图片</p>
-          <p class="page-description">建议用英文搜索，效果更精准</p>
+          <p class="page-description">建议英文搜索，效果更精准</p>
         </div>
         
         <!-- 搜索框 -->

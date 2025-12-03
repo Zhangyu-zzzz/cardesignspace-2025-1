@@ -20,6 +20,7 @@ services:
     volumes:
       - ./backend/uploads:/app/uploads
       - ./backend/logs:/app/logs
+      - ./persistent/clip_models:/app/services/clip_utils/clip-vit-base-patch32
     networks:
       - auto-gallery-network
     healthcheck:

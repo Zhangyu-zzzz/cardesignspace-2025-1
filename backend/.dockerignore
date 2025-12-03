@@ -21,4 +21,15 @@ __tests__/
 docs/
 *.md
 Dockerfile
-.dockerignore 
+.dockerignore
+
+# 排除大型 CLIP 模型文件（使用 volume 挂载）
+services/clip_utils/clip-vit-base-patch32/
+services/clip_utils/models/
+*.h5
+*.pb
+*.ckpt
+*.pth
+*.bin
+saved_model/
+variables/ 

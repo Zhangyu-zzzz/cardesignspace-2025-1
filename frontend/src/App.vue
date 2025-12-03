@@ -51,8 +51,11 @@
                 <el-menu-item index="/" class="nav-item">
                   <span>首页</span>
                 </el-menu-item>
+                <el-menu-item index="/smart-search" class="nav-item">
+                  <span>智能搜索</span>
+                </el-menu-item>
                 <el-menu-item index="/image-gallery" class="nav-item">
-                  <span>图片</span>
+                  <span>标签搜索</span>
                 </el-menu-item>
                 <el-menu-item index="/draw-car" class="nav-item">
                   <span>画了个车</span>
@@ -100,9 +103,17 @@
                     <i class="el-icon-house"></i>
                     首页
                   </el-dropdown-item>
+                  <el-dropdown-item command="/smart-search">
+                    <i class="el-icon-search"></i>
+                    智能搜索
+                  </el-dropdown-item>
                   <el-dropdown-item command="/image-gallery">
                     <i class="el-icon-picture-outline"></i>
-                    图片
+                    标签搜索
+                  </el-dropdown-item>
+                  <el-dropdown-item command="/draw-car">
+                    <i class="el-icon-edit"></i>
+                    画了个车
                   </el-dropdown-item>
                   <el-dropdown-item command="/articles">
                     <i class="el-icon-document"></i>
@@ -119,10 +130,6 @@
                   <el-dropdown-item command="/upload">
                     <i class="el-icon-upload"></i>
                     上传
-                  </el-dropdown-item>
-                  <el-dropdown-item command="/draw-car">
-                    <i class="el-icon-edit"></i>
-                    画了个车
                   </el-dropdown-item>
                   <el-dropdown-item command="/about">
                     <i class="el-icon-info"></i>
@@ -253,9 +260,12 @@ export default {
     this.initializeAuth()
     // 监听窗口大小变化以更新placeholder
     window.addEventListener('resize', this.handleResize)
+    // 监听认证错误事件（由 apiClient 拦截器触发）
+    window.addEventListener('auth:error', this.handleAuthError)
   },
   beforeDestroy() {
     window.removeEventListener('resize', this.handleResize)
+    window.removeEventListener('auth:error', this.handleAuthError)
   },
       methods: {
     ...mapActions(['login', 'logout', 'updateUser', 'checkAuth']),
@@ -263,6 +273,22 @@ export default {
     // 处理窗口大小变化
     handleResize() {
       this.$forceUpdate() // 强制更新组件以重新计算placeholder
+    },
+    
+    // 处理认证错误事件
+    handleAuthError(event) {
+      const { message } = event.detail || {}
+      console.log('🔐 收到认证错误事件:', event.detail)
+      
+      // 清除用户数据
+      this.clearUserData()
+      
+      // 显示错误消息
+      if (message) {
+        this.$message.error(message)
+      } else {
+        this.$message.error('登录已过期，请重新登录')
+      }
     },
     
     // 初始化认证状态

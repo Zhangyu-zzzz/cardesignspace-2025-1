@@ -131,6 +131,14 @@ su7_model_data.json
 test-*.js 
 AGENTS.md
 
+# 🤖 机器学习模型文件（过大，不入库）
+backend/services/clip_utils/clip-vit-base-patch32/
+backend/services/clip_utils/__pycache__/
+*.bin
+*.msgpack
+*.h5
+__pycache__/
+
 docs/operations/cos-to-s3-backup-guide.md
 backend/backup-progress.json
 backend/backup-scheduler-status.json

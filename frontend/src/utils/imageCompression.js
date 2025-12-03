@@ -15,7 +15,7 @@ export function compressImage(file, options = {}) {
       maxWidth: 1920,
       maxHeight: 1080,
       quality: 0.8,
-      maxSize: 10 * 1024 * 1024, // 10MB
+      maxSize: 50 * 1024 * 1024, // 50MB
       outputFormat: 'webp' // 默认输出WebP格式
     }
     

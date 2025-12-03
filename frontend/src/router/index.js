@@ -132,6 +132,12 @@ const routes = [
     meta: { requiresAuth: false }
   },
   {
+    path: '/smart-search',
+    name: 'SmartSearch',
+    component: () => import('../views/SmartSearch.vue'),
+    meta: { requiresAuth: false }
+  },
+  {
     path: '/test-links',
     name: 'TestLinks',
     component: () => import('../views/TestLinks.vue'),

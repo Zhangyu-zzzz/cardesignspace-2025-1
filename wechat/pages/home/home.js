@@ -20,8 +20,25 @@ function getModelYear(model) {
 }
 
 function getBestImageUrl(model) {
-  if (!model) return '';
+  // 防御性检查，确保model是对象
+  if (!model || typeof model !== 'object') {
+    console.error('无效的模型数据:', model);
+    return '';
+  }
+  
+  // 1. 首先尝试使用模型自身的coverUrl（封面图）- 与网页端保持一致
+  if (model.coverUrl && typeof model.coverUrl === 'string' && model.coverUrl.trim() !== '') {
+    return model.coverUrl;
+  }
+  
+  // 2. 其次尝试使用模型自身的thumbnail属性 - 与网页端保持一致
+  if (model.thumbnail && typeof model.thumbnail === 'string' && model.thumbnail.trim() !== '') {
+    return model.thumbnail;
+  }
+  
+  // 3. 检查是否有Images集合并且不为空
   if (model.Images && Array.isArray(model.Images) && model.Images.length > 0) {
+    // 获取第一张图片的URL（后端已按sortOrder排序，所以第一张就是sortOrder最小的）
     const image = model.Images[0];
     if (image) {
       return (
@@ -35,8 +52,13 @@ function getBestImageUrl(model) {
       );
     }
   }
+  
+  // 4. 兼容旧字段
   if (model.image) return model.image;
+  
+  // 5. 最后尝试使用品牌logo作为占位符
   if (model.Brand && model.Brand.logo) return model.Brand.logo;
+  
   return '';
 }
 

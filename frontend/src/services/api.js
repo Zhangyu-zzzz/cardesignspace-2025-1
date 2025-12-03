@@ -90,6 +90,36 @@ apiClient.interceptors.response.use(
       );
     }
     
+    // 处理 401 未授权错误
+    if (error.response && error.response.status === 401) {
+      console.warn('⚠️ 认证失败 (401)，token 可能已过期');
+      
+      // 清除本地存储的 token
+      localStorage.removeItem('token');
+      
+      // 如果是在浏览器环境中，触发自定义事件，让组件处理
+      if (typeof window !== 'undefined') {
+        // 触发自定义事件，让 Vue 组件可以监听并处理
+        const authErrorEvent = new CustomEvent('auth:error', {
+          detail: {
+            status: 401,
+            message: '登录已过期，请重新登录',
+            url: error.config?.url
+          }
+        });
+        window.dispatchEvent(authErrorEvent);
+        
+        // 如果 1 秒后还没有被处理（比如组件监听了事件），则自动跳转
+        setTimeout(() => {
+          // 检查 token 是否仍然被清除（说明没有被重新登录）
+          if (!localStorage.getItem('token') && window.location.pathname !== '/login') {
+            console.log('自动跳转到登录页');
+            window.location.href = '/login';
+          }
+        }, 1000);
+      }
+    }
+    
     return Promise.reject(error);
   }
 );

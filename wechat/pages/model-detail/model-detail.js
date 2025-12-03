@@ -52,11 +52,31 @@ Page({
   async loadImages(modelId) {
     try {
       const res = await modelAPI.getImages(modelId);
-      const images = res.data || res || [];
+      let images = res.data || res || [];
       
+      // 按sortOrder排序，如果没有sortOrder则按原有顺序 - 与网页端保持一致
+      images = images.sort((a, b) => {
+        const orderA = a.sortOrder !== undefined && a.sortOrder !== null ? a.sortOrder : 999999;
+        const orderB = b.sortOrder !== undefined && b.sortOrder !== null ? b.sortOrder : 999999;
+        return orderA - orderB;
+      });
+      
+      console.log('获取到图片数量:', images.length);
       this.setData({ images: images });
     } catch (error) {
       console.error('加载图片失败:', error);
+      // 如果获取图片失败，尝试从模型数据中获取
+      if (this.data.model && this.data.model.Images) {
+        let images = this.data.model.Images;
+        // 同样按sortOrder排序
+        images = images.sort((a, b) => {
+          const orderA = a.sortOrder !== undefined && a.sortOrder !== null ? a.sortOrder : 999999;
+          const orderB = b.sortOrder !== undefined && b.sortOrder !== null ? b.sortOrder : 999999;
+          return orderA - orderB;
+        });
+        this.setData({ images: images });
+        console.log('从模型数据中获取到图片:', images.length);
+      }
     }
   },
 

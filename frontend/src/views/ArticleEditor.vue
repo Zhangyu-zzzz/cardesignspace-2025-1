@@ -799,8 +799,8 @@ export default {
               this.$message.info(`正在上传第 ${imageCount} 张图片...`)
               
               // 验证文件大小
-              if (file.size > 10 * 1024 * 1024) {
-                this.$message.error(`图片 ${imageCount} 大小超过10MB，已跳过`)
+              if (file.size > 50 * 1024 * 1024) {
+                this.$message.error(`图片 ${imageCount} 大小超过50MB，已跳过`)
                 continue
               }
               
@@ -976,8 +976,8 @@ export default {
         const file = event.target.files[0]
         if (file) {
           // 验证文件大小
-          if (file.size > 10 * 1024 * 1024) {
-            this.$message.error('图片大小不能超过10MB')
+          if (file.size > 50 * 1024 * 1024) {
+            this.$message.error('图片大小不能超过50MB')
             document.body.removeChild(input)
             return
           }
@@ -1025,8 +1025,8 @@ export default {
         })
         
         // 验证文件大小
-        if (file.size > 10 * 1024 * 1024) {
-          this.$message.error('图片大小不能超过10MB')
+        if (file.size > 50 * 1024 * 1024) {
+          this.$message.error('图片大小不能超过50MB')
           return
         }
         
@@ -1070,8 +1070,8 @@ export default {
             const file = new File([blob], `pasted-image-${Date.now()}-${i}`, { type: blob.type })
             
             // 验证文件大小
-            if (file.size > 10 * 1024 * 1024) {
-              console.warn(`图片 ${i + 1} 大小超过10MB，已跳过`)
+            if (file.size > 50 * 1024 * 1024) {
+              console.warn(`图片 ${i + 1} 大小超过50MB，已跳过`)
               continue
             }
             
@@ -1427,14 +1427,14 @@ export default {
 
     beforeUpload(file) {
       const isImage = file.type.startsWith('image/')
-      const isLt5M = file.size / 1024 / 1024 < 10
+      const isLt5M = file.size / 1024 / 1024 < 50
 
       if (!isImage) {
         this.$message.error('只能上传图片文件!')
         return false
       }
       if (!isLt5M) {
-        this.$message.error('图片大小不能超过 10MB!')
+        this.$message.error('图片大小不能超过 50MB!')
         return false
       }
       return true

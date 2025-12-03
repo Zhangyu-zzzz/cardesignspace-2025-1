@@ -70,8 +70,8 @@ const corsOptions = {
 
 // 配置中间件
 app.use(cors(corsOptions));
-app.use(express.json({ limit: '10mb' })); // 增加JSON请求体大小限制到10MB
-app.use(express.urlencoded({ extended: true, limit: '10mb' })); // 增加URL编码请求体大小限制到10MB
+app.use(express.json({ limit: '50mb' })); // 增加JSON请求体大小限制到50MB
+app.use(express.urlencoded({ extended: true, limit: '50mb' })); // 增加URL编码请求体大小限制到50MB
 
 // 应用防爬虫中间件 - 临时完全禁用
 // TODO: 生产环境问题解决后重新启用
@@ -121,6 +121,7 @@ app.use('/api/upload', require('./routes/upload'));
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/forum', require('./routes/forumRoutes'));
 app.use('/api/search', require('./routes/searchRoutes'));
+app.use('/api/smart-search', require('./routes/smartSearchRoutes'));
 app.use('/api/notifications', require('./routes/notificationRoutes'));
 // 统一与去重后的路由挂载
 app.use('/api/images', require('./routes/imageRoutes'));
@@ -180,7 +181,7 @@ app.use((err, req, res, next) => {
     return res.status(400).json({
       success: false,
       status: 'error',
-      message: err.code === 'LIMIT_FILE_SIZE' ? '文件大小超过限制（最大10MB）' : '文件上传失败',
+      message: err.code === 'LIMIT_FILE_SIZE' ? '文件大小超过限制（最大50MB）' : '文件上传失败',
       error: err.code || 'MulterError',
       details: process.env.NODE_ENV === 'production' ? undefined : err.message
     });

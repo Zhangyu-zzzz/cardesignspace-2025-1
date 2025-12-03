@@ -509,3 +509,5 @@ mysql -u root -p auto_gallery < backend/migrations/add_drawing_data_to_vehicles.
 
 
 
+
+

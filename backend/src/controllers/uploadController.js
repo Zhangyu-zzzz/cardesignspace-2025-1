@@ -1159,12 +1159,12 @@ exports.uploadArticleImage = async (req, res) => {
       });
     }
 
-    // 验证文件大小（最大10MB）
-    const maxSize = 10 * 1024 * 1024; // 10MB
+    // 验证文件大小（最大50MB）
+    const maxSize = 50 * 1024 * 1024; // 50MB
     if (req.file.size > maxSize) {
       return res.status(400).json({
         status: 'error',
-        message: '图片大小不能超过10MB'
+        message: '图片大小不能超过50MB'
       });
     }
 

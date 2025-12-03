@@ -1597,8 +1597,8 @@ export default {
         return false
       }
       
-      if (file.size > 10 * 1024 * 1024) {
-        this.$message.error(`文件 ${file.name} 大小超过 10MB`)
+      if (file.size > 50 * 1024 * 1024) {
+        this.$message.error(`文件 ${file.name} 大小超过 50MB`)
         return false
       }
       
@@ -1626,8 +1626,8 @@ export default {
         return
       }
       
-      if (file.raw && file.raw.size > 10 * 1024 * 1024) {
-        this.$message.error(`文件 ${file.name} 大小超过 10MB`)
+      if (file.raw && file.raw.size > 50 * 1024 * 1024) {
+        this.$message.error(`文件 ${file.name} 大小超过 50MB`)
         // 从文件列表中移除这个文件
         const filteredList = fileList.filter(f => f.uid !== file.uid)
         this.$set(this.uploadDialog.form, 'fileList', filteredList)
@@ -1638,7 +1638,7 @@ export default {
       // 只保留通过验证的文件
       const validFiles = fileList.filter(f => {
         if (!f.raw) return true // 保留已经存在的文件
-        return f.raw.type.startsWith('image/') && f.raw.size <= 10 * 1024 * 1024
+        return f.raw.type.startsWith('image/') && f.raw.size <= 50 * 1024 * 1024
       })
       
       // 使用Vue.set确保响应式更新
@@ -1774,6 +1774,16 @@ export default {
         console.log(`上传文件 ${i + 1}/${files.length}: ${fileItem.name}`);
         
         try {
+          // 检查 token 是否仍然存在（可能在之前的请求中被清除）
+          const token = localStorage.getItem('token')
+          if (!token) {
+            console.warn('Token 已失效，停止上传')
+            this.uploadProgress.status = 'exception'
+            this.uploadProgress.currentFile = ''
+            this.$message.error('登录已过期，请重新登录后继续上传')
+            break // 停止上传循环
+          }
+          
           const formData = new FormData()
           formData.append('image', fileItem.file) // 使用file属性
           formData.append('title', `${fileItem.name}`)
@@ -1798,6 +1808,17 @@ export default {
             console.log(`文件 ${fileItem.name} 上传失败:`, response.message);
           }
         } catch (error) {
+          // 检查是否是 401 错误
+          if (error.response && error.response.status === 401) {
+            console.warn('认证失败 (401)，停止上传')
+            this.uploadProgress.status = 'exception'
+            this.uploadProgress.currentFile = ''
+            this.uploadProgress.errorCount++
+            results.push({ success: false, filename: fileItem.name, error: '登录已过期' })
+            this.$message.error('登录已过期，请重新登录后继续上传剩余文件')
+            break // 停止上传循环
+          }
+          
           this.uploadProgress.errorCount++
           results.push({ success: false, filename: fileItem.name, error: error.message })
           console.log(`文件 ${fileItem.name} 上传异常:`, error);
@@ -1858,6 +1879,16 @@ export default {
         console.log(`上传文件 ${i + 1}/${files.length}: ${fileItem.name}`);
         
         try {
+          // 检查 token 是否仍然存在（可能在之前的请求中被清除）
+          const token = localStorage.getItem('token')
+          if (!token) {
+            console.warn('Token 已失效，停止上传')
+            this.uploadProgress.status = 'exception'
+            this.uploadProgress.currentFile = ''
+            this.$message.error('登录已过期，请重新登录后继续上传')
+            break // 停止上传循环
+          }
+          
           const formData = new FormData()
           formData.append('image', fileItem.file) // 使用file属性
           formData.append('title', `${fileItem.name}`)
@@ -1883,6 +1914,17 @@ export default {
             console.log(`文件 ${fileItem.name} 上传失败:`, response.message);
           }
         } catch (error) {
+          // 检查是否是 401 错误
+          if (error.response && error.response.status === 401) {
+            console.warn('认证失败 (401)，停止上传')
+            this.uploadProgress.status = 'exception'
+            this.uploadProgress.currentFile = ''
+            this.uploadProgress.errorCount++
+            results.push({ success: false, filename: fileItem.name, error: '登录已过期' })
+            this.$message.error('登录已过期，请重新登录后继续上传剩余文件')
+            break // 停止上传循环
+          }
+          
           this.uploadProgress.errorCount++
           results.push({ success: false, filename: fileItem.name, error: error.message })
           console.log(`文件 ${fileItem.name} 上传异常:`, error);
@@ -2291,8 +2333,8 @@ export default {
         }
         
         // 验证文件大小
-        if (file.size > 10 * 1024 * 1024) {
-          this.$message.error(`文件 ${file.name} 大小超过 10MB`);
+        if (file.size > 50 * 1024 * 1024) {
+          this.$message.error(`文件 ${file.name} 大小超过 50MB`);
           return;
         }
         
@@ -2359,8 +2401,8 @@ export default {
         }
         
         // 验证文件大小
-        if (file.size > 10 * 1024 * 1024) {
-          this.$message.error(`文件 ${file.name} 大小超过 10MB`);
+        if (file.size > 50 * 1024 * 1024) {
+          this.$message.error(`文件 ${file.name} 大小超过 50MB`);
           return;
         }
         
@@ -2448,8 +2490,8 @@ export default {
         return false
       }
       
-      if (file.size > 10 * 1024 * 1024) {
-        this.$message.error('文件大小不能超过 10MB')
+      if (file.size > 50 * 1024 * 1024) {
+        this.$message.error('文件大小不能超过 50MB')
         return false
       }
       

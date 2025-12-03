@@ -1,0 +1,682 @@
+<template>
+  <div class="smart-search">
+    <div class="search-header">
+      <h1 class="page-title">智能搜索</h1>
+      <p class="page-description">结合关系数据库和向量数据库，智能识别品牌信息并进行语义搜索</p>
+      
+      <!-- 搜索框 -->
+      <div class="search-box-container">
+        <el-input
+          v-model="searchQuery"
+          placeholder="例如：红色的宝马SUV、奔驰概念车、奥迪A4"
+          class="search-input"
+          size="large"
+          @keyup.enter.native="performSearch"
+          clearable
+        >
+          <el-button 
+            slot="append" 
+            icon="el-icon-search"
+            @click="performSearch"
+            :loading="loading"
+          >
+            搜索
+          </el-button>
+        </el-input>
+      </div>
+
+      <!-- 搜索信息提示 -->
+      <div v-if="searchInfo" class="search-info">
+        <el-tag v-if="searchInfo.brandInfo" type="success" size="small">
+          识别到品牌: {{ searchInfo.brandInfo.name }}
+        </el-tag>
+        <el-tag type="info" size="small">
+          MySQL结果: {{ searchInfo.mysqlResultsCount }} 张
+        </el-tag>
+        <el-tag type="warning" size="small">
+          向量结果: {{ searchInfo.vectorResultsCount }} 张
+        </el-tag>
+      </div>
+    </div>
+
+    <!-- 加载状态 -->
+    <div v-if="loading" class="loading-container" v-loading="loading" element-loading-text="正在搜索...">
+      <div style="min-height: 400px;"></div>
+    </div>
+
+    <!-- 搜索结果 -->
+    <div v-else-if="images.length > 0" class="results-container">
+      <div class="results-header">
+        <span class="results-count">
+          找到 {{ pagination.total }} 张图片，已加载 {{ images.length }} 张
+        </span>
+      </div>
+
+      <!-- 图片网格 -->
+      <div class="image-grid">
+        <div 
+          v-for="image in images" 
+          :key="image.id" 
+          class="image-card"
+          @click="openImageModal(image)"
+        >
+          <div class="image-container">
+            <img 
+              :src="image.bestUrl || image.url" 
+              :alt="image.filename"
+              @load="onImageLoad"
+              @error="onImageError"
+              loading="lazy"
+            />
+            <div class="image-overlay">
+              <div class="model-name">{{ image.model?.name || image.Model?.name || '未知车型' }}</div>
+              <div class="brand-name">{{ image.brand?.name || image.model?.Brand?.name || '' }}</div>
+            </div>
+          </div>
+          
+          <div class="image-details">
+            <div class="filename">{{ image.filename }}</div>
+            
+            <!-- 标签显示 -->
+            <div v-if="image.tags && image.tags.length > 0" class="tags-display">
+              <span 
+                v-for="(tag, index) in image.tags.slice(0, 3)" 
+                :key="index" 
+                class="tag"
+              >
+                {{ tag }}
+              </span>
+              <span v-if="image.tags.length > 3" class="more-tags">
+                +{{ image.tags.length - 3 }}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 加载更多提示 -->
+      <div v-if="loadingMore" class="loading-more">
+        <i class="el-icon-loading"></i>
+        <span>正在加载更多...</span>
+      </div>
+      <div v-else-if="hasMore" class="load-more-hint">
+        滚动到底部自动加载更多
+      </div>
+      <div v-else-if="images.length > 0" class="no-more-hint">
+        已加载全部 {{ pagination.total }} 张图片
+      </div>
+    </div>
+
+    <!-- 空状态 -->
+    <div v-else-if="hasSearched && !loading" class="empty-state">
+      <el-empty description="没有找到相关图片，请尝试其他关键词">
+        <el-button type="primary" @click="clearSearch">重新搜索</el-button>
+      </el-empty>
+    </div>
+
+    <!-- 初始提示 -->
+    <div v-else class="initial-hint">
+      <el-card class="hint-card">
+        <div slot="header">
+          <span>💡 使用提示</span>
+        </div>
+        <ul class="hint-list">
+          <li>输入品牌名称（如"宝马"、"奔驰"）进行精确匹配</li>
+          <li>输入描述性词汇（如"红色的"、"运动"）进行语义搜索</li>
+          <li>可以组合使用，如"红色的宝马SUV"</li>
+          <li>系统会自动识别品牌信息并使用关系数据库精确匹配</li>
+          <li>其他描述性信息会使用向量数据库进行语义搜索</li>
+        </ul>
+      </el-card>
+    </div>
+
+    <!-- 图片详情模态框 -->
+    <el-dialog
+      :visible.sync="showModal"
+      :title="selectedImage?.filename"
+      width="80%"
+      class="image-modal"
+    >
+      <div v-if="selectedImage" class="modal-content">
+        <div class="modal-image">
+          <img :src="selectedImage.bestUrl || selectedImage.url" :alt="selectedImage.filename">
+        </div>
+        
+        <div class="modal-info">
+          <div class="info-item">
+            <label>文件名:</label>
+            <span>{{ selectedImage.filename }}</span>
+          </div>
+          <div class="info-item" v-if="selectedImage.model || selectedImage.Model">
+            <label>车型:</label>
+            <span>{{ selectedImage.model?.name || selectedImage.Model?.name }}</span>
+          </div>
+          <div class="info-item" v-if="selectedImage.brand || selectedImage.model?.Brand">
+            <label>品牌:</label>
+            <span>{{ selectedImage.brand?.name || selectedImage.model?.Brand?.name }}</span>
+          </div>
+          <div class="info-item" v-if="selectedImage.model || selectedImage.Model">
+            <label>类型:</label>
+            <span>{{ selectedImage.model?.type || selectedImage.Model?.type }}</span>
+          </div>
+          <div class="info-item" v-if="selectedImage.tags && selectedImage.tags.length > 0">
+            <label>标签:</label>
+            <div class="tags-list">
+              <span v-for="tag in selectedImage.tags" :key="tag" class="tag">
+                {{ tag }}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </el-dialog>
+  </div>
+</template>
+
+<script>
+import { apiClient } from '@/services/api'
+
+export default {
+  name: 'SmartSearch',
+  data() {
+    return {
+      searchQuery: '',
+      images: [],
+      loading: false,
+      loadingMore: false,
+      hasSearched: false,
+      hasMore: false,
+      pagination: {
+        page: 1,
+        limit: 20,
+        total: 0,
+        pages: 0
+      },
+      searchInfo: null,
+      showModal: false,
+      selectedImage: null,
+      scrollHandler: null
+    }
+  },
+  mounted() {
+    // 添加滚动监听
+    this.scrollHandler = this.handleScroll.bind(this);
+    window.addEventListener('scroll', this.scrollHandler);
+  },
+  beforeDestroy() {
+    // 移除滚动监听
+    if (this.scrollHandler) {
+      window.removeEventListener('scroll', this.scrollHandler);
+    }
+  },
+  methods: {
+    async performSearch() {
+      if (!this.searchQuery.trim()) {
+        this.$message.warning('请输入搜索关键词')
+        return
+      }
+
+      this.loading = true
+      this.hasSearched = true
+      this.pagination.page = 1
+      this.images = [] // 清空之前的图片
+
+      try {
+        await this.loadImages()
+      } catch (error) {
+        console.error('搜索失败:', error)
+        this.$message.error('搜索失败，请稍后重试')
+      } finally {
+        this.loading = false
+      }
+    },
+
+    async loadImages(isLoadMore = false) {
+      try {
+        if (isLoadMore) {
+          this.loadingMore = true
+        }
+
+        const response = await apiClient.get('/smart-search', {
+          params: {
+            q: this.searchQuery,
+            page: this.pagination.page,
+            limit: this.pagination.limit
+          }
+        })
+
+        // 注意：apiClient的响应拦截器已经返回了response.data
+        if (response.status === 'success') {
+          const newImages = response.data.images || []
+          
+          if (isLoadMore) {
+            // 加载更多：追加到现有列表
+            this.images = [...this.images, ...newImages]
+          } else {
+            // 新搜索：替换列表
+            this.images = newImages
+          }
+          
+          this.pagination = response.data.pagination || this.pagination
+          this.hasMore = response.data.pagination?.hasMore || false
+          this.searchInfo = response.data.searchInfo || null
+          
+          // 调试日志
+          console.log('搜索响应:', {
+            imagesCount: this.images.length,
+            newImagesCount: newImages.length,
+            hasMore: this.hasMore,
+            total: this.pagination.total,
+            searchInfo: this.searchInfo,
+            vectorResultsCount: this.searchInfo?.vectorResultsCount,
+            mysqlResultsCount: this.searchInfo?.mysqlResultsCount
+          })
+        } else {
+          throw new Error(response.message || '搜索失败')
+        }
+      } catch (error) {
+        console.error('加载图片失败:', error)
+        console.error('错误详情:', {
+          message: error.message,
+          response: error.response?.data,
+          status: error.response?.status,
+          config: error.config
+        })
+        if (!isLoadMore) {
+          throw error
+        }
+      } finally {
+        if (isLoadMore) {
+          this.loadingMore = false
+        }
+      }
+    },
+
+    handleScroll() {
+      // 检查是否滚动到底部
+      if (this.loadingMore || !this.hasMore || this.loading) {
+        return
+      }
+
+      const scrollTop = window.pageYOffset || document.documentElement.scrollTop
+      const windowHeight = window.innerHeight
+      const documentHeight = document.documentElement.scrollHeight
+
+      // 当距离底部200px时开始加载
+      if (scrollTop + windowHeight >= documentHeight - 200) {
+        this.loadMore()
+      }
+    },
+
+    async loadMore() {
+      if (!this.hasMore || this.loadingMore) {
+        return
+      }
+
+      this.pagination.page += 1
+      await this.loadImages(true)
+    },
+
+    openImageModal(image) {
+      this.selectedImage = image
+      this.showModal = true
+    },
+
+    clearSearch() {
+      this.searchQuery = ''
+      this.images = []
+      this.hasSearched = false
+      this.hasMore = false
+      this.searchInfo = null
+      this.pagination.page = 1
+    },
+
+    onImageLoad() {
+      // 图片加载完成
+    },
+
+    onImageError(event) {
+      // 图片加载失败，可以设置默认图片
+      event.target.src = '/default-avatar.svg'
+    }
+  }
+}
+</script>
+
+<style scoped>
+.smart-search {
+  padding: 40px 20px;
+  max-width: 1800px;
+  margin: 0 auto;
+  min-height: calc(100vh - 100px);
+  background-color: #f5f7fa;
+}
+
+.search-header {
+  margin-bottom: 30px;
+  background: white;
+  padding: 30px;
+  border-radius: 8px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+}
+
+.page-title {
+  font-size: 32px;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 10px;
+}
+
+.page-description {
+  font-size: 14px;
+  color: #666;
+  margin-bottom: 20px;
+}
+
+.search-box-container {
+  max-width: 800px;
+  margin-bottom: 20px;
+  margin-top: 30px;
+}
+
+.search-input {
+  width: 100%;
+}
+
+/* 确保输入框可见 */
+.search-input >>> .el-input__inner {
+  background-color: #fff !important;
+  color: #333 !important;
+  border: 1px solid #dcdfe6 !important;
+  font-size: 16px !important;
+  padding: 0 15px !important;
+  height: 48px !important;
+  line-height: 48px !important;
+}
+
+.search-input >>> .el-input__inner::placeholder {
+  color: #999 !important;
+}
+
+.search-input >>> .el-input__inner:focus {
+  border-color: #409eff !important;
+  outline: none !important;
+}
+
+.search-input >>> .el-input-group__append {
+  background-color: #409eff !important;
+  border-color: #409eff !important;
+  color: #fff !important;
+  padding: 0 20px !important;
+}
+
+.search-input >>> .el-input-group__append .el-button {
+  color: #fff !important;
+  font-size: 16px !important;
+}
+
+.search-info {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 15px;
+}
+
+.loading-container {
+  min-height: 400px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.results-container {
+  margin-top: 20px;
+  background: white;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+}
+
+.results-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding: 10px 0;
+  border-bottom: 1px solid #eee;
+}
+
+.results-count {
+  font-size: 16px;
+  font-weight: bold;
+  color: #333;
+}
+
+.results-page {
+  font-size: 14px;
+  color: #666;
+}
+
+/* 图片网格 */
+.image-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 16px;
+  margin-bottom: 40px;
+}
+
+.image-card {
+  background: white;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.image-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(220, 53, 69, 0.15);
+}
+
+.image-container {
+  position: relative;
+  height: 180px;
+  overflow: hidden;
+}
+
+.image-container img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s;
+}
+
+.image-card:hover .image-container img {
+  transform: scale(1.05);
+}
+
+.image-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(transparent, rgba(0,0,0,0.7));
+  padding: 12px;
+  color: white;
+}
+
+.model-name {
+  font-weight: bold;
+  font-size: 13px;
+  margin-bottom: 3px;
+}
+
+.brand-name {
+  font-size: 11px;
+  opacity: 0.9;
+}
+
+.image-details {
+  padding: 12px;
+}
+
+.filename {
+  font-size: 11px;
+  color: #666;
+  margin-bottom: 6px;
+  word-break: break-all;
+}
+
+.tags-display {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  margin-bottom: 6px;
+}
+
+.tag {
+  padding: 2px 5px;
+  border-radius: 3px;
+  font-size: 10px;
+  background: #f0f0f0;
+  color: #555;
+}
+
+.more-tags {
+  font-size: 10px;
+  color: #999;
+  padding: 2px 5px;
+}
+
+.loading-more,
+.load-more-hint,
+.no-more-hint {
+  margin-top: 30px;
+  text-align: center;
+  padding: 20px;
+  color: #909399;
+  font-size: 14px;
+}
+
+.loading-more {
+  color: #409EFF;
+}
+
+.loading-more i {
+  margin-right: 8px;
+  font-size: 16px;
+}
+
+.no-more-hint {
+  color: #67C23A;
+}
+
+.empty-state {
+  min-height: 400px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+  margin-top: 20px;
+}
+
+.initial-hint {
+  margin-top: 40px;
+}
+
+.hint-card {
+  max-width: 800px;
+  margin: 0 auto;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+}
+
+.hint-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.hint-list li {
+  padding: 8px 0;
+  border-bottom: 1px solid #f0f0f0;
+  color: #666;
+}
+
+.hint-list li:last-child {
+  border-bottom: none;
+}
+
+/* 模态框样式 */
+.image-modal .modal-content {
+  display: flex;
+  gap: 20px;
+}
+
+.modal-image {
+  flex: 1;
+  max-width: 60%;
+}
+
+.modal-image img {
+  width: 100%;
+  height: auto;
+  border-radius: 8px;
+}
+
+.modal-info {
+  flex: 1;
+  padding: 20px;
+}
+
+.info-item {
+  margin-bottom: 15px;
+}
+
+.info-item label {
+  font-weight: bold;
+  color: #333;
+  display: inline-block;
+  min-width: 80px;
+  margin-right: 10px;
+}
+
+.info-item span {
+  color: #666;
+}
+
+.tags-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 5px;
+}
+
+@media (max-width: 768px) {
+  .smart-search {
+    padding: 10px;
+  }
+
+  .image-grid {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 12px;
+  }
+
+  .image-container {
+    height: 150px;
+  }
+
+  .modal-content {
+    flex-direction: column;
+  }
+
+  .modal-image, .modal-info {
+    max-width: 100%;
+  }
+}
+</style>
+

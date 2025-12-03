@@ -11,7 +11,7 @@ const storage = multer.memoryStorage();
 const imageUpload = multer({
   storage: storage,
   limits: {
-    fileSize: 10 * 1024 * 1024, // 10MB限制
+    fileSize: 50 * 1024 * 1024, // 50MB限制
   },
   fileFilter: (req, file, cb) => {
     // 检查文件类型
@@ -53,7 +53,7 @@ const handleMulterError = (err, req, res, next) => {
     if (err.code === 'LIMIT_FILE_SIZE') {
       return res.status(400).json({
         status: 'error',
-        message: '文件大小超过限制（最大10MB）',
+        message: '文件大小超过限制（最大50MB）',
         error: 'File too large'
       });
     }

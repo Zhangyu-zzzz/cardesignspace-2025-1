@@ -1251,10 +1251,10 @@ export default {
           return false
         }
         
-        // 检查文件大小 (5MB)
-        const isLt5M = file.raw.size / 1024 / 1024 < 5
+        // 检查文件大小 (50MB)
+        const isLt5M = file.raw.size / 1024 / 1024 < 50
         if (!isLt5M) {
-          this.$message.error('图片大小不能超过 5MB!')
+          this.$message.error('图片大小不能超过 50MB!')
           return false
         }
         
@@ -1774,10 +1774,10 @@ export default {
           return false
         }
         
-        // 检查文件大小 (5MB)
-        const isLt5M = file.raw.size / 1024 / 1024 < 5
+        // 检查文件大小 (50MB)
+        const isLt5M = file.raw.size / 1024 / 1024 < 50
         if (!isLt5M) {
-          this.$message.error('图片大小不能超过 5MB!')
+          this.$message.error('图片大小不能超过 50MB!')
           return false
         }
         

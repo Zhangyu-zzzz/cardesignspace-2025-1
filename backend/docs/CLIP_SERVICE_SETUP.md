@@ -227,3 +227,5 @@ npm start
 3. 如果CLIP服务不可用，系统会自动回退到payload过滤搜索
 4. 确保CLIP服务和Node.js后端在同一网络环境中
 
+
+

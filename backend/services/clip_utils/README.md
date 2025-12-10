@@ -38,3 +38,5 @@ export CLIP_REFERENCE_PROJECT=/path/to/daydayup-1
 - 首次运行会自动下载模型，需要网络连接
 - 模型下载后会被缓存，后续运行会更快
 
+
+

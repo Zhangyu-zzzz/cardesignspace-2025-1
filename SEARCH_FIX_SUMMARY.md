@@ -146,3 +146,5 @@ for (const brand of brands) {
 - ✅ 混合搜索（品牌 + 向量搜索）
 - ⚠️ 不影响其他API端点
 
+
+

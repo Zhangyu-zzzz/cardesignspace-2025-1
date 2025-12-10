@@ -738,9 +738,17 @@ export default {
 
 <style scoped>
 .image-gallery {
-  padding: 20px;
-  max-width: 1800px; /* 增加最大宽度 */
-  margin: 0 auto;
+  padding: 20px 0;
+  background: #0a0a0a;
+  min-height: 100vh;
+}
+
+.image-gallery > * {
+  max-width: 1800px;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 20px;
+  padding-right: 20px;
 }
 
 .gallery-container {
@@ -753,10 +761,11 @@ export default {
 .filter-sidebar {
   width: 280px; /* 从300px减少到280px */
   flex-shrink: 0;
-  background: #f8f9fa;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 8px;
   padding: 20px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
   height: fit-content;
   position: sticky;
   top: 20px;
@@ -777,17 +786,19 @@ export default {
 
 /* 优化后的图片卡片 */
 .image-card-optimized {
-  background: white;
-  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
   overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.4);
   cursor: pointer;
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition: all 0.3s ease;
 }
 
 .image-card-optimized:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 16px rgba(220, 53, 69, 0.15);
+  transform: translateY(-4px);
+  box-shadow: 0 8px 25px rgba(224, 52, 38, 0.3);
+  border-color: #e03426;
 }
 
 /* 优化后的图片容器 */
@@ -833,11 +844,13 @@ export default {
 /* 优化后的图片详情 */
 .image-details-optimized {
   padding: 12px; /* 从15px减少到12px */
+  background: rgba(255, 255, 255, 0.03);
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .filename {
   font-size: 11px; /* 从12px减少到11px */
-  color: #666;
+  color: rgba(255, 255, 255, 0.6);
   margin-bottom: 6px; /* 从8px减少到6px */
   word-break: break-all;
 }
@@ -853,18 +866,20 @@ export default {
   padding: 2px 5px; /* 从2px 6px减少到2px 5px */
   border-radius: 3px;
   font-size: 10px; /* 从11px减少到10px */
-  background: #f0f0f0;
-  color: #555;
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.15);
 }
 
 .style-tag {
-  background: #f8d7da;
-  color: #721c24;
+  background: rgba(224, 52, 38, 0.15);
+  color: rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(224, 52, 38, 0.3);
 }
 
 .more-tags, .more-style-tags {
   font-size: 10px; /* 从11px减少到10px */
-  color: #999;
+  color: rgba(255, 255, 255, 0.5);
   padding: 2px 5px; /* 从2px 6px减少到2px 5px */
 }
 
@@ -874,7 +889,8 @@ export default {
   gap: 30px;
   margin-bottom: 20px;
   padding: 15px;
-  background: #f8f9fa;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 6px;
 }
 
@@ -886,18 +902,18 @@ export default {
 
 .stats-label {
   font-weight: 500;
-  color: #555;
+  color: rgba(255, 255, 255, 0.7);
 }
 
 .stats-value {
   font-weight: bold;
-  color: #dc3545;
+  color: #e03426;
 }
 
 /* 筛选相关样式保持不变 */
 .filter-section h3 {
   margin: 0 0 20px 0;
-  color: #333;
+  color: rgba(255, 255, 255, 0.9);
   font-size: 18px;
 }
 
@@ -909,22 +925,23 @@ export default {
   display: block;
   margin-bottom: 5px;
   font-weight: 500;
-  color: #555;
+  color: rgba(255, 255, 255, 0.7);
 }
 
 .filter-group select {
   width: 100%;
   padding: 8px 12px;
-  border: 1px solid #ddd;
+  border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 4px;
-  background: white;
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.9);
   transition: border-color 0.2s;
 }
 
 .filter-group select:focus {
   outline: none;
-  border-color: #dc3545;
-  box-shadow: 0 0 0 2px rgba(220, 53, 69, 0.25);
+  border-color: #e03426;
+  box-shadow: 0 0 0 2px rgba(224, 52, 38, 0.25);
 }
 
 .tag-buttons, .style-tag-buttons {
@@ -935,16 +952,18 @@ export default {
 
 .tag-btn, .style-tag-btn {
   padding: 6px 12px;
-  border: 1px solid #ddd;
+  border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 4px;
-  background: white;
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.8);
   cursor: pointer;
   transition: all 0.2s;
   font-size: 14px;
 }
 
 .tag-btn:hover, .style-tag-btn:hover {
-  background: #f0f0f0;
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.3);
 }
 
 .tag-btn.active, .style-tag-btn.active {
@@ -956,16 +975,22 @@ export default {
 .tag-search-input {
   width: 100%;
   padding: 8px 12px;
-  border: 1px solid #ddd;
+  border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 4px;
   box-sizing: border-box;
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.9);
   transition: border-color 0.2s;
 }
 
 .tag-search-input:focus {
   outline: none;
-  border-color: #dc3545;
-  box-shadow: 0 0 0 2px rgba(220, 53, 69, 0.25);
+  border-color: #e03426;
+  box-shadow: 0 0 0 2px rgba(224, 52, 38, 0.25);
+}
+
+.tag-search-input::placeholder {
+  color: rgba(255, 255, 255, 0.4);
 }
 
 
@@ -988,22 +1013,22 @@ export default {
 
 .popular-tag {
   padding: 4px 8px;
-  background: #f8f9fa;
-  border: 1px solid #e9ecef;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 12px;
   font-size: 12px;
-  color: #495057;
+  color: rgba(255, 255, 255, 0.7);
   cursor: pointer;
   transition: all 0.2s ease;
   user-select: none;
 }
 
 .popular-tag:hover {
-  background: #dc3545;
+  background: #e03426;
   color: white;
-  border-color: #dc3545;
+  border-color: #e03426;
   transform: translateY(-1px);
-  box-shadow: 0 2px 4px rgba(220, 53, 69, 0.2);
+  box-shadow: 0 2px 4px rgba(224, 52, 38, 0.3);
 }
 
 .popular-tags-loading {
@@ -1052,21 +1077,21 @@ export default {
   justify-content: center;
   align-items: center;
   min-height: 400px;
-  background: #f8f9fa;
+  background: transparent;
   border-radius: 12px;
   margin: 20px 0;
 }
 
 .loading-spinner {
   text-align: center;
-  color: #666;
+  color: rgba(255, 255, 255, 0.7);
 }
 
 .spinner {
   width: 50px;
   height: 50px;
-  border: 4px solid #f3f3f3;
-  border-top: 4px solid #007bff;
+  border: 4px solid rgba(255, 255, 255, 0.1);
+  border-top: 4px solid #e03426;
   border-radius: 50%;
   animation: spin 1s linear infinite;
   margin: 0 auto 20px;
@@ -1096,7 +1121,7 @@ export default {
   justify-content: center;
   align-items: center;
   min-height: 400px;
-  background: #f8f9fa;
+  background: transparent;
   border-radius: 12px;
   margin: 20px 0;
   text-align: center;
@@ -1146,7 +1171,8 @@ export default {
 }
 
 .image-modal {
-  background: white;
+  background: #1a1a1a;
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 8px;
   max-width: 90vw;
   max-height: 90vh;
@@ -1160,12 +1186,12 @@ export default {
   justify-content: space-between;
   align-items: center;
   padding: 20px;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .modal-header h3 {
   margin: 0;
-  color: #333;
+  color: rgba(255, 255, 255, 0.9);
 }
 
 .close-btn {
@@ -1274,10 +1300,10 @@ export default {
 }
 
 .tags-edit-section {
-  border: 1px solid #ddd;
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 6px;
   padding: 12px;
-  background: #f9f9f9;
+  background: rgba(255, 255, 255, 0.03);
 }
 
 .current-tags {
@@ -1285,9 +1311,9 @@ export default {
 }
 
 .editable-tag {
-  background: #e3f2fd;
-  border: 1px solid #2196f3;
-  color: #1976d2;
+  background: rgba(224, 52, 38, 0.15);
+  border: 1px solid rgba(224, 52, 38, 0.3);
+  color: rgba(255, 255, 255, 0.8);
 }
 
 .add-tag-section {
@@ -1297,16 +1323,18 @@ export default {
 .tag-input {
   width: 100%;
   padding: 6px 8px;
-  border: 1px solid #ddd;
+  border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 4px;
   font-size: 14px;
   margin-bottom: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.9);
 }
 
 .tag-input:focus {
   outline: none;
-  border-color: #007bff;
-  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+  border-color: #e03426;
+  box-shadow: 0 0 0 2px rgba(224, 52, 38, 0.25);
 }
 
 .suggested-tags {
@@ -1318,14 +1346,14 @@ export default {
 
 .suggested-label {
   font-size: 12px;
-  color: #666;
+  color: rgba(255, 255, 255, 0.6);
   margin-right: 8px;
 }
 
 .suggested-tag {
-  background: #f8f9fa;
-  border: 1px solid #dee2e6;
-  color: #495057;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: rgba(255, 255, 255, 0.7);
   padding: 2px 6px;
   border-radius: 12px;
   font-size: 11px;

@@ -494,8 +494,16 @@ export default {
 <style scoped>
 .brand-detail {
   min-height: 100vh;
-  background: #f8f9fa;
-  padding: 20px;
+  background: #0a0a0a;
+  padding: 20px 0;
+}
+
+.brand-detail > * {
+  max-width: 1200px;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 20px;
+  padding-right: 20px;
 }
 
 .loading-container, .error-message {
@@ -503,15 +511,17 @@ export default {
   margin: 0 auto;
   padding: 40px;
   text-align: center;
+  color: rgba(255, 255, 255, 0.7);
 }
 
 .brand-header {
   max-width: 1200px;
   margin: 0 auto 30px auto;
-  background: white;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 12px;
   padding: 30px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
   display: flex;
   align-items: center;
   gap: 30px;
@@ -520,7 +530,7 @@ export default {
 .brand-logo {
   width: 120px;
   height: 120px;
-  background: #f8f9fa;
+  background: rgba(255, 255, 255, 0.05);
   border-radius: 12px;
   display: flex;
   align-items: center;
@@ -540,14 +550,14 @@ export default {
 
 .brand-info h1 {
   margin: 0 0 15px 0;
-  color: #333;
+  color: rgba(255, 255, 255, 0.9);
   font-size: 28px;
   font-weight: 600;
 }
 
 .brand-info p {
   margin: 8px 0;
-  color: #666;
+  color: rgba(255, 255, 255, 0.7);
   line-height: 1.6;
 }
 
@@ -559,15 +569,16 @@ export default {
 .model-filter-section {
   max-width: 1200px;
   margin: 0 auto 20px auto;
-  background: white;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 12px;
   padding: 25px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
 }
 
 .model-filter-section h2 {
   margin: 0 0 20px 0;
-  color: #333;
+  color: rgba(255, 255, 255, 0.9);
   font-size: 22px;
   font-weight: 600;
 }
@@ -593,9 +604,9 @@ export default {
 }
 
 .filter-btn {
-  border: 1px solid #ddd;
-  background: white;
-  color: #666;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.7);
   border-radius: 6px;
   padding: 8px 16px;
   cursor: pointer;
@@ -616,16 +627,17 @@ export default {
 .model-list {
   max-width: 1200px;
   margin: 0 auto;
-  background: white;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 12px;
   padding: 25px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
 }
 
 .no-models {
   text-align: center;
   padding: 60px 20px;
-  color: #999;
+  color: rgba(255, 255, 255, 0.5);
 }
 
 .models-grid {
@@ -635,18 +647,18 @@ export default {
 }
 
 .model-card {
-  border: 1px solid #e4e7ed;
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 8px;
   overflow: hidden;
   cursor: pointer;
   transition: all 0.3s;
-  background: white;
+  background: rgba(255, 255, 255, 0.03);
   aspect-ratio: 1;
 }
 
 .model-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+  box-shadow: 0 4px 15px rgba(224, 52, 38, 0.3);
   border-color: #e03426;
 }
 
@@ -654,7 +666,7 @@ export default {
   width: 100%;
   height: 75%;
   overflow: hidden;
-  background: #f8f9fa;
+  background: rgba(255, 255, 255, 0.02);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -700,7 +712,7 @@ export default {
 
 .model-info h3 {
   margin: 0 0 2px 0;
-  color: #333;
+  color: rgba(255, 255, 255, 0.9);
   font-size: 11px;
   font-weight: 600;
   line-height: 1.2;
@@ -725,7 +737,7 @@ export default {
 
 /* 列表视图样式 */
 .models-list {
-  background: white;
+  background: transparent;
   border-radius: 8px;
   padding: 20px;
 }
@@ -747,23 +759,24 @@ export default {
   transition: all 0.2s;
   border-radius: 4px;
   font-size: 14px;
-  color: #333;
+  color: rgba(255, 255, 255, 0.7);
   line-height: 1.4;
   margin-bottom: 1px;
 }
 
 .model-list-item:hover {
-  background: #f0f0f0;
+  background: rgba(255, 255, 255, 0.05);
   color: #e03426;
 }
 
 /* 图片预览提示框样式 */
 .image-preview-tooltip {
   position: fixed;
-  background: white;
-  border: 1px solid #e4e7ed;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 8px;
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(10px);
   padding: 8px;
   z-index: 1000;
   pointer-events: none;
@@ -786,9 +799,9 @@ export default {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: #f8f9fa;
+  background: rgba(255, 255, 255, 0.03);
   border-radius: 6px;
-  color: #ccc;
+  color: rgba(255, 255, 255, 0.4);
 }
 
 .no-preview-image i {
@@ -841,14 +854,14 @@ export default {
 
 .image-preview-tooltip.above .tooltip-arrow {
   bottom: -6px;
-  border-top: 6px solid white;
-  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.1));
+  border-top: 6px solid rgba(255, 255, 255, 0.05);
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.3));
 }
 
 .image-preview-tooltip.below .tooltip-arrow {
   top: -6px;
-  border-bottom: 6px solid white;
-  filter: drop-shadow(0 -1px 1px rgba(0, 0, 0, 0.1));
+  border-bottom: 6px solid rgba(255, 255, 255, 0.05);
+  filter: drop-shadow(0 -1px 1px rgba(0, 0, 0, 0.3));
 }
 
 

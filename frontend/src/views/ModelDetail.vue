@@ -819,14 +819,21 @@ import Sortable from 'sortablejs';
   <style scoped>
   .model-detail {
   padding: 20px 0px;
+  min-height: 100vh;
+  background: #0a0a0a;
+}
+
+.model-detail > * {
   max-width: 1200px;
-  margin: 0 auto;
+  margin-left: auto;
+  margin-right: auto;
 }
   
-  .loading-container, .error-message {
-    padding: 40px;
-    text-align: center;
-  }
+.loading-container, .error-message {
+  padding: 40px;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.7);
+}
   
   .error-message {
     color: #e03426;
@@ -872,12 +879,12 @@ import Sortable from 'sortablejs';
     flex-wrap: wrap;
   }
   
-  .model-title h1 {
-    margin: 0 15px 0 0;
-    font-size: 20px;
-    /* font-weight: 600; */
-    color: #333;
-  }
+.model-title h1 {
+  margin: 0 15px 0 0;
+  font-size: 20px;
+  /* font-weight: 600; */
+  color: rgba(255, 255, 255, 0.9);
+}
   
   .year-tag {
     margin-left: 10px;
@@ -896,28 +903,29 @@ import Sortable from 'sortablejs';
     margin-right: 8px;
   }
   
-  .brand-name {
-    font-size: 14px;
-    color: #333;
-    font-weight: 500;
+.brand-name {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.8);
+  font-weight: 500;
   }
   
-  .model-info-section {
-    margin-bottom: 40px;
-    padding: 20px;
-    background-color: #fff;
-    border-radius: 8px;
-    box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.05);
-  }
-  
-  .model-info-section h2 {
-    margin-top: 0;
-    margin-bottom: 20px;
-    font-size: 22px;
-    color: #333;
-    border-bottom: 1px solid #eee;
-    padding-bottom: 10px;
-  }
+.model-info-section {
+  margin-bottom: 40px;
+  padding: 20px;
+  background-color: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.3);
+}
+
+.model-info-section h2 {
+  margin-top: 0;
+  margin-bottom: 20px;
+  font-size: 22px;
+  color: rgba(255, 255, 255, 0.9);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding-bottom: 10px;
+}
   
   .specs-grid {
     display: grid;
@@ -925,20 +933,20 @@ import Sortable from 'sortablejs';
     gap: 20px;
   }
   
-  .spec-category {
-    margin-bottom: 20px;
-    padding: 15px;
-    background-color: #f8f9fa;
-    border-radius: 8px;
-  }
-  
-  .spec-category h3 {
-    margin: 0 0 15px 0;
-    font-size: 18px;
-    color: #333;
-    border-bottom: 1px solid #eee;
-    padding-bottom: 8px;
-  }
+.spec-category {
+  margin-bottom: 20px;
+  padding: 15px;
+  background-color: rgba(255, 255, 255, 0.02);
+  border-radius: 8px;
+}
+
+.spec-category h3 {
+  margin: 0 0 15px 0;
+  font-size: 18px;
+  color: rgba(255, 255, 255, 0.9);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding-bottom: 8px;
+}
   
   .spec-row {
     display: flex;
@@ -947,26 +955,26 @@ import Sortable from 'sortablejs';
     font-size: 14px;
   }
   
-  .spec-label {
-    color: #666;
-    flex: 1;
-  }
-  
-  .spec-value {
-    color: #333;
-    font-weight: 500;
-    flex: 1;
-    text-align: right;
-  }
+.spec-label {
+  color: rgba(255, 255, 255, 0.6);
+  flex: 1;
+}
+
+.spec-value {
+  color: rgba(255, 255, 255, 0.9);
+  font-weight: 500;
+  flex: 1;
+  text-align: right;
+}
   
   .price-info {
     font-size: 16px;
   }
   
-  .price-info .label {
-    font-weight: bold;
-    color: #666;
-  }
+.price-info .label {
+  font-weight: bold;
+  color: rgba(255, 255, 255, 0.7);
+}
   
   .price-info .price {
     font-size: 24px;
@@ -974,13 +982,13 @@ import Sortable from 'sortablejs';
     font-weight: bold;
   }
   
-  .model-description {
-    margin-top: 20px;
-    padding-top: 20px;
-    border-top: 1px dashed #eee;
-    color: #666;
-    line-height: 1.6;
-  }
+.model-description {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px dashed rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.7);
+  line-height: 1.6;
+}
   
   .images-section {
     margin-bottom: 40px;
@@ -995,26 +1003,27 @@ import Sortable from 'sortablejs';
   padding: 0;
 }
   
-  .image-card {
-    border-radius: 8px;
-    overflow: hidden;
-    transition: all 0.3s ease;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-    background-color: #fff;
-    position: relative;
-    cursor: move; /* 拖拽时显示移动光标 */
-    aspect-ratio: 1;
-  }
+.image-card {
+  border-radius: 8px;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  background-color: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  position: relative;
+  cursor: move; /* 拖拽时显示移动光标 */
+  aspect-ratio: 1;
+}
   
   .image-card:hover {
     cursor: move;
   }
   
-  /* 拖拽排序样式 */
-  .sortable-ghost {
-    opacity: 0.4;
-    background: #f0f0f0;
-  }
+/* 拖拽排序样式 */
+.sortable-ghost {
+  opacity: 0.4;
+  background: rgba(255, 255, 255, 0.1);
+}
   
   .sortable-chosen {
     cursor: grabbing !important;
@@ -1198,115 +1207,183 @@ import Sortable from 'sortablejs';
     }
   }
 
-  /* 车型描述区域样式 */
-  .model-description-section {
-    margin: 40px 10px 20px 10px;
-    padding: 30px;
-    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
-    border-radius: 16px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-    border: 1px solid #e3e6ea;
-    position: relative;
-    overflow: hidden;
-  }
+/* 车型描述区域样式 - 优化版 */
+.model-description-section {
+  margin: 40px 10px 30px 10px;
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%);
+  border-radius: 20px;
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  position: relative;
+  overflow: hidden;
+  backdrop-filter: blur(10px);
+  transition: all 0.3s ease;
+}
 
-  .model-description-section::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 4px;
-    background: linear-gradient(90deg, #e03426, #ff6b6b, #e03426);
-    border-radius: 4px 4px 0 0;
-  }
+.model-description-section:hover {
+  transform: translateY(-2px);
+  box-shadow: 
+    0 12px 40px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  border-color: rgba(224, 52, 38, 0.3);
+}
 
-  .description-title {
-    margin: 0 0 25px 0;
-    font-size: 22px;
-    color: #333;
-    font-weight: 600;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding-bottom: 15px;
-    border-bottom: 2px solid #e9ecef;
-    position: relative;
-  }
+.model-description-section::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, 
+    transparent 0%, 
+    #e03426 20%, 
+    #ff6b6b 50%, 
+    #e03426 80%, 
+    transparent 100%
+  );
+  animation: shimmer 3s ease-in-out infinite;
+}
 
-  .description-title i {
-    color: #e03426;
-    font-size: 24px;
-  }
+@keyframes shimmer {
+  0%, 100% { opacity: 0.8; }
+  50% { opacity: 1; }
+}
 
-  .description-container {
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-  }
+.description-title {
+  margin: 0;
+  padding: 25px 30px 20px;
+  font-size: 24px;
+  color: rgba(255, 255, 255, 0.95);
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: linear-gradient(135deg, rgba(224, 52, 38, 0.08) 0%, transparent 100%);
+  position: relative;
+  letter-spacing: 0.5px;
+}
 
-  .description-content {
-    flex: 1;
-  }
+.description-title::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 30px;
+  right: 30px;
+  height: 2px;
+  background: linear-gradient(90deg, 
+    #e03426 0%, 
+    rgba(224, 52, 38, 0.3) 50%, 
+    transparent 100%
+  );
+}
 
-  .description-text {
-    font-size: 16px;
-    line-height: 1.8;
-    color: #555;
-    margin: 0;
-    text-align: justify;
-    word-break: break-word;
-    white-space: pre-wrap;
-  }
+.description-title i {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #e03426 0%, #ff6b6b 100%);
+  border-radius: 10px;
+  color: white;
+  font-size: 20px;
+  box-shadow: 0 4px 15px rgba(224, 52, 38, 0.4);
+}
 
-  .description-meta {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 20px;
-    padding-top: 20px;
-    border-top: 1px solid #e9ecef;
-    margin-top: 10px;
-  }
+.description-container {
+  padding: 25px 30px 30px;
+}
 
-  .meta-item {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 14px;
-    color: #666;
-    padding: 8px 12px;
-    background: #f8f9fa;
-    border-radius: 8px;
-    border: 1px solid #e9ecef;
-  }
+.description-content {
+  position: relative;
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 12px;
+  border-left: 3px solid #e03426;
+}
 
-  .meta-item i {
-    color: #e03426;
-    font-size: 16px;
-  }
+.description-text {
+  font-size: 16px;
+  line-height: 2;
+  color: rgba(255, 255, 255, 0.85);
+  margin: 0;
+  text-align: justify;
+  word-break: break-word;
+  white-space: pre-wrap;
+  text-indent: 2em;
+  letter-spacing: 0.5px;
+}
 
-  /* 车型参数展示样式 */
-  .model-specs-section {
-    margin: 40px 10px 20px 10px;
-    padding: 25px;
-    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-    border-radius: 16px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-    border: 1px solid #e3e6ea;
-  }
+.description-text::first-letter {
+  font-size: 1.8em;
+  font-weight: 700;
+  color: #e03426;
+  float: left;
+  line-height: 1;
+  margin: 0.1em 0.1em 0 0;
+}
 
-  .specs-title {
-    margin: 0 0 25px 0;
-    font-size: 22px;
-    color: #333;
-    font-weight: 600;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding-bottom: 15px;
-    border-bottom: 2px solid #e03426;
-    position: relative;
-  }
+.description-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px dashed rgba(255, 255, 255, 0.15);
+}
+
+.meta-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.75);
+  padding: 8px 16px;
+  background: linear-gradient(135deg, rgba(224, 52, 38, 0.1) 0%, rgba(224, 52, 38, 0.05) 100%);
+  border-radius: 20px;
+  border: 1px solid rgba(224, 52, 38, 0.2);
+  transition: all 0.3s ease;
+  cursor: default;
+}
+
+.meta-item:hover {
+  background: linear-gradient(135deg, rgba(224, 52, 38, 0.15) 0%, rgba(224, 52, 38, 0.08) 100%);
+  border-color: rgba(224, 52, 38, 0.3);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(224, 52, 38, 0.2);
+}
+
+.meta-item i {
+  color: #e03426;
+  font-size: 15px;
+  filter: drop-shadow(0 0 4px rgba(224, 52, 38, 0.5));
+}
+
+/* 车型参数展示样式 */
+.model-specs-section {
+  margin: 40px 10px 20px 10px;
+  padding: 25px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.specs-title {
+  margin: 0 0 25px 0;
+  font-size: 22px;
+  color: rgba(255, 255, 255, 0.9);
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-bottom: 15px;
+  border-bottom: 2px solid #e03426;
+  position: relative;
+}
 
   .specs-title::after {
     content: '';
@@ -1335,18 +1412,18 @@ import Sortable from 'sortablejs';
     margin-top: 10px;
   }
 
-  .spec-item {
-    display: flex;
-    align-items: center;
-    padding: 20px;
-    background: white;
-    border-radius: 12px;
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
-    transition: all 0.3s ease;
-    border: 1px solid #f1f3f4;
-    position: relative;
-    overflow: hidden;
-  }
+.spec-item {
+  display: flex;
+  align-items: center;
+  padding: 20px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 12px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
+  transition: all 0.3s ease;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  position: relative;
+  overflow: hidden;
+}
 
   .spec-item::before {
     content: '';
@@ -1392,53 +1469,78 @@ import Sortable from 'sortablejs';
     font-weight: bold;
   }
 
-  .spec-content {
-    flex: 1;
-    min-width: 0;
-  }
+.spec-content {
+  flex: 1;
+  min-width: 0;
+}
 
-  .spec-label {
-    font-size: 14px;
-    color: #666;
-    font-weight: 500;
-    margin-bottom: 4px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-  }
+.spec-label {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.6);
+  font-weight: 500;
+  margin-bottom: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
 
-  .spec-value {
-    font-size: 18px;
-    color: #333;
-    font-weight: 700;
-    line-height: 1.2;
-    word-break: break-all;
-  }
+.spec-value {
+  font-size: 18px;
+  color: rgba(255, 255, 255, 0.9);
+  font-weight: 700;
+  line-height: 1.2;
+  word-break: break-all;
+}
 
   /* 响应式设计 */
   @media (max-width: 768px) {
     .model-description-section {
-      margin: 30px 5px 15px 5px;
-      padding: 20px 15px;
+      margin: 30px 5px 20px 5px;
+      border-radius: 16px;
     }
 
     .description-title {
+      padding: 20px 20px 15px;
       font-size: 20px;
-      margin-bottom: 20px;
+    }
+
+    .description-title::after {
+      left: 20px;
+      right: 20px;
+    }
+
+    .description-title i {
+      width: 36px;
+      height: 36px;
+      font-size: 18px;
+    }
+
+    .description-container {
+      padding: 20px;
+    }
+
+    .description-content {
+      padding: 15px;
     }
 
     .description-text {
       font-size: 15px;
-      line-height: 1.7;
+      line-height: 1.9;
+      text-indent: 2em;
     }
 
     .description-meta {
-      gap: 15px;
+      gap: 10px;
       padding-top: 15px;
+      margin-top: 15px;
     }
 
     .meta-item {
-      font-size: 13px;
-      padding: 6px 10px;
+      font-size: 12px;
+      padding: 6px 12px;
+    }
+
+    .meta-item i {
+      font-size: 14px;
     }
 
     .model-specs-section {
@@ -1477,29 +1579,63 @@ import Sortable from 'sortablejs';
 
   @media (max-width: 480px) {
     .model-description-section {
-      margin: 20px 5px 10px 5px;
-      padding: 15px 10px;
+      margin: 20px 5px 15px 5px;
+      border-radius: 12px;
     }
 
     .description-title {
+      padding: 18px 15px 12px;
       font-size: 18px;
-      margin-bottom: 15px;
+      gap: 10px;
+    }
+
+    .description-title::after {
+      left: 15px;
+      right: 15px;
+    }
+
+    .description-title i {
+      width: 32px;
+      height: 32px;
+      font-size: 16px;
+      border-radius: 8px;
+    }
+
+    .description-container {
+      padding: 15px;
+    }
+
+    .description-content {
+      padding: 12px;
+      border-left-width: 2px;
     }
 
     .description-text {
       font-size: 14px;
-      line-height: 1.6;
+      line-height: 1.8;
+      text-indent: 2em;
+      letter-spacing: 0.3px;
+    }
+
+    .description-text::first-letter {
+      font-size: 1.5em;
     }
 
     .description-meta {
-      gap: 10px;
+      gap: 8px;
       padding-top: 12px;
-      flex-direction: column;
+      margin-top: 12px;
     }
 
     .meta-item {
-      font-size: 12px;
-      padding: 5px 8px;
+      font-size: 11px;
+      padding: 6px 10px;
+      flex: 1 1 auto;
+      min-width: fit-content;
+    }
+
+    .meta-item i {
+      font-size: 13px;
     }
 
     .model-specs-section {

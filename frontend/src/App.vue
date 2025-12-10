@@ -493,6 +493,8 @@ html, body {
   max-width: 100%;
   margin: 0;
   padding: 0;
+  background: #0a0a0a;
+  min-height: 100vh;
 }
 
 /* 当灵感图片模态框打开时隐藏导航栏 */
@@ -515,6 +517,8 @@ body:has(.inspiration-modal) .navbar-container {
   overflow-x: hidden;
   margin: 0;
   padding: 0;
+  background: #0a0a0a;
+  min-height: 100vh;
 }
 
 /* Element UI 容器重置 */
@@ -522,6 +526,8 @@ body:has(.inspiration-modal) .navbar-container {
   width: 100% !important;
   margin: 0 !important;
   padding: 0 !important;
+  background: #0a0a0a;
+  min-height: 100vh;
 }
 
 .el-header {
@@ -696,7 +702,9 @@ body:has(.inspiration-modal) .navbar-container {
 .el-footer {
   text-align: center;
   line-height: 60px;
-  color: #909399;
+  color: rgba(255, 255, 255, 0.6);
+  background: #0a0a0a;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 /* ===== 导航栏样式 ===== */

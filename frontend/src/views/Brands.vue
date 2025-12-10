@@ -110,9 +110,17 @@ export default {
 
 <style scoped>
 .brands {
-  padding: 20px;
+  padding: 20px 0;
+  background: #0a0a0a;
+  min-height: 100vh;
+}
+
+.brands > * {
   max-width: 1200px;
-  margin: 0 auto;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 20px;
+  padding-right: 20px;
 }
 
 .header-container {
@@ -122,8 +130,12 @@ export default {
   margin-bottom: 20px;
 }
 
+.header-container h1 {
+  color: rgba(255, 255, 255, 0.9);
+}
+
 .refresh-btn {
-  background-color: #3498db;
+  background-color: #e03426;
   color: white;
   border: none;
   border-radius: 4px;
@@ -158,10 +170,11 @@ export default {
   text-align: center;
   margin: 40px 0;
   font-size: 16px;
+  color: rgba(255, 255, 255, 0.7);
 }
 
 .error {
-  color: #e74c3c;
+  color: #e03426;
 }
 
 .brand-grid {
@@ -172,16 +185,17 @@ export default {
 }
 
 .brand-card {
-  border: 1px solid #eaeaea;
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 8px;
   overflow: hidden;
   transition: transform 0.3s, box-shadow 0.3s;
-  background-color: #fff;
+  background-color: rgba(255, 255, 255, 0.03);
 }
 
 .brand-card:hover {
   transform: translateY(-5px);
-  box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+  box-shadow: 0 6px 20px rgba(224, 52, 38, 0.3);
+  border-color: #e03426;
 }
 
 .brand-logo {
@@ -189,7 +203,7 @@ export default {
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: #f9f9f9;
+  background-color: rgba(255, 255, 255, 0.05);
   padding: 10px;
 }
 
@@ -203,7 +217,7 @@ export default {
   width: 80px;
   height: 80px;
   border-radius: 50%;
-  background-color: #3498db;
+  background-color: #e03426;
   color: white;
   display: flex;
   align-items: center;
@@ -219,12 +233,12 @@ export default {
 .brand-info h2 {
   margin-top: 0;
   margin-bottom: 10px;
-  color: #333;
+  color: rgba(255, 255, 255, 0.9);
   font-size: 18px;
 }
 
 .country, .year {
-  color: #666;
+  color: rgba(255, 255, 255, 0.6);
   margin: 5px 0;
   font-size: 14px;
 }
@@ -245,7 +259,7 @@ export default {
 .view-details {
   display: inline-block;
   margin-top: 10px;
-  color: #3498db;
+  color: #e03426;
   text-decoration: none;
   font-size: 14px;
   font-weight: 500;
@@ -253,5 +267,6 @@ export default {
 
 .view-details:hover {
   text-decoration: underline;
+  color: #FF4757;
 }
 </style> 

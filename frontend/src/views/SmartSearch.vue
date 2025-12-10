@@ -35,19 +35,6 @@
             </button>
           </div>
           
-          <!-- 快捷搜索标签 -->
-          <div class="quick-search-tags">
-            <span class="tags-label">热门搜索：</span>
-            <button 
-              v-for="tag in quickSearchTags" 
-              :key="tag"
-              class="quick-tag"
-              @click="quickSearch(tag)"
-            >
-              {{ tag }}
-            </button>
-          </div>
-          
           <!-- 搜索提示 -->
           <!-- <div class="search-hint">
             💡 支持自然语言搜索，如"红色的宝马SUV"，或使用关键词组合，如"蓝色 跑车 奔驰"
@@ -69,6 +56,28 @@
               </svg>
               <span><strong>翻译：</strong>{{ searchInfo.translatedQuery }}</span>
             </div>
+          </div>
+        </transition>
+        
+        <!-- 快捷搜索标签 - 移到翻译信息下方 -->
+        <transition name="fade">
+          <div v-if="quickSearchTags.length > 0" class="quick-search-tags">
+            <span class="tags-label">
+              <svg class="tags-icon" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M16 6l2.29 2.29-4.88 4.88-4-4L2 16.59 3.41 18l6-6 4 4 6.3-6.29L22 12V6z"/>
+              </svg>
+              热门搜索：
+            </span>
+            <button 
+              v-for="tag in quickSearchTags" 
+              :key="tag.query"
+              class="quick-tag"
+              @click="quickSearch(tag.query)"
+              :title="`搜索次数: ${tag.count}`"
+            >
+              {{ tag.query }}
+              <span class="tag-count">{{ tag.count }}</span>
+            </button>
           </div>
         </transition>
       </div>
@@ -152,14 +161,6 @@
                   <div class="overlay-content">
                     <h3 class="model-name">{{ image.model?.name || '未知车型' }}</h3>
                     <p class="brand-name">{{ image.brand?.name || '' }}</p>
-                  </div>
-                  <div class="overlay-actions">
-                    <button class="action-btn">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke-width="2"/>
-                        <circle cx="12" cy="12" r="3" stroke-width="2"/>
-                      </svg>
-                    </button>
                   </div>
                 </div>
               </div>
@@ -267,6 +268,19 @@
                 <p class="modal-brand" v-if="selectedImage.brand?.name">{{ selectedImage.brand.name }}</p>
               </div>
               
+              <!-- 跳转到车型详情按钮 -->
+              <div v-if="selectedImage.modelId" class="modal-action-buttons">
+                <button class="view-model-btn" @click="goToModelDetail">
+                  <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                  <span>查看该车型所有图片</span>
+                  <svg class="arrow-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path d="M9 5l7 7-7 7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </button>
+              </div>
+              
               <div class="info-cards">
                 <div class="info-card" v-if="selectedImage.model?.type">
                   <div class="info-card-label">车型类型</div>
@@ -323,13 +337,15 @@ export default {
       showModal: false,
       selectedImage: null,
       scrollHandler: null,
-      quickSearchTags: ['红色跑车', '奔驰SUV', '蓝色轿车', 'BMW概念车'],
+      quickSearchTags: [],
       loadingStepTimer: null
     }
   },
   mounted() {
     this.scrollHandler = this.handleScroll.bind(this)
     window.addEventListener('scroll', this.scrollHandler)
+    // 加载热门搜索
+    this.loadPopularSearches()
   },
   beforeDestroy() {
     if (this.scrollHandler) {
@@ -340,12 +356,61 @@ export default {
     }
   },
   methods: {
+    // 加载热门搜索
+    async loadPopularSearches() {
+      try {
+        const response = await apiClient.get('/search-stats/popular', {
+          params: { limit: 6 }
+        })
+        if (response.success && response.data) {
+          this.quickSearchTags = response.data
+        }
+      } catch (error) {
+        console.error('加载热门搜索失败:', error)
+        // 失败时使用默认数据
+        this.quickSearchTags = [
+          { query: '红色跑车', count: 0 },
+          { query: '奔驰SUV', count: 0 },
+          { query: '蓝色轿车', count: 0 },
+          { query: 'BMW概念车', count: 0 }
+        ]
+      }
+    },
+
+    // 记录搜索
+    async recordSearch(searchData) {
+      try {
+        // 获取或生成会话ID
+        let sessionId = localStorage.getItem('search_session_id');
+        if (!sessionId) {
+          sessionId = 'sess_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+          localStorage.setItem('search_session_id', sessionId);
+        }
+        
+        const recordData = {
+          query: searchData.query,
+          translatedQuery: searchData.translatedQuery || null,
+          brandId: searchData.brandId || null,
+          resultsCount: searchData.resultsCount || 0,
+          searchType: searchData.searchType || 'smart',
+          isSuccessful: searchData.isSuccessful !== false,
+          errorMessage: searchData.errorMessage || null,
+          sessionId: sessionId
+        };
+        
+        await apiClient.post('/search-stats/record', recordData);
+      } catch (error) {
+        console.error('记录搜索失败:', error);
+      }
+    },
+
     async performSearch() {
       if (!this.searchQuery.trim()) {
         this.$message.warning('请输入搜索关键词')
         return
       }
 
+      const searchStartTime = Date.now();
       this.loading = true
       this.hasSearched = true
       this.pagination.page = 1
@@ -361,9 +426,32 @@ export default {
 
       try {
         await this.loadImages()
+        
+        // 搜索成功后记录
+        const searchDuration = Date.now() - searchStartTime;
+        this.recordSearch({
+          query: this.searchQuery.trim(),
+          translatedQuery: this.searchInfo?.translatedQuery,
+          brandId: this.searchInfo?.brandInfo?.id,
+          resultsCount: this.images.length,
+          searchType: 'smart',
+          isSuccessful: true,
+          searchDuration: searchDuration
+        });
+        
       } catch (error) {
         console.error('搜索失败:', error)
         this.$message.error('搜索失败，请稍后重试')
+        
+        // 搜索失败也记录
+        this.recordSearch({
+          query: this.searchQuery.trim(),
+          resultsCount: 0,
+          searchType: 'smart',
+          isSuccessful: false,
+          errorMessage: error.message || '搜索失败'
+        });
+        
       } finally {
         this.loading = false
         this.loadingStep = 4
@@ -371,6 +459,8 @@ export default {
           clearInterval(this.loadingStepTimer)
           this.loadingStepTimer = null
         }
+        // 搜索完成后重新加载热门搜索
+        this.loadPopularSearches()
       }
     },
 
@@ -448,6 +538,15 @@ export default {
       this.showModal = true
     },
 
+    goToModelDetail() {
+      if (this.selectedImage && this.selectedImage.modelId) {
+        // 关闭弹窗
+        this.showModal = false
+        // 跳转到车型详情页
+        this.$router.push(`/model/${this.selectedImage.modelId}`)
+      }
+    },
+
     clearSearch() {
       this.searchQuery = ''
       this.images = []
@@ -468,21 +567,21 @@ export default {
 /* 主容器 - 定义CSS变量 */
 .smart-search-modern {
   min-height: 100vh;
-  background: #ffffff;
+  background: #0a0a0a;
   /* CSS变量定义 */
-  --primary-color: #DC3545;
+  --primary-color: #e03426;
   --primary-light: #FF4757;
   --primary-dark: #C42331;
-  --text-primary: #1a1a1a;
-  --text-secondary: #666666;
-  --text-tertiary: #999999;
-  --bg-primary: #ffffff;
-  --bg-secondary: #f8f9fa;
-  --bg-tertiary: #f1f3f5;
-  --border-color: #e9ecef;
-  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.04);
-  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.08);
-  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.12);
+  --text-primary: rgba(255, 255, 255, 0.9);
+  --text-secondary: rgba(255, 255, 255, 0.7);
+  --text-tertiary: rgba(255, 255, 255, 0.5);
+  --bg-primary: rgba(255, 255, 255, 0.03);
+  --bg-secondary: rgba(255, 255, 255, 0.05);
+  --bg-tertiary: rgba(255, 255, 255, 0.08);
+  --border-color: rgba(255, 255, 255, 0.1);
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.5);
   --radius-sm: 8px;
   --radius-md: 12px;
   --radius-lg: 16px;
@@ -492,7 +591,7 @@ export default {
 /* Hero区域 */
 .hero-section {
   padding: 90px 20px 20px;
-  background: #ffffff;
+  background: transparent;
   position: relative;
   overflow: hidden;
 }
@@ -525,20 +624,20 @@ export default {
   display: flex;
   align-items: center;
   background: var(--bg-primary);
-  border: 2px solid #dcdfe6;
+  border: 2px solid var(--border-color);
   border-radius: 16px;
   padding: 8px 8px 8px 20px;
   transition: var(--transition);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
 .search-box:hover {
-  border-color: #c0c4cc;
+  border-color: rgba(255, 255, 255, 0.2);
 }
 
 .search-box:focus-within {
   border-color: var(--primary-color);
-  box-shadow: 0 4px 16px rgba(220, 53, 69, 0.15);
+  box-shadow: 0 4px 16px rgba(224, 52, 38, 0.3);
 }
 
 .search-icon {
@@ -601,19 +700,33 @@ export default {
   cursor: not-allowed;
 }
 
-/* 快捷搜索标签 */
+/* 快捷搜索标签 - 移到翻译下方 */
 .quick-search-tags {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 16px;
+  gap: 10px;
+  margin-top: 12px;
+  padding: 12px 20px;
+  background: transparent;
+  border: none;
+  animation: fadeInUp 0.4s ease;
 }
 
 .tags-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   font-size: 14px;
-  color: var(--text-secondary);
-  font-weight: 500;
+  color: var(--text-primary);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.tags-icon {
+  width: 18px;
+  height: 18px;
+  color: var(--primary-color);
 }
 
 /* 搜索提示 */
@@ -628,28 +741,68 @@ export default {
 }
 
 .quick-tag {
-  padding: 6px 16px;
-  background: #f1f3f5;
-  border: 1px solid #dee2e6;
-  border-radius: 100px;
-  font-size: 14px;
-  color: #495057;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 20px;
+  font-size: 13px;
+  color: var(--text-primary);
   cursor: pointer;
   transition: var(--transition);
   font-weight: 500;
+  position: relative;
+  overflow: hidden;
+}
+
+.quick-tag::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, var(--primary-color), var(--primary-light));
+  opacity: 0;
+  transition: opacity 0.3s ease;
 }
 
 .quick-tag:hover {
-  background: var(--primary-color) !important;
-  border-color: var(--primary-color) !important;
-  color: white !important;
+  border-color: var(--primary-color);
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(220, 53, 69, 0.25);
+  box-shadow: 0 4px 12px rgba(224, 52, 38, 0.3);
+}
+
+.quick-tag:hover::before {
+  opacity: 1;
+}
+
+.quick-tag:hover {
+  color: white !important;
+  position: relative;
+  z-index: 1;
+}
+
+.quick-tag:hover .tag-count {
+  background: rgba(255, 255, 255, 0.25) !important;
+  color: white !important;
+  position: relative;
+  z-index: 1;
 }
 
 .quick-tag:active {
-  background: var(--primary-light) !important;
-  transform: translateY(0);
+  transform: translateY(-1px);
+}
+
+.tag-count {
+  font-size: 11px;
+  padding: 2px 6px;
+  background: rgba(224, 52, 38, 0.2);
+  border-radius: 10px;
+  color: var(--primary-color);
+  font-weight: 600;
+  transition: var(--transition);
+  position: relative;
+  z-index: 1;
 }
 
 /* 搜索信息卡片 */
@@ -659,11 +812,9 @@ export default {
   flex-wrap: wrap;
   gap: 16px;
   padding: 12px 20px;
-  background: var(--bg-primary);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-md);
-  margin-top: 16px;
-  box-shadow: var(--shadow-sm);
+  background: transparent;
+  border: none;
+  margin-top: 12px;
 }
 
 .info-item {
@@ -698,7 +849,7 @@ export default {
   justify-content: center;
   min-height: 450px;
   gap: 24px;
-  background: #ffffff;
+  background: transparent;
   border-radius: var(--radius-lg);
   padding: 60px 20px;
 }
@@ -714,7 +865,7 @@ export default {
 .loading-spinner-large {
   width: 64px;
   height: 64px;
-  border: 4px solid #f1f3f5;
+  border: 4px solid rgba(255, 255, 255, 0.1);
   border-top-color: var(--primary-color);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
@@ -761,7 +912,8 @@ export default {
   gap: 12px;
   margin-top: 16px;
   padding: 20px 32px;
-  background: white;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-sm);
 }
@@ -790,8 +942,8 @@ export default {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #e9ecef;
-  color: #868e96;
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.6);
   font-size: 14px;
   font-weight: 600;
   transition: all 0.3s ease;
@@ -827,7 +979,7 @@ export default {
 .step-divider {
   width: 40px;
   height: 2px;
-  background: #e9ecef;
+  background: rgba(255, 255, 255, 0.1);
   transition: all 0.3s ease;
 }
 
@@ -983,36 +1135,6 @@ export default {
   font-size: 14px;
   color: rgba(255,255,255,0.8);
   margin: 0;
-}
-
-.overlay-actions {
-  display: flex;
-  gap: 8px;
-}
-
-.action-btn {
-  width: 40px;
-  height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(255,255,255,0.2);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255,255,255,0.3);
-  border-radius: 50%;
-  cursor: pointer;
-  transition: var(--transition);
-}
-
-.action-btn svg {
-  width: 20px;
-  height: 20px;
-  color: white;
-}
-
-.action-btn:hover {
-  background: rgba(255,255,255,0.3);
-  transform: scale(1.1);
 }
 
 /* 加载更多区域 */
@@ -1338,6 +1460,57 @@ export default {
   padding: 4px 0;
 }
 
+/* 车型详情跳转按钮 */
+.modal-action-buttons {
+  margin: 24px 0;
+}
+
+.view-model-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 16px 24px;
+  background: linear-gradient(135deg, var(--primary-color) 0%, #1976d2 100%);
+  color: white;
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(25, 118, 210, 0.2);
+}
+
+.view-model-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(25, 118, 210, 0.3);
+  background: linear-gradient(135deg, #1565c0 0%, #0d47a1 100%);
+}
+
+.view-model-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 8px rgba(25, 118, 210, 0.2);
+}
+
+.view-model-btn .btn-icon {
+  width: 20px;
+  height: 20px;
+  stroke-width: 2;
+}
+
+.view-model-btn .arrow-icon {
+  width: 16px;
+  height: 16px;
+  stroke-width: 2.5;
+  transition: transform 0.3s ease;
+}
+
+.view-model-btn:hover .arrow-icon {
+  transform: translateX(4px);
+}
+
 .info-cards {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
@@ -1544,6 +1717,21 @@ export default {
 
   .modal-brand {
     font-size: 16px;
+  }
+
+  .view-model-btn {
+    padding: 14px 20px;
+    font-size: 15px;
+  }
+
+  .view-model-btn .btn-icon {
+    width: 18px;
+    height: 18px;
+  }
+
+  .view-model-btn .arrow-icon {
+    width: 14px;
+    height: 14px;
   }
 
   .info-cards {

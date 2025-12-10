@@ -1372,10 +1372,12 @@ export default {
   max-width: 1200px;
   width: 100%;
   max-height: 90vh;
-  background: var(--bg-primary);
+  background: rgba(15, 15, 15, 0.98);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: var(--radius-lg);
   overflow: hidden;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(20px);
 }
 
 .modal-close {
@@ -1418,7 +1420,7 @@ export default {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #f8f9fa;
+  background: rgba(0, 0, 0, 0.4);
   padding: 40px;
 }
 
@@ -1427,37 +1429,40 @@ export default {
   max-height: 80vh;
   object-fit: contain;
   border-radius: var(--radius-md);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
 }
 
 .modal-info-section {
   flex: 1;
   padding: 40px;
   overflow-y: auto;
-  background: #f8f9fa;
+  background: rgba(20, 20, 20, 0.95);
 }
 
 .modal-header-info {
   margin-bottom: 28px;
   padding-bottom: 24px;
-  border-bottom: 2px solid #f0f0f0;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.15);
 }
 
 .modal-title {
   font-size: 32px;
   font-weight: 700;
-  color: var(--text-primary);
-  margin: 0 0 8px 0;
+  color: rgba(255, 255, 255, 0.95);
+  margin: 0 0 12px 0;
   line-height: 1.2;
   letter-spacing: -0.02em;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
 .modal-brand {
   font-size: 20px;
-  color: var(--primary-color);
+  color: var(--primary-light);
   margin: 0;
   font-weight: 600;
   display: inline-block;
   padding: 4px 0;
+  text-shadow: 0 2px 4px rgba(224, 52, 38, 0.3);
 }
 
 /* 车型详情跳转按钮 */
@@ -1520,22 +1525,24 @@ export default {
 
 .info-card {
   padding: 20px;
-  background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
-  border: 1px solid #e9ecef;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.05) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 12px;
   text-align: center;
   transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
 }
 
 .info-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 4px 16px rgba(224, 52, 38, 0.2);
   border-color: var(--primary-color);
+  background: linear-gradient(135deg, rgba(224, 52, 38, 0.15) 0%, rgba(224, 52, 38, 0.08) 100%);
 }
 
 .info-card-label {
   font-size: 13px;
-  color: var(--text-secondary);
+  color: rgba(255, 255, 255, 0.6);
   margin-bottom: 8px;
   font-weight: 500;
   text-transform: uppercase;
@@ -1544,15 +1551,16 @@ export default {
 
 .info-card-value {
   font-size: 20px;
-  color: var(--text-primary);
+  color: rgba(255, 255, 255, 0.95);
   font-weight: 700;
 }
 
 .modal-tags {
   padding: 20px;
-  background: #ffffff;
-  border: 1px solid #e9ecef;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 12px;
+  backdrop-filter: blur(10px);
 }
 
 .tags-header {
@@ -1565,13 +1573,13 @@ export default {
 .tags-icon {
   width: 18px;
   height: 18px;
-  color: var(--primary-color);
+  color: var(--primary-light);
 }
 
 .tags-title {
   font-size: 15px;
   font-weight: 600;
-  color: var(--text-primary);
+  color: rgba(255, 255, 255, 0.9);
   margin: 0;
 }
 
@@ -1583,12 +1591,20 @@ export default {
 
 .tag-item {
   padding: 8px 16px;
-  background: #f8f9fa;
-  border: 1px solid #e9ecef;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 100px;
   font-size: 14px;
-  color: #495057;
+  color: rgba(255, 255, 255, 0.85);
   font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.tag-item:hover {
+  background: rgba(224, 52, 38, 0.2);
+  border-color: var(--primary-color);
+  color: rgba(255, 255, 255, 0.95);
+  transform: translateY(-1px);
 }
 
 /* 动画 */

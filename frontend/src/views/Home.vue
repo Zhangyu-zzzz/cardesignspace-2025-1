@@ -108,7 +108,21 @@
     
     <!-- 品牌导航区域 -->
     <div class="brand-section">
+      <!-- 品牌区域标题和折叠按钮 - 全宽背景 -->
+      <div class="brand-section-header" @click="toggleBrandsDisplay">
+        <div class="brand-section-title">
+          <i class="el-icon-office-building"></i>
+          <span>品牌导航</span>
+          <span class="brand-count" v-if="!loading">({{ allBrands.length }})</span>
+        </div>
+        <div class="toggle-icon">
+          <i :class="showBrands ? 'el-icon-arrow-up' : 'el-icon-arrow-down'"></i>
+        </div>
+      </div>
+      
       <div class="content-container">
+      <!-- 品牌内容区域 - 可折叠 -->
+      <div v-show="showBrands" class="brand-content-wrapper">
       <!-- 品牌分类选择器 -->
       <div class="brand-category-tabs">
         <button 
@@ -197,86 +211,71 @@
         </div>
       </div>
       </div>
+      </div>
     </div>
 
     <!-- 车型展示区域 -->
     <div class="models-display-section">
       <div class="content-container">
-      <div class="section-header">
-        <div class="section-title">
-          <h2>车型展示</h2>
-          <p class="section-subtitle">浏览所有车型</p>
-        </div>
-      </div>
       
-      <!-- 筛选控制栏 -->
+      <!-- 筛选控制栏 - 单行版 -->
       <div class="filter-control-bar">
         <!-- 年代筛选 -->
-        <div class="decade-control">
-          <span class="control-label">年代筛选：</span>
-          <div class="decade-buttons">
-            <button 
-              class="decade-btn" 
-              :class="{ active: selectedDecade === '' }"
-              @click="selectDecade('')"
-            >
-              全部
-            </button>
-            <button 
-              v-for="decade in decades" 
-              :key="decade.value"
-              class="decade-btn" 
-              :class="{ active: selectedDecade === decade.value }"
-              @click="selectDecade(decade.value)"
-            >
-              {{ decade.label }}
-            </button>
-          </div>
-        </div>
+        <button 
+          class="filter-btn" 
+          :class="{ active: selectedDecade === '' }"
+          @click="selectDecade('')"
+        >
+          全部
+        </button>
+        <button 
+          v-for="decade in decades" 
+          :key="decade.value"
+          class="filter-btn" 
+          :class="{ active: selectedDecade === decade.value }"
+          @click="selectDecade(decade.value)"
+        >
+          {{ decade.label }}
+        </button>
+        
+        <!-- 分隔符 -->
+        <div class="filter-divider"></div>
         
         <!-- 概念车筛选 -->
-        <div class="concept-control">
-          <span class="control-label">车型类型：</span>
-          <button 
-            class="concept-btn" 
-            :class="{ active: showConceptCars }"
-            @click="toggleConceptCars"
-          >
-            <i class="el-icon-star-on"></i>
-            {{ showConceptCars ? '概念车' : '全部车型' }}
-          </button>
-        </div>
+        <button 
+          class="filter-btn icon-btn" 
+          :class="{ active: showConceptCars }"
+          @click="toggleConceptCars"
+        >
+          <i class="el-icon-star-on"></i>
+          概念车
+        </button>
         
         <!-- 排序控制 -->
-        <div class="sort-control">
-          <span class="control-label">排序方式：</span>
-          <div class="sort-buttons">
-            <button 
-              class="sort-btn" 
-              :class="{ active: sortType === 'newest' }"
-              @click="selectSortType('newest')"
-            >
-              <i class="el-icon-sort"></i>
-              新车优先
-            </button>
-            <button 
-              class="sort-btn" 
-              :class="{ active: sortType === 'oldest' }"
-              @click="selectSortType('oldest')"
-            >
-              <i class="el-icon-sort"></i>
-              老车优先
-            </button>
-            <button 
-              class="sort-btn" 
-              :class="{ active: sortType === 'latestUpload' }"
-              @click="selectSortType('latestUpload')"
-            >
-              <i class="el-icon-upload2"></i>
-              最新上传
-            </button>
-          </div>
-        </div>
+        <button 
+          class="filter-btn icon-btn" 
+          :class="{ active: sortType === 'newest' }"
+          @click="selectSortType('newest')"
+        >
+          <i class="el-icon-bottom"></i>
+          新车优先
+        </button>
+        <button 
+          class="filter-btn icon-btn" 
+          :class="{ active: sortType === 'oldest' }"
+          @click="selectSortType('oldest')"
+        >
+          <i class="el-icon-top"></i>
+          老车优先
+        </button>
+        <button 
+          class="filter-btn icon-btn" 
+          :class="{ active: sortType === 'latestUpload' }"
+          @click="selectSortType('latestUpload')"
+        >
+          <i class="el-icon-upload2"></i>
+          最新上传
+        </button>
       </div>
       
       <div class="models-content">
@@ -469,6 +468,7 @@ export default {
       latestModelsLoading: true,
       latestModelsError: null,
       modelImageLoadError: {},
+      showBrands: false, // 品牌区域默认折叠
       
       // 轮播图相关数据
       currentSlide: 0,
@@ -481,7 +481,7 @@ export default {
       displayModels: [],
       displayModelsLoading: false,
       displayModelsError: null,
-      sortType: 'newest', // 'newest' 为新车优先，'oldest' 为老车优先，'latestUpload' 为最新上传
+      sortType: 'latestUpload', // 'newest' 为新车优先，'oldest' 为老车优先，'latestUpload' 为最新上传
       currentDisplayPage: 1,
       displayPageSize: 18, // 减少到18个车型，提升加载速度
       hasMoreDisplayModels: true,
@@ -633,6 +633,11 @@ export default {
     }
   },
   methods: {
+    // 切换品牌展示区域的显示/隐藏
+    toggleBrandsDisplay() {
+      this.showBrands = !this.showBrands;
+    },
+    
     // 获取车型图片URL的辅助方法
     getModelImageUrl(model) {
       // 防御性检查，确保model是对象
@@ -2342,6 +2347,8 @@ export default {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Helvetica Neue', Helvetica, Arial, sans-serif;
   overflow-x: hidden;
   width: 100%;
+  background: #0a0a0a;
+  min-height: 100vh;
 }
 
 /* 顶部导航栏样式 */
@@ -2388,6 +2395,7 @@ export default {
   margin: 0 auto;
   padding: 0 12px;
   box-sizing: border-box;
+  max-width: 1400px;
 }
 
 .fullscreen-carousel {
@@ -2655,17 +2663,17 @@ export default {
 
 /* 车型展示区域样式 */
 .models-display-section {
-  background: #fff;
-  margin: 20px 0;
+  background: transparent;
+  margin: 8px 0 20px 0;
   border-radius: 12px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
   overflow: hidden;
 }
 
 .section-header {
-  padding: 24px 24px 16px 24px;
-  border-bottom: 1px solid #f0f0f0;
+  padding: 0;
+  border-bottom: none;
   text-align: center;
+  display: none; /* 隐藏标题区域，让筛选栏直接显示 */
 }
 
 .section-title {
@@ -2676,148 +2684,88 @@ export default {
   margin: 0 0 4px 0;
   font-size: 20px;
   font-weight: 600;
-  color: #333;
+  color: #ffffff;
 }
 
 .section-subtitle {
   font-size: 14px;
-  color: #666;
+  color: rgba(255, 255, 255, 0.7);
   margin: 0;
 }
 
-.sort-buttons {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
+/* 旧的 sort-buttons 已移除 */
 
-.sort-btn {
-  background: #fff;
-  color: #666;
-  border: 1px solid #ddd;
-  padding: 8px 16px;
-  border-radius: 6px;
-  font-size: 14px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
+/* 旧的按钮样式已合并到 .filter-btn */
 
-.sort-btn:hover {
-  background: #f5f5f5;
-  border-color: #ccc;
-}
-
-.sort-btn.active {
-  background: #e03426;
-  color: white;
-  border-color: #e03426;
-}
-
-.sort-btn.active:hover {
-  background: #d02e20;
-  border-color: #d02e20;
-}
-
-.concept-btn {
-  background: #fff;
-  color: #666;
-  border: 1px solid #ddd;
-  padding: 8px 16px;
-  border-radius: 6px;
-  font-size: 14px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-weight: 500;
-}
-
-.concept-btn:hover {
-  background: #fce4e4;
-  border-color: #f5a5a5;
-  color: #e03426;
-  transform: translateY(-1px);
-}
-
-.concept-btn.active {
-  background: #e03426;
-  border-color: #e03426;
-  color: white;
-  box-shadow: 0 2px 6px rgba(224, 52, 38, 0.3);
-}
-
-.concept-btn:active {
-  transform: scale(0.95);
-}
-
-/* 筛选控制栏样式 */
+/* 筛选控制栏样式 - 单行版 */
 .filter-control-bar {
-  padding: 16px 16px;
-  border-bottom: 1px solid #f0f0f0;
-  background: #fafafa;
+  padding: 18px 0;
+  border-bottom: none;
+  background: transparent;
   display: flex;
-  flex-wrap: wrap;
-  gap: 20px;
-  align-items: flex-start;
-  justify-content: center;
-}
-
-.sort-control,
-.decade-control,
-.concept-control {
-  display: flex;
+  flex-wrap: nowrap;
+  gap: 6px;
   align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
+  justify-content: center;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
 
-.control-label {
-  font-size: 14px;
-  font-weight: 500;
-  color: #333;
-  white-space: nowrap;
+.filter-control-bar::-webkit-scrollbar {
+  display: none;
 }
 
-.decade-buttons {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+/* 筛选分隔符 */
+.filter-divider {
+  width: 1px;
+  height: 20px;
+  background: rgba(255, 255, 255, 0.15);
+  margin: 0 6px;
+  flex-shrink: 0;
 }
 
-.decade-btn {
-  padding: 8px 16px;
-  background: #fff;
-  border: 1px solid #ddd;
-  border-radius: 20px;
+/* 统一的筛选按钮样式 */
+.filter-btn {
+  padding: 6px 14px;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 18px;
   cursor: pointer;
-  font-size: 13px;
-  font-weight: 500;
-  color: #666;
+  font-size: 12px;
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.7);
   transition: all 0.2s ease;
-  min-width: 60px;
   text-align: center;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
-.decade-btn:hover {
-  background: #fce4e4;
-  border-color: #f5a5a5;
-  color: #e03426;
-  transform: translateY(-1px);
+.filter-btn:hover {
+  background: transparent;
+  border-color: rgba(255, 255, 255, 0.5);
+  color: #ffffff;
 }
 
-.decade-btn.active {
+.filter-btn.active {
   background: #e03426;
   border-color: #e03426;
   color: white;
-  box-shadow: 0 2px 6px rgba(224, 52, 38, 0.3);
+  box-shadow: 0 2px 8px rgba(224, 52, 38, 0.4);
 }
 
-.decade-btn:active {
-  transform: scale(0.95);
+.filter-btn:active {
+  transform: scale(0.97);
+}
+
+.filter-btn.icon-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.filter-btn.icon-btn i {
+  font-size: 12px;
 }
 
 .models-content {
@@ -2832,20 +2780,20 @@ export default {
 }
 
 .model-display-card {
-  background: #fff;
+  background: rgba(255, 255, 255, 0.05);
   border-radius: 12px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.4);
   overflow: hidden;
   cursor: pointer;
   transition: all 0.3s ease;
-  border: 1px solid #f0f0f0;
+  border: 1px solid rgba(255, 255, 255, 0.08);
   aspect-ratio: 4/5;
   min-height: 200px;
 }
 
 .model-display-card:hover {
   transform: translateY(-4px);
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 8px 25px rgba(224, 52, 38, 0.3);
   border-color: #e03426;
 }
 
@@ -2891,7 +2839,7 @@ export default {
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  background: #fff;
+  background: transparent;
   position: relative;
   z-index: 10;
   border-radius: 0 0 12px 12px;
@@ -2901,7 +2849,7 @@ export default {
   margin: 0;
   font-size: 13px;
   font-weight: 600;
-  color: #333;
+  color: #ffffff;
   line-height: 1.3;
   text-align: center;
   overflow: hidden;
@@ -3186,19 +3134,86 @@ export default {
 
 /* 品牌展示区域样式优化 */
 .brand-section {
-  background: #fff;
-  margin: 20px 0;
-  border-radius: 12px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+  background: transparent;
+  margin: 20px 0 8px 0;
+  border-radius: 0;
   overflow: hidden;
+}
+
+/* 品牌区域标题 */
+.brand-section-header {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 16px 20px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border-radius: 0;
+  margin-bottom: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  position: relative;
+  width: 100%;
+}
+
+.brand-section-header:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.brand-section-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 18px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.brand-section-title i {
+  font-size: 20px;
+  color: #e03426;
+}
+
+.brand-count {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.5);
+  font-weight: 400;
+}
+
+.toggle-icon {
+  font-size: 18px;
+  color: rgba(255, 255, 255, 0.6);
+  transition: transform 0.3s ease;
+  position: absolute;
+  right: 20px;
+}
+
+.toggle-icon i {
+  transition: transform 0.3s ease;
+}
+
+/* 品牌内容包裹器 */
+.brand-content-wrapper {
+  animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* 品牌分类标签页 */
 .brand-category-tabs {
   display: flex;
-  background: #f8f9fa;
+  background: transparent;
   padding: 0;
-  border-bottom: 1px solid #e9ecef;
+  border-bottom: none;
+  margin-bottom: 12px;
 }
 
 .category-tab {
@@ -3209,18 +3224,18 @@ export default {
   cursor: pointer;
   font-size: 14px;
   font-weight: 500;
-  color: #666;
+  color: rgba(255, 255, 255, 0.6);
   transition: all 0.3s ease;
   position: relative;
 }
 
 .category-tab:hover {
-  background: rgba(224, 52, 38, 0.08);
-  color: #e03426;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.9);
 }
 
 .category-tab.active {
-  background: #fff;
+  background: transparent;
   color: #e03426;
   font-weight: 600;
 }
@@ -3241,21 +3256,22 @@ export default {
   flex-wrap: wrap;
   padding: 12px 16px;
   gap: 6px;
-  background: #fff;
-  border-bottom: 1px solid #f0f0f0;
+  background: transparent;
+  border-bottom: none;
+  justify-content: center;
 }
 
 .alphabet-btn {
   min-width: 32px;
   height: 32px;
   padding: 0 6px;
-  background: #f8f9fa;
-  border: 1px solid #e9ecef;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 6px;
   cursor: pointer;
   font-size: 12px;
   font-weight: 500;
-  color: #666;
+  color: rgba(255, 255, 255, 0.6);
   transition: all 0.2s ease;
   display: flex;
   align-items: center;
@@ -3263,9 +3279,9 @@ export default {
 }
 
 .alphabet-btn:hover {
-  background: #fce4e4;
-  border-color: #f5a5a5;
-  color: #e03426;
+  background: transparent;
+  border-color: rgba(255, 255, 255, 0.4);
+  color: #ffffff;
   transform: translateY(-1px);
 }
 
@@ -3284,7 +3300,7 @@ export default {
 /* 品牌展示网格 */
 .brands-display {
   padding: 16px 12px;
-  background: #fff;
+  background: transparent;
 }
 
 .brands-grid {
@@ -3301,8 +3317,8 @@ export default {
   flex-direction: column;
   align-items: center;
   padding: min(1vw, 8px) min(0.6vw, 6px);
-  background: #ffffff;
-  border: 1px solid #f0f2f5;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: min(1vw, 8px);
   cursor: pointer;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -3318,8 +3334,8 @@ export default {
 
 .brand-card:hover {
   transform: translateY(-3px);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
-  background: #fff;
+  box-shadow: 0 6px 20px rgba(224, 52, 38, 0.3);
+  background: rgba(255, 255, 255, 0.08);
   border-color: #e03426;
 }
 
@@ -3418,7 +3434,7 @@ export default {
 .brand-card .brand-name {
   font-size: clamp(9px, 1.4vw, 13px);
   text-align: center;
-  color: #333333;
+  color: rgba(255, 255, 255, 0.9);
   font-weight: 500;
   line-height: 1.2;
   max-width: 100%;
@@ -3439,9 +3455,9 @@ export default {
   text-align: center;
   padding: 16px 0;
   font-size: 14px;
-  color: #909399;
-  border-top: 1px solid #f0f0f0;
-  background: #fafbfc;
+  color: rgba(255, 255, 255, 0.5);
+  border-top: none;
+  background: transparent;
   margin: 0 -20px -20px -20px;
 }
 
@@ -3479,7 +3495,7 @@ export default {
 .no-brands-message {
   text-align: center;
   padding: 12px;
-  color: #909399;
+  color: rgba(255, 255, 255, 0.7);
   font-size: 14px;
 }
 
@@ -3555,11 +3571,11 @@ export default {
 }
 
 .no-more-text {
-  color: #909399;
+  color: rgba(255, 255, 255, 0.6);
   font-size: 14px;
   margin: 0;
   padding: 12px;
-  background-color: #f5f7fa;
+  background-color: rgba(255, 255, 255, 0.05);
   border-radius: 8px;
   display: inline-block;
 }
@@ -3575,11 +3591,11 @@ body, html {
   overflow-x: hidden;
   margin: 0;
   padding: 0;
-  background-color: #f5f5f5;
+  background-color: #0a0a0a;
 }
 
 .home {
-  background-color: #f5f5f5;
+  background-color: #0a0a0a;
   min-height: 100vh;
   margin: 0;
   padding: 0;
@@ -3632,15 +3648,19 @@ body, html {
   }
   
   .filter-control-bar {
-    flex-direction: column;
-    gap: 16px;
-    align-items: center;
+    padding: 14px 10px;
+    gap: 5px;
+    justify-content: flex-start;
+    overflow-x: auto;
   }
   
-  .sort-control,
-  .decade-control,
-  .concept-control {
-    justify-content: center;
+  .filter-divider {
+    margin: 0 4px;
+  }
+  
+  .filter-btn {
+    padding: 5px 10px;
+    font-size: 11px;
   }
   
   .models-content .models-grid {
@@ -3662,22 +3682,21 @@ body, html {
   }
   
   .filter-control-bar {
-    padding: 16px 12px;
-    flex-direction: column;
-    gap: 12px;
+    padding: 12px 8px;
+    gap: 4px;
+    justify-content: flex-start;
+    overflow-x: auto;
   }
   
-  .sort-control,
-  .decade-control,
-  .concept-control {
-    flex-direction: column;
-    gap: 8px;
-    text-align: center;
+  .filter-divider {
+    margin: 0 3px;
   }
   
-  .decade-buttons {
-    justify-content: center;
+  .filter-btn {
+    padding: 5px 9px;
+    font-size: 10px;
   }
+  
   
   .brand-category-filter {
     padding: 12px;
@@ -3862,21 +3881,21 @@ body, html {
   }
   
   .filter-control-bar {
-    padding: 12px 8px;
-    gap: 15px;
-    flex-direction: column;
-    align-items: stretch;
+    padding: 10px 5px;
+    gap: 4px;
+    justify-content: flex-start;
+    overflow-x: auto;
   }
   
-  .decade-control,
-  .sort-control,
-  .concept-control {
-    gap: 8px;
+  .filter-divider {
+    margin: 0 2px;
   }
   
-  .decade-buttons {
-    gap: 6px;
+  .filter-btn {
+    padding: 4px 8px;
+    font-size: 9px;
   }
+  
   
   .decade-btn {
     padding: 6px 12px;
@@ -4428,7 +4447,7 @@ body, html {
   align-items: center;
   justify-content: center;
   padding: 40px 20px;
-  color: #666;
+  color: rgba(255, 255, 255, 0.7);
   font-size: 16px;
   gap: 12px;
 }
@@ -4444,7 +4463,7 @@ body, html {
   align-items: center;
   justify-content: center;
   padding: 40px 20px;
-  color: #999;
+  color: rgba(255, 255, 255, 0.6);
   font-size: 14px;
   border-top: 1px solid #f0f0f0;
   margin-top: 20px;

@@ -360,6 +360,152 @@ async function searchByVector(queryVector, options = {}, collectionName = DEFAUL
   }
 }
 
+/**
+ * 将图片向量插入或更新到Qdrant
+ * @param {number} imageId - 图片ID
+ * @param {Array<number>} vector - 图片的向量表示（512维）
+ * @param {Object} payload - 额外的元数据（可选）
+ * @param {string} collectionName - 集合名称
+ * @returns {Promise<Object>} 操作结果
+ */
+async function upsertImageVector(imageId, vector, payload = {}, collectionName = DEFAULT_COLLECTION) {
+  try {
+    if (!imageId || !Number.isInteger(imageId) || imageId <= 0) {
+      throw new Error(`无效的图片ID: ${imageId}`);
+    }
+
+    if (!Array.isArray(vector)) {
+      throw new Error(`向量必须是数组，实际得到: ${typeof vector}`);
+    }
+
+    if (vector.length !== 512) {
+      throw new Error(`向量维度错误: 期望512维，实际${vector.length}维`);
+    }
+
+    // 构建point对象
+    const point = {
+      id: imageId, // 使用图片ID作为向量点的ID
+      vector: vector,
+      payload: {
+        image_id: imageId,
+        ...payload,
+        updated_at: new Date().toISOString()
+      }
+    };
+
+    logger.info(`📌 准备upsert向量: imageId=${imageId}, collection=${collectionName}`);
+    
+    // 使用upsert方法插入或更新向量
+    // @qdrant/js-client-rest的upsert方法：upsert(collectionName, { points: [point] })
+    const result = await qdrantClient.upsert(collectionName, {
+      wait: true, // 等待操作完成
+      points: [point]
+    });
+
+    logger.info(`✅ 向量upsert成功: imageId=${imageId}, status=${result.status}`);
+    
+    return {
+      success: true,
+      imageId,
+      status: result.status
+    };
+  } catch (error) {
+    logger.error(`❌ 向量upsert失败 (imageId=${imageId}):`, error.message);
+    logger.error('错误堆栈:', error.stack);
+    throw error;
+  }
+}
+
+/**
+ * 批量插入或更新图片向量到Qdrant
+ * @param {Array<Object>} items - 图片向量数据数组，每个元素包含 {imageId, vector, payload}
+ * @param {string} collectionName - 集合名称
+ * @returns {Promise<Object>} 操作结果
+ */
+async function batchUpsertImageVectors(items, collectionName = DEFAULT_COLLECTION) {
+  try {
+    if (!Array.isArray(items) || items.length === 0) {
+      throw new Error('批量upsert的数据不能为空');
+    }
+
+    // 验证并构建points
+    const points = items.map(item => {
+      const { imageId, vector, payload = {} } = item;
+
+      if (!imageId || !Number.isInteger(imageId) || imageId <= 0) {
+        throw new Error(`无效的图片ID: ${imageId}`);
+      }
+
+      if (!Array.isArray(vector) || vector.length !== 512) {
+        throw new Error(`图片${imageId}的向量格式错误`);
+      }
+
+      return {
+        id: imageId,
+        vector: vector,
+        payload: {
+          image_id: imageId,
+          ...payload,
+          updated_at: new Date().toISOString()
+        }
+      };
+    });
+
+    logger.info(`📌 准备批量upsert: ${points.length}个向量, collection=${collectionName}`);
+
+    // 批量upsert
+    const result = await qdrantClient.upsert(collectionName, {
+      wait: true,
+      points: points
+    });
+
+    logger.info(`✅ 批量向量upsert成功: ${points.length}个向量, status=${result.status}`);
+
+    return {
+      success: true,
+      count: points.length,
+      status: result.status
+    };
+  } catch (error) {
+    logger.error(`❌ 批量向量upsert失败:`, error.message);
+    logger.error('错误堆栈:', error.stack);
+    throw error;
+  }
+}
+
+/**
+ * 从Qdrant删除图片向量
+ * @param {number} imageId - 图片ID
+ * @param {string} collectionName - 集合名称
+ * @returns {Promise<Object>} 操作结果
+ */
+async function deleteImageVector(imageId, collectionName = DEFAULT_COLLECTION) {
+  try {
+    if (!imageId || !Number.isInteger(imageId) || imageId <= 0) {
+      throw new Error(`无效的图片ID: ${imageId}`);
+    }
+
+    logger.info(`🗑️  准备删除向量: imageId=${imageId}, collection=${collectionName}`);
+
+    // 使用delete方法删除向量点
+    const result = await qdrantClient.delete(collectionName, {
+      wait: true,
+      points: [imageId]
+    });
+
+    logger.info(`✅ 向量删除成功: imageId=${imageId}`);
+
+    return {
+      success: true,
+      imageId,
+      status: result.status
+    };
+  } catch (error) {
+    logger.error(`❌ 向量删除失败 (imageId=${imageId}):`, error.message);
+    throw error;
+  }
+}
+
 module.exports = {
   qdrantClient,
   DEFAULT_COLLECTION,
@@ -367,6 +513,9 @@ module.exports = {
   getCollectionInfo,
   searchVectors,
   searchByText,
-  searchByVector
+  searchByVector,
+  upsertImageVector,
+  batchUpsertImageVectors,
+  deleteImageVector
 };
 

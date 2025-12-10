@@ -11,6 +11,9 @@ const { Brand, Model, Image, ArticleImage } = require('../models/mysql');
 const { analyzeBufferAndUpsert } = require('../services/analysisService');
 const User = require('../models/mysql/User');
 
+// 导入自动向量化服务
+const { triggerAsyncVectorization } = require('../services/autoVectorizeService');
+
 // 从文件名中提取数字的辅助函数
 function extractNumberFromFilename(filename) {
   if (!filename) return null;
@@ -171,6 +174,15 @@ exports.uploadSingleImage = async (req, res) => {
           console.error('结构化分析失败(单图):', e);
         }
       })();
+
+      // 异步触发向量化（不阻塞响应）
+      try {
+        triggerAsyncVectorization(savedImage.id, cosResult.url);
+        logger.info(`🎯 已触发图片向量化: imageId=${savedImage.id}`);
+      } catch (vectorizeError) {
+        // 向量化失败不影响主流程，只记录日志
+        logger.warn(`向量化触发失败 (imageId=${savedImage.id}):`, vectorizeError.message);
+      }
 
       // 上传成功后给用户增加积分
       const pointsToAdd = 10; // 每张图片10积分
@@ -344,6 +356,14 @@ exports.uploadMultipleImages = async (req, res) => {
             console.error(`结构化分析失败(${file.originalname}):`, e);
           }
         })();
+
+        // 异步触发向量化（不阻塞响应）
+        try {
+          triggerAsyncVectorization(savedImage.id, cosResult.url);
+          logger.info(`🎯 已触发图片向量化: imageId=${savedImage.id}`);
+        } catch (vectorizeError) {
+          logger.warn(`向量化触发失败 (imageId=${savedImage.id}):`, vectorizeError.message);
+        }
 
         uploadResults.push({
           success: true,

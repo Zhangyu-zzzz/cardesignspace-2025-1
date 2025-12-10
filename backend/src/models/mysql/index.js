@@ -23,6 +23,8 @@ const Vehicle = require('./Vehicle');
 const VehicleVote = require('./VehicleVote');
 const MonitoredPage = require('./MonitoredPage');
 const CrawlHistory = require('./CrawlHistory');
+const SearchStat = require('./SearchStat');
+const SearchHistory = require('./SearchHistory');
 
 // 设置模型之间的关联关系，避免循环引用问题
 
@@ -213,5 +215,7 @@ module.exports = {
   Vehicle,
   VehicleVote,
   MonitoredPage,
-  CrawlHistory
+  CrawlHistory,
+  SearchStat,
+  SearchHistory
 }; 

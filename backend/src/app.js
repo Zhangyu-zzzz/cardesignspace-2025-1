@@ -122,6 +122,7 @@ app.use('/api/auth', require('./routes/auth'));
 app.use('/api/forum', require('./routes/forumRoutes'));
 app.use('/api/search', require('./routes/searchRoutes'));
 app.use('/api/smart-search', require('./routes/smartSearchRoutes'));
+app.use('/api/search-stats', require('./routes/searchStatsRoutes'));
 app.use('/api/notifications', require('./routes/notificationRoutes'));
 // 统一与去重后的路由挂载
 app.use('/api/images', require('./routes/imageRoutes'));

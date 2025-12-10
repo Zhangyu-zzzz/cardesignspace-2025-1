@@ -7,3 +7,5 @@ router.get('/', smartSearchController.smartSearch);
 
 module.exports = router;
 
+
+

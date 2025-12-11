@@ -382,12 +382,19 @@ export default {
       return this.nameCheckStatus === 'available'
     }
   },
-  mounted() {
+  async mounted() {
     // ⭐ 路由守卫已经处理了登录检查，这里不再重复检查
     // 如果API调用返回401，会在loadVehicles中处理
     
     this.initializeDrawCanvas()
-    this.loadVehicles()
+    
+    // ⭐ 确保数据加载完成，避免首次进入车库页面时显示空白
+    await this.loadVehicles()
+    
+    // ⭐ 检查路由参数，如果直接进入车库页面，确保数据已加载
+    if (this.$route.query.screen === 'garage') {
+      this.goToScreen('garage')
+    }
     
     // ⭐ 添加键盘快捷键：按 'D' 键切换调试边界显示
     window.addEventListener('keydown', this.handleDebugToggle)
@@ -401,16 +408,21 @@ export default {
     window.removeEventListener('keydown', this.handleDebugToggle)
   },
   methods: {
-    goToScreen(screen) {
+    async goToScreen(screen) {
       // ⭐ 切换屏幕时关闭弹窗
       this.selectedVehicle = null
       
+      // ⭐ 如果进入车库页面，确保数据已加载
+      if (screen === 'garage' && (!this.vehicles || this.vehicles.length === 0)) {
+        await this.loadVehicles()
+      }
+      
       this.currentScreen = screen
-      this.$nextTick(() => {
+      this.$nextTick(async () => {
         if (screen === 'draw') {
           this.initializeDrawCanvas()
         } else if (screen === 'garage') {
-          this.initializeGarageCanvas()
+          await this.initializeGarageCanvas()
         } else if (screen === 'rank') {
           this.updateRankList()
         }
@@ -837,9 +849,15 @@ export default {
       }
     },
     
-    initializeGarageCanvas() {
+    async initializeGarageCanvas() {
       const canvas = this.$refs.garageCanvas
       if (!canvas) return
+      
+      // ⭐ 如果数据还没加载，先加载数据（双重保险）
+      if (!this.vehicles || this.vehicles.length === 0) {
+        console.log('⚠️ 车库数据未加载，正在加载...')
+        await this.loadVehicles()
+      }
       
       // ⭐ 使用容器的实际尺寸，而不是window尺寸
       const container = canvas.parentElement
@@ -850,6 +868,7 @@ export default {
       this.garageCtx = canvas.getContext('2d')
       
       console.log('车库Canvas尺寸:', canvas.width, 'x', canvas.height)
+      console.log('载具数量:', this.vehicles.length)
       
       // 初始化载具精灵
       this.initializeVehicleSprites()

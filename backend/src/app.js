@@ -145,6 +145,9 @@ app.use('/api/ingest', require('./routes/ingestRoutes'));
 // 反馈API路由
 app.use('/api/feedback', require('./routes/feedback'));
 
+// 网站优化意见API路由
+app.use('/api/web-comments', require('./routes/webComments'));
+
 // 画了个车API路由
 app.use('/api/draw-car', require('./routes/vehicle'));
 

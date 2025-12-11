@@ -19,6 +19,7 @@ const ImageStat = require('./ImageStat');
 const Tag = require('./Tag');
 const ImageTag = require('./ImageTag');
 const Feedback = require('./Feedback');
+const WebComment = require('./WebComment');
 const Vehicle = require('./Vehicle');
 const VehicleVote = require('./VehicleVote');
 const MonitoredPage = require('./MonitoredPage');
@@ -170,6 +171,16 @@ Feedback.belongsTo(User, { foreignKey: 'userId', as: 'User' });
 User.hasMany(Feedback, { foreignKey: 'repliedBy', as: 'RepliedFeedbacks' });
 Feedback.belongsTo(User, { foreignKey: 'repliedBy', as: 'RepliedBy' });
 
+// === 网站优化意见模型关联 ===
+
+// 用户和网站优化意见的关联
+User.hasMany(WebComment, { foreignKey: 'userId', as: 'WebComments' });
+WebComment.belongsTo(User, { foreignKey: 'userId', as: 'User' });
+
+// 回复人和网站优化意见的关联
+User.hasMany(WebComment, { foreignKey: 'repliedBy', as: 'RepliedWebComments' });
+WebComment.belongsTo(User, { foreignKey: 'repliedBy', as: 'RepliedBy' });
+
 // === 载具模型关联 ===
 
 // 用户和载具的关联
@@ -212,6 +223,7 @@ module.exports = {
   Tag,
   ImageTag,
   Feedback,
+  WebComment,
   Vehicle,
   VehicleVote,
   MonitoredPage,

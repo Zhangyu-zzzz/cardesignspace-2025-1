@@ -177,3 +177,4 @@ SHOW VARIABLES LIKE 'character_set%';
 SHOW GRANTS FOR 'Jason'@'%';
 ```
 
+

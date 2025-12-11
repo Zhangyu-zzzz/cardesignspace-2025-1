@@ -362,18 +362,27 @@ export default {
         const response = await apiClient.get('/search-stats/popular', {
           params: { limit: 6 }
         })
-        if (response.success && response.data) {
-          this.quickSearchTags = response.data
+        console.log('热门搜索API响应:', response)
+        
+        if (response && response.success && response.data && Array.isArray(response.data) && response.data.length > 0) {
+          // ⭐ 确保数据格式正确，count 是数字
+          this.quickSearchTags = response.data.map(item => ({
+            query: item.query || '',
+            count: parseInt(item.count) || 0,
+            last_searched_at: item.last_searched_at
+          })).filter(item => item.query && item.count > 0) // 过滤掉无效数据
+          
+          console.log('处理后的热门搜索数据:', this.quickSearchTags)
+        } else {
+          // 如果没有数据，清空数组，不显示假数据
+          this.quickSearchTags = []
+          console.log('热门搜索数据为空或格式不正确')
         }
       } catch (error) {
         console.error('加载热门搜索失败:', error)
-        // 失败时使用默认数据
-        this.quickSearchTags = [
-          { query: '红色跑车', count: 0 },
-          { query: '奔驰SUV', count: 0 },
-          { query: '蓝色轿车', count: 0 },
-          { query: 'BMW概念车', count: 0 }
-        ]
+        console.error('错误详情:', error.response?.data || error.message)
+        // 失败时不显示假数据，清空数组
+        this.quickSearchTags = []
       }
     },
 

@@ -106,11 +106,13 @@ exports.recordSearch = async (req, res) => {
 exports.getPopularSearches = async (req, res) => {
   try {
     const limit = parseInt(req.query.limit) || 6;
-    const days = parseInt(req.query.days) || 30; // 默认显示30天内的热门搜索
+    const days = parseInt(req.query.days) || 90; // ⭐ 改为90天，避免过滤掉有效数据
     
     // 计算日期范围
     const dateThreshold = new Date();
     dateThreshold.setDate(dateThreshold.getDate() - days);
+    
+    console.log('获取热门搜索:', { limit, days, dateThreshold });
     
     const popularSearches = await SearchStat.findAll({
       where: {
@@ -123,15 +125,29 @@ exports.getPopularSearches = async (req, res) => {
         ['last_searched_at', 'DESC']
       ],
       limit: limit,
-      attributes: ['query', 'count', 'last_searched_at']
+      attributes: ['query', 'count', 'last_searched_at'],
+      raw: true // ⭐ 返回纯对象而不是 Sequelize 模型实例
     });
+
+    console.log('查询结果数量:', popularSearches.length);
+    console.log('原始数据示例:', popularSearches[0]);
+
+    // ⭐ 确保返回的数据格式正确
+    const formattedData = popularSearches.map(item => ({
+      query: item.query || '',
+      count: parseInt(item.count) || 0, // 确保 count 是数字
+      last_searched_at: item.last_searched_at
+    })).filter(item => item.query && item.count > 0); // 过滤掉无效数据
+
+    console.log('格式化后的数据:', formattedData);
 
     res.json({
       success: true,
-      data: popularSearches
+      data: formattedData
     });
   } catch (error) {
     console.error('获取热门搜索失败:', error);
+    console.error('错误堆栈:', error.stack);
     res.status(500).json({
       success: false,
       message: '获取热门搜索失败',

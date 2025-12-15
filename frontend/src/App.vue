@@ -486,15 +486,32 @@ export default {
 </script>
 
 <style>
-/* 全局防止水平滚动 */
-html, body {
-  overflow-x: hidden;
+/* 全局防止水平滚动和双重滚动条 */
+html {
+  overflow-x: hidden !important;
+  overflow-y: auto !important; /* 只有 html 有滚动条 */
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  /* 确保 html 是唯一的滚动容器 */
+  position: relative;
+}
+
+body {
+  overflow-x: hidden !important;
+  overflow-y: visible !important; /* body 绝对不产生滚动条 */
   width: 100%;
   max-width: 100%;
   margin: 0;
   padding: 0;
   background: #0a0a0a;
   min-height: 100vh;
+  height: auto; /* 允许 body 根据内容自动增长 */
+  position: relative;
+  /* 确保 body 不会产生滚动上下文 */
+  -webkit-overflow-scrolling: auto !important;
 }
 
 /* 当灵感图片模态框打开时隐藏导航栏 */
@@ -514,20 +531,38 @@ body:has(.inspiration-modal) .navbar-container {
   color: #2c3e50;
   width: 100%;
   max-width: 100%;
-  overflow-x: hidden;
+  overflow-x: hidden !important;
+  overflow-y: visible !important; /* app 容器绝对不应该有滚动条 */
+  overflow-scrolling: auto !important;
   margin: 0;
   padding: 0;
   background: #0a0a0a;
   min-height: 100vh;
+  height: auto; /* 允许根据内容自动增长 */
+  position: relative;
+  /* 确保不会产生滚动上下文 */
+  -webkit-overflow-scrolling: auto !important;
 }
 
-/* Element UI 容器重置 */
+/* Element UI 容器重置 - 强制移除所有滚动条 */
 .el-container {
   width: 100% !important;
   margin: 0 !important;
   padding: 0 !important;
   background: #0a0a0a;
   min-height: 100vh;
+  /* 强制移除容器的滚动条 - 使用所有可能的属性 */
+  overflow: visible !important;
+  overflow-y: visible !important;
+  overflow-x: hidden !important;
+  overflow-scrolling: auto !important;
+  -webkit-overflow-scrolling: auto !important;
+  height: auto !important;
+  max-height: none !important;
+  /* 确保容器不会产生独立的滚动上下文 */
+  position: relative !important;
+  /* Element UI 的 .el-container 默认是 display: flex，我们需要保持这个 */
+  /* 但确保它不产生滚动条 */
 }
 
 .el-header {
@@ -540,6 +575,45 @@ body:has(.inspiration-modal) .navbar-container {
   padding: 0 !important;
   margin: 0 !important;
   margin-top: 60px !important; /* 为固定导航栏留出空间 */
+  /* 强制移除 el-main 的滚动条 - 使用所有可能的属性 */
+  overflow: visible !important;
+  overflow-y: visible !important;
+  overflow-x: hidden !important;
+  overflow-scrolling: auto !important;
+  -webkit-overflow-scrolling: auto !important;
+  height: auto !important;
+  max-height: none !important;
+  /* 确保不会产生滚动上下文 */
+  position: relative !important;
+  /* Element UI 的 .el-main 默认是 flex: 1，我们需要保持这个但移除滚动 */
+  flex: 1 1 auto !important;
+  /* 确保不会产生滚动条 */
+  scrollbar-width: none !important; /* Firefox */
+  -ms-overflow-style: none !important; /* IE and Edge */
+}
+
+/* 隐藏可能的滚动条（Webkit浏览器） */
+.el-main::-webkit-scrollbar,
+.el-container::-webkit-scrollbar,
+#app::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+/* 确保所有 Element UI 容器都不产生滚动条 */
+.el-container,
+.el-main,
+.el-header,
+.el-footer {
+  scrollbar-width: none !important; /* Firefox */
+  -ms-overflow-style: none !important; /* IE and Edge */
+}
+
+/* 额外的全局覆盖 - 确保没有其他元素产生滚动条 */
+.el-container *,
+.el-main * {
+  /* 不在这里设置，因为子元素可能需要自己的滚动（如模态框内容） */
 }
 
 /* ===== Element UI 主题色覆盖 ===== */

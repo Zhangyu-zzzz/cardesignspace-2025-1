@@ -11,12 +11,12 @@ const TRANSLATE_SERVICES = [
   {
     name: 'Google Translate (免费)',
     url: 'https://translate.googleapis.com/translate_a/single',
-    timeout: 2000  // 降低超时时间到2秒
+    timeout: 5000  // 增加到5秒，确保翻译完成
   },
   {
     name: 'MyMemory Translate',
     url: 'https://api.mymemory.translated.net/get',
-    timeout: 2000  // 降低超时时间到2秒
+    timeout: 5000  // 增加到5秒，确保翻译完成
   }
 ];
 
@@ -184,7 +184,7 @@ async function smartTranslate(query) {
   try {
     const translated = await Promise.race([
       translateToEnglish(originalQuery),
-      new Promise((_, reject) => setTimeout(() => reject(new Error('Translation timeout')), 8000)) // 增加到8秒，确保翻译完成
+      new Promise((_, reject) => setTimeout(() => reject(new Error('翻译超时，请稍后重试')), 9000)) // 9秒超时，确保有足够时间完成翻译
     ]);
     
     // 只缓存成功的翻译（翻译结果不包含中文）

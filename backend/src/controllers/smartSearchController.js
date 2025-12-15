@@ -74,14 +74,79 @@ exports.smartSearch = async (req, res, next) => {
       }
     }
 
-    // 步骤3: 如果查询包含中文，先翻译成英文
+    // 步骤3: 如果查询包含中文，先翻译成英文（必须等待翻译完成）
     const translateClient = require('../services/translateClient');
     const vectorQuery = descriptiveQuery || query; // 如果没有描述性信息，使用整个查询
-    const translationResult = await translateClient.smartTranslate(vectorQuery);
-    const finalVectorQuery = translationResult.translated; // 使用翻译后的查询
     
-    if (translationResult.isTranslated) {
-      logger.info(`🌐 查询已翻译: "${translationResult.original}" -> "${finalVectorQuery}"`);
+    // 检查查询是否包含中文
+    const hasChinese = translateClient.containsChinese(vectorQuery);
+    
+    let translationResult;
+    let finalVectorQuery;
+    
+    if (hasChinese) {
+      // 如果包含中文，必须等待翻译完成
+      logger.info(`🌐 检测到中文查询，开始翻译: "${vectorQuery}"`);
+      
+      try {
+        // 等待翻译完成（带超时保护）
+        translationResult = await Promise.race([
+          translateClient.smartTranslate(vectorQuery),
+          new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('翻译超时，请稍后重试')), 10000) // 10秒超时
+          )
+        ]);
+        
+        finalVectorQuery = translationResult.translated;
+        
+        // 验证翻译结果：如果翻译后仍包含中文，说明翻译失败
+        if (translateClient.containsChinese(finalVectorQuery)) {
+          logger.error(`❌ 翻译失败：翻译结果仍包含中文 "${finalVectorQuery}"`);
+          return res.status(400).json({
+            status: 'error',
+            message: '翻译失败，请使用英文进行搜索，或稍后重试',
+            error: '翻译结果无效'
+          });
+        }
+        
+        // 验证翻译结果不为空
+        if (!finalVectorQuery || !finalVectorQuery.trim()) {
+          logger.error(`❌ 翻译失败：翻译结果为空`);
+          return res.status(400).json({
+            status: 'error',
+            message: '翻译失败，请使用英文进行搜索，或稍后重试',
+            error: '翻译结果为空'
+          });
+        }
+        
+        if (translationResult.isTranslated) {
+          logger.info(`✅ 翻译成功: "${translationResult.original}" -> "${finalVectorQuery}"`);
+        } else {
+          logger.warn(`⚠️ 翻译未完成，但返回了结果: "${finalVectorQuery}"`);
+          // 如果翻译未完成，返回错误
+          return res.status(400).json({
+            status: 'error',
+            message: '翻译未完成，请稍后重试',
+            error: '翻译服务未响应'
+          });
+        }
+      } catch (translationError) {
+        logger.error(`❌ 翻译异常: ${translationError.message}`);
+        return res.status(400).json({
+          status: 'error',
+          message: translationError.message || '翻译失败，请使用英文进行搜索，或稍后重试',
+          error: '翻译服务异常'
+        });
+      }
+    } else {
+      // 不包含中文，直接使用原文
+      finalVectorQuery = vectorQuery;
+      translationResult = {
+        original: vectorQuery,
+        translated: vectorQuery,
+        isTranslated: false
+      };
+      logger.info(`✅ 查询不包含中文，直接使用原文: "${finalVectorQuery}"`);
     }
     
     // 步骤4: 执行向量搜索
@@ -205,7 +270,8 @@ exports.smartSearch = async (req, res, next) => {
           
           return {
             ...data,
-            bestUrl: chooseBestUrl(assetsMap, true) || data.url,
+            bestUrl: chooseBestUrl(assetsMap, true) || data.url, // 原图URL（用于详情页）
+            thumbnailUrl: chooseBestUrl(assetsMap, true, true) || data.url, // ⭐ 缩略图URL（用于列表）
             model: modelData,
             brand: modelData.Brand,
             vectorScore: score, // 保存相似度分数用于排序
@@ -664,8 +730,23 @@ function extractImageIds(vectorResults) {
 
 /**
  * 选择最佳图片 URL（优先 webp，回退 jpeg）
+ * @param {boolean} forThumbnail - 是否用于缩略图显示（列表模式）
  */
-function chooseBestUrl(assetsMap, preferWebp = true) {
+function chooseBestUrl(assetsMap, preferWebp = true, forThumbnail = false) {
+  // ⭐ 如果是缩略图模式，优先使用 thumbnail 或 medium
+  if (forThumbnail) {
+    if (assetsMap.thumbnail) {
+      return assetsMap.thumbnail;
+    }
+    if (assetsMap.thumb) {
+      return assetsMap.thumb;
+    }
+    if (assetsMap.medium) {
+      return assetsMap.medium;
+    }
+  }
+  
+  // 原逻辑：优先 webp，回退 jpeg
   if (preferWebp && assetsMap.webp) {
     return assetsMap.webp;
   }

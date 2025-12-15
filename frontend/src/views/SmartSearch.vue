@@ -151,12 +151,21 @@
               @click="openImageModal(image)"
             >
               <div class="image-wrapper">
+                <!-- 缩略图（列表显示）- 始终渲染，让浏览器可以加载 -->
                 <img 
-                  :src="image.bestUrl || image.url" 
-                  :alt="image.filename"
+                  :src="getThumbnailUrl(image)" 
+                  :alt="image.filename || '图片'"
                   loading="lazy"
-                  @error="onImageError"
+                  @load="onImageLoad(image, $event)"
+                  @error="onImageError($event, image)"
+                  class="image-thumbnail"
+                  :class="{ 'image-loaded': image.imageLoaded }"
+                  :data-image-id="image.id"
                 />
+                <!-- 占位符 - 覆盖在图片上方，加载完成后隐藏 -->
+                <div v-if="!image.imageLoaded" class="image-placeholder">
+                  <div class="placeholder-spinner"></div>
+                </div>
                 <div class="image-overlay">
                   <div class="overlay-content">
                     <h3 class="model-name">{{ image.model?.name || '未知车型' }}</h3>
@@ -338,7 +347,9 @@ export default {
       selectedImage: null,
       scrollHandler: null,
       quickSearchTags: [],
-      loadingStepTimer: null
+      loadingStepTimer: null,
+      scrollRafId: null, // ⭐ 滚动动画帧ID
+      imageObservers: [] // ⭐ Intersection Observer 实例
     }
   },
   mounted() {
@@ -354,6 +365,12 @@ export default {
     if (this.loadingStepTimer) {
       clearInterval(this.loadingStepTimer)
     }
+    if (this.scrollRafId) {
+      cancelAnimationFrame(this.scrollRafId)
+    }
+    // ⭐ 清理 Intersection Observer
+    this.imageObservers.forEach(observer => observer.disconnect())
+    this.imageObservers = []
   },
   methods: {
     // 加载热门搜索
@@ -488,13 +505,36 @@ export default {
         })
 
         if (response.status === 'success') {
-          const newImages = response.data.images || []
+          const newImages = (response.data.images || []).map(img => {
+            const imageUrl = this.getThumbnailUrl(img)
+            console.log('📷 准备加载图片:', img.id, 'URL:', imageUrl ? imageUrl.substring(0, 50) + '...' : '无URL')
+            return {
+              ...img,
+              imageLoaded: false, // ⭐ 初始化图片加载状态
+              _loadTimeout: null // ⭐ 加载超时定时器
+            }
+          })
           
           if (isLoadMore) {
             this.images = [...this.images, ...newImages]
           } else {
             this.images = newImages
           }
+          
+          // ⭐ 为每张图片设置加载超时（3秒后自动显示，避免一直转圈）
+          this.$nextTick(() => {
+            newImages.forEach(img => {
+              if (img._loadTimeout) {
+                clearTimeout(img._loadTimeout)
+              }
+              img._loadTimeout = setTimeout(() => {
+                if (!img.imageLoaded) {
+                  console.warn('⏰ 图片加载超时，强制显示:', img.id)
+                  this.$set(img, 'imageLoaded', true)
+                }
+              }, 3000) // 3秒超时
+            })
+          })
           
           this.pagination = response.data.pagination || this.pagination
           this.hasMore = response.data.pagination?.hasMore || false
@@ -514,18 +554,27 @@ export default {
       }
     },
 
+    // ⭐ 防抖优化的滚动处理
     handleScroll() {
       if (this.loadingMore || !this.hasMore || this.loading) {
         return
       }
 
-      const scrollTop = window.pageYOffset || document.documentElement.scrollTop
-      const windowHeight = window.innerHeight
-      const documentHeight = document.documentElement.scrollHeight
-
-      if (scrollTop + windowHeight >= documentHeight - 300) {
-        this.loadMore()
+      // 使用 requestAnimationFrame 优化性能
+      if (this.scrollRafId) {
+        cancelAnimationFrame(this.scrollRafId)
       }
+
+      this.scrollRafId = requestAnimationFrame(() => {
+        const scrollTop = window.pageYOffset || document.documentElement.scrollTop
+        const windowHeight = window.innerHeight
+        const documentHeight = document.documentElement.scrollHeight
+
+        // 提前300px触发加载
+        if (scrollTop + windowHeight >= documentHeight - 300) {
+          this.loadMore()
+        }
+      })
     },
 
     async loadMore() {
@@ -565,8 +614,85 @@ export default {
       this.pagination.page = 1
     },
 
-    onImageError(event) {
-      event.target.src = '/default-avatar.svg'
+    // ⭐ 获取缩略图URL，优先使用缩略图
+    getThumbnailUrl(image) {
+      if (!image) {
+        console.warn('getThumbnailUrl: image 为空')
+        return ''
+      }
+      
+      // 优先使用后端返回的 thumbnailUrl
+      if (image.thumbnailUrl) {
+        return image.thumbnailUrl
+      }
+      
+      // 如果没有，尝试从 Assets 中查找
+      if (image.Assets && Array.isArray(image.Assets)) {
+        const thumbnail = image.Assets.find(a => a.variant === 'thumbnail' || a.variant === 'thumb')
+        if (thumbnail && thumbnail.url) {
+          return thumbnail.url
+        }
+        // 如果没有缩略图，使用 medium
+        const medium = image.Assets.find(a => a.variant === 'medium')
+        if (medium && medium.url) {
+          return medium.url
+        }
+      }
+      
+      // 最后回退到 bestUrl 或原图
+      const fallbackUrl = image.bestUrl || image.url || ''
+      if (!fallbackUrl) {
+        console.warn('⚠️ 图片没有可用的URL:', image.id, image)
+      }
+      return fallbackUrl
+    },
+
+    // ⭐ 图片加载完成
+    onImageLoad(image, event) {
+      if (image) {
+        console.log('✅ 图片加载完成:', image.id)
+        // 清除超时定时器
+        if (image._loadTimeout) {
+          clearTimeout(image._loadTimeout)
+          image._loadTimeout = null
+        }
+        this.$set(image, 'imageLoaded', true)
+      } else if (event && event.target) {
+        // 如果没有传入 image 参数，尝试从 DOM 中查找
+        const imageId = event.target.getAttribute('data-image-id')
+        if (imageId) {
+          const foundImage = this.images.find(img => String(img.id) === String(imageId))
+          if (foundImage) {
+            console.log('✅ 图片加载完成（通过DOM查找）:', imageId)
+            // 清除超时定时器
+            if (foundImage._loadTimeout) {
+              clearTimeout(foundImage._loadTimeout)
+              foundImage._loadTimeout = null
+            }
+            this.$set(foundImage, 'imageLoaded', true)
+          }
+        }
+      }
+    },
+
+    // ⭐ 图片加载失败处理
+    onImageError(event, image) {
+      console.error('图片加载失败:', image?.id, this.getThumbnailUrl(image))
+      
+      // 尝试使用原图URL作为回退
+      if (image && (image.bestUrl || image.url)) {
+        const fallbackUrl = image.bestUrl || image.url
+        if (event.target.src !== fallbackUrl) {
+          event.target.src = fallbackUrl
+          return // 不设置 imageLoaded，让占位符继续显示，等待回退URL加载
+        }
+      }
+      
+      // 如果所有URL都失败，标记为已加载（隐藏占位符，显示错误状态）
+      if (image) {
+        this.$set(image, 'imageLoaded', true)
+        this.$set(image, 'imageError', true)
+      }
     }
   }
 }
@@ -1067,10 +1193,10 @@ export default {
   color: white;
 }
 
-/* 图片网格 */
+/* 图片网格 - 每行5张图 */
 .image-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  grid-template-columns: repeat(5, 1fr);
   gap: 16px;
   margin-bottom: 48px;
 }
@@ -1109,6 +1235,62 @@ export default {
 
 .image-wrapper:hover img {
   transform: scale(1.05);
+}
+
+/* ⭐ 图片占位符 */
+.image-placeholder {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, 
+    rgba(255, 255, 255, 0.05) 0%, 
+    rgba(255, 255, 255, 0.1) 50%, 
+    rgba(255, 255, 255, 0.05) 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2; /* 确保在图片上方 */
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.placeholder-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid rgba(255, 255, 255, 0.1);
+  border-top-color: var(--primary-color);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.image-thumbnail {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  position: relative;
+  z-index: 1;
+  display: block; /* 确保图片显示 */
+}
+
+.image-thumbnail.image-loaded {
+  opacity: 1;
 }
 
 /* 图片遮罩 */
@@ -1676,7 +1858,23 @@ export default {
 }
 
 /* 响应式设计 */
-  @media (max-width: 768px) {
+/* 中等屏幕：4列 */
+@media (max-width: 1200px) and (min-width: 769px) {
+  .image-grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+  }
+}
+
+/* 小屏幕：3列 */
+@media (max-width: 1000px) and (min-width: 769px) {
+  .image-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+  }
+}
+
+@media (max-width: 768px) {
   .title-section {
     margin-bottom: 24px;
   }

@@ -64,7 +64,8 @@ async function searchVectors(queryVector, options = {}, collectionName = DEFAULT
       limit = 10,
       score_threshold = 0.0,
       filter = null,
-      imageIds = null // 新增：图片 ID 列表，用于过滤
+      imageIds = null, // 图片 ID 列表，用于过滤
+      offset = 0 // ⭐ 新增：偏移量，用于分页搜索
     } = options;
 
     // 构建搜索参数
@@ -72,6 +73,7 @@ async function searchVectors(queryVector, options = {}, collectionName = DEFAULT
     const searchParams = {
       vector: queryVector,
       limit,
+      offset, // ⭐ 添加offset支持分页
       score_threshold,
       with_payload: true,
       with_vector: false

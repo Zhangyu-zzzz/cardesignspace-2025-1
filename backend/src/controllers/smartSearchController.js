@@ -84,58 +84,63 @@ exports.smartSearch = async (req, res, next) => {
     let translationResult;
     let finalVectorQuery;
     
+    // ⭐ 步骤3: 翻译处理（如果包含中文，必须等待翻译完成）
     if (hasChinese) {
-      // 如果包含中文，必须等待翻译完成
-      logger.info(`🌐 检测到中文查询，开始翻译: "${vectorQuery}"`);
+      logger.info(`🌐 检测到中文查询，必须翻译后才能搜索: "${vectorQuery}"`);
       
       try {
-        // 等待翻译完成（带超时保护）
+        // ⭐ 必须等待翻译完成（带12秒超时保护，给翻译服务足够时间）
         translationResult = await Promise.race([
           translateClient.smartTranslate(vectorQuery),
           new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('翻译超时，请稍后重试')), 10000) // 10秒超时
+            setTimeout(() => reject(new Error('翻译超时（12秒），服务器可能繁忙，请稍后重试或使用英文搜索')), 12000)
           )
         ]);
         
         finalVectorQuery = translationResult.translated;
         
-        // 验证翻译结果：如果翻译后仍包含中文，说明翻译失败
+        // ⭐ 严格验证1：翻译结果不能包含中文
         if (translateClient.containsChinese(finalVectorQuery)) {
-          logger.error(`❌ 翻译失败：翻译结果仍包含中文 "${finalVectorQuery}"`);
+          logger.error(`❌ 翻译验证失败：结果仍包含中文 "${finalVectorQuery}"`);
           return res.status(400).json({
             status: 'error',
-            message: '翻译失败，请使用英文进行搜索，或稍后重试',
-            error: '翻译结果无效'
+            message: '翻译未完成，结果仍包含中文。建议使用英文进行搜索（如：red bmw suv）',
+            error: '翻译结果验证失败'
           });
         }
         
-        // 验证翻译结果不为空
+        // ⭐ 严格验证2：翻译结果不能为空
         if (!finalVectorQuery || !finalVectorQuery.trim()) {
-          logger.error(`❌ 翻译失败：翻译结果为空`);
+          logger.error(`❌ 翻译验证失败：结果为空`);
           return res.status(400).json({
             status: 'error',
-            message: '翻译失败，请使用英文进行搜索，或稍后重试',
+            message: '翻译失败，结果为空。建议使用英文进行搜索（如：red bmw suv）',
             error: '翻译结果为空'
           });
         }
         
-        if (translationResult.isTranslated) {
-          logger.info(`✅ 翻译成功: "${translationResult.original}" -> "${finalVectorQuery}"`);
-        } else {
-          logger.warn(`⚠️ 翻译未完成，但返回了结果: "${finalVectorQuery}"`);
-          // 如果翻译未完成，返回错误
+        // ⭐ 严格验证3：必须是成功翻译（isTranslated = true）
+        if (!translationResult.isTranslated) {
+          logger.error(`❌ 翻译未成功：isTranslated=false`);
           return res.status(400).json({
             status: 'error',
-            message: '翻译未完成，请稍后重试',
-            error: '翻译服务未响应'
+            message: '翻译未完成，无法进行搜索。建议使用英文进行搜索（如：red bmw suv）',
+            error: '翻译标志未设置'
           });
         }
+        
+        // ⭐ 所有验证通过，翻译成功
+        logger.info(`✅ 翻译完成并验证通过: "${translationResult.original}" -> "${finalVectorQuery}"`);
+        logger.info(`✅ 现在开始使用翻译后的英文进行向量搜索...`);
+        
       } catch (translationError) {
-        logger.error(`❌ 翻译异常: ${translationError.message}`);
+        // ⭐ 任何翻译错误都会阻止继续搜索
+        logger.error(`❌ 翻译失败，终止搜索: ${translationError.message}`);
         return res.status(400).json({
           status: 'error',
-          message: translationError.message || '翻译失败，请使用英文进行搜索，或稍后重试',
-          error: '翻译服务异常'
+          message: translationError.message || '翻译服务异常，无法搜索。建议使用英文进行搜索（如：red bmw suv）',
+          error: '翻译服务异常',
+          suggestion: '请使用英文关键词（如：red bmw suv, white car）进行搜索，效果更精准'
         });
       }
     } else {
@@ -149,26 +154,31 @@ exports.smartSearch = async (req, res, next) => {
       logger.info(`✅ 查询不包含中文，直接使用原文: "${finalVectorQuery}"`);
     }
     
-    // 步骤4: 执行向量搜索
+    // 步骤4: 执行向量搜索 - ⭐ 真正的分页搜索
     // 如果有品牌筛选，只在这些图片的向量中搜索；否则搜索全部
     let vectorResults = [];
     
     try {
       logger.info(`🚀 开始向量搜索: query="${finalVectorQuery}"${brandImageIds.length > 0 ? `, 限制在 ${brandImageIds.length} 张品牌图片中` : ''}`);
       
-      // ⭐ 获取足够多的结果用于分页
-      // 大幅提升限制：支持加载所有匹配结果（最多2000个）
-      // 前端每页50张，2000个结果可支持40页，基本覆盖所有场景
-      const searchLimit = Math.min(Math.max(parseInt(limit) * 10, 200), 2000);
+      // ⭐ 真正的分页搜索：每次只搜索当前页+buffer
+      // 计算offset：(page - 1) * limit
+      const pageNum = parseInt(page) || 1;
+      const limitNum = parseInt(limit) || 50;
+      const offset = (pageNum - 1) * limitNum;
+      
+      // 搜索数量：当前页 + buffer（额外20%，用于过滤掉无效结果）
+      const searchLimit = Math.ceil(limitNum * 1.2);
       
       // 如果有品牌筛选，传入图片 ID 列表作为 filter
       const searchOptions = {
         limit: searchLimit,
+        offset: offset, // ⭐ 添加offset实现分页
         score_threshold: 0.0,
-        imageIds: brandImageIds.length > 0 ? brandImageIds : null // 传入图片 ID 列表
+        imageIds: brandImageIds.length > 0 ? brandImageIds : null
       };
       
-      logger.info(`向量搜索参数: limit=${searchLimit}, score_threshold=0.0, hasBrandFilter=${brandImageIds.length > 0}`);
+      logger.info(`⚡ 分页搜索参数: page=${pageNum}, limit=${limitNum}, offset=${offset}, searchLimit=${searchLimit}, hasBrandFilter=${brandImageIds.length > 0}`);
       
       const searchStartTime = Date.now();
       vectorResults = await searchByText(finalVectorQuery, searchOptions);
@@ -358,28 +368,33 @@ exports.smartSearch = async (req, res, next) => {
       }
     }
 
-    // 步骤7: 分页处理（支持无限滚动）
+    // 步骤7: ⭐ 分页处理（真正的分页搜索，无需内存分页）
     const pageNum = parseInt(page) || 1;
-    const limitNum = parseInt(limit) || 20;
-    const pageOffset = (pageNum - 1) * limitNum;
-    const totalCount = images.length;
+    const limitNum = parseInt(limit) || 50;
     
-    // 返回当前页的结果
-    const paginatedResults = images.slice(pageOffset, pageOffset + limitNum);
-    const hasMore = pageOffset + limitNum < totalCount;
+    // ⭐ 由于使用了offset分页，images已经是当前页的结果，无需再次分页
+    // 只需要限制返回的数量为limit（防止返回超过limit的结果）
+    const paginatedResults = images.slice(0, limitNum);
+    
+    // ⭐ 判断是否还有更多结果：如果返回的结果数量等于请求的数量，说明可能还有更多
+    const hasMore = images.length >= limitNum;
+    
+    // ⭐ 总数估算：由于我们不再一次性搜索所有结果，无法知道确切总数
+    // 使用估算值：如果还有更多，total = (page * limit) + limit，否则 total = (page - 1) * limit + 实际数量
+    const estimatedTotal = hasMore ? (pageNum * limitNum) + limitNum : (pageNum - 1) * limitNum + paginatedResults.length;
 
     const duration = Date.now() - startTime;
-    logger.info(`✅ 搜索完成: 耗时=${duration}ms, 品牌筛选=${brandImageIds.length}, 向量结果=${vectorResults.length}, 图片=${images.length}, 返回=${paginatedResults.length}, 还有更多=${hasMore}`);
+    logger.info(`✅ 分页搜索完成: 耗时=${duration}ms, 页码=${pageNum}, 品牌筛选=${brandImageIds.length}, 向量结果=${vectorResults.length}, 返回=${paginatedResults.length}, 还有更多=${hasMore}`);
 
     res.json({
       status: 'success',
       data: {
         images: paginatedResults,
         pagination: {
-          total: totalCount,
+          total: estimatedTotal, // ⭐ 估算总数
           page: pageNum,
           limit: limitNum,
-          pages: Math.ceil(totalCount / limitNum),
+          pages: hasMore ? pageNum + 1 : pageNum, // ⭐ 估算总页数
           hasMore: hasMore
         },
         searchInfo: {

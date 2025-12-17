@@ -351,7 +351,9 @@ export default {
       quickSearchTags: [],
       loadingStepTimer: null,
       scrollRafId: null, // ⭐ 滚动动画帧ID
-      imageObservers: [] // ⭐ Intersection Observer 实例
+      imageObservers: [], // ⭐ Intersection Observer 实例
+      searchCache: {}, // ⭐ 搜索结果缓存：{ 'query_page': { images, pagination, searchInfo } }
+      currentSearchKey: '' // ⭐ 当前搜索的缓存key
     }
   },
   mounted() {
@@ -445,6 +447,11 @@ export default {
       this.images = []
       this.loadingStep = 0
       
+      // ⭐ 生成缓存key并清除旧缓存（新搜索时清除之前的搜索缓存）
+      const query = this.searchQuery.trim()
+      this.currentSearchKey = query
+      this.searchCache = {} // 清空缓存，开始新的搜索
+      
       // 模拟加载步骤动画
       this.loadingStepTimer = setInterval(() => {
         if (this.loadingStep < 3) {
@@ -458,7 +465,7 @@ export default {
         // 搜索成功后记录
         const searchDuration = Date.now() - searchStartTime;
         this.recordSearch({
-          query: this.searchQuery.trim(),
+          query: query,
           translatedQuery: this.searchInfo?.translatedQuery,
           brandId: this.searchInfo?.brandInfo?.id,
           resultsCount: this.images.length,
@@ -473,7 +480,7 @@ export default {
         
         // 搜索失败也记录
         this.recordSearch({
-          query: this.searchQuery.trim(),
+          query: query,
           resultsCount: 0,
           searchType: 'smart',
           isSuccessful: false,
@@ -498,6 +505,29 @@ export default {
           this.loadingMore = true
         }
 
+        // ⭐ 生成缓存key：query_page
+        const cacheKey = `${this.currentSearchKey || this.searchQuery.trim()}_${this.pagination.page}`
+        
+        // ⭐ 检查缓存
+        if (this.searchCache[cacheKey]) {
+          console.log('🎯 使用缓存数据:', cacheKey)
+          const cached = this.searchCache[cacheKey]
+          
+          if (isLoadMore) {
+            this.images = [...this.images, ...cached.images]
+          } else {
+            this.images = cached.images
+          }
+          
+          this.pagination = cached.pagination
+          this.hasMore = cached.pagination?.hasMore || false
+          this.searchInfo = cached.searchInfo || null
+          
+          return // 使用缓存，直接返回
+        }
+
+        // ⭐ 缓存未命中，调用API
+        console.log('📡 从API加载数据:', cacheKey)
         const response = await apiClient.get('/smart-search', {
           params: {
             q: this.searchQuery,
@@ -516,6 +546,13 @@ export default {
               _loadTimeout: null // ⭐ 加载超时定时器
             }
           })
+          
+          // ⭐ 缓存结果（存储原始数据，不包含imageLoaded等临时状态）
+          this.searchCache[cacheKey] = {
+            images: newImages,
+            pagination: response.data.pagination,
+            searchInfo: response.data.searchInfo
+          }
           
           if (isLoadMore) {
             this.images = [...this.images, ...newImages]

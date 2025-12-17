@@ -106,7 +106,7 @@ async function translateWithMyMemory(text) {
 async function translateToEnglish(text) {
   try {
     if (!text || !text.trim()) {
-      return text;
+      throw new Error('翻译文本为空');
     }
 
     // 如果文本不包含中文，直接返回
@@ -120,27 +120,41 @@ async function translateToEnglish(text) {
     // 尝试多个翻译服务，按顺序尝试
     let translatedText = null;
     
-    // 尝试 Google Translate
-    translatedText = await translateWithGoogle(text);
-    if (translatedText) {
-      logger.info(`✅ 翻译成功 (Google): "${text}" -> "${translatedText}"`);
-      return translatedText;
+    // ⭐ 尝试 Google Translate（第一优先）
+    try {
+      translatedText = await translateWithGoogle(text);
+      if (translatedText && !containsChinese(translatedText)) {
+        logger.info(`✅ 翻译成功 (Google): "${text}" -> "${translatedText}"`);
+        return translatedText;
+      } else if (translatedText && containsChinese(translatedText)) {
+        logger.warn(`⚠️  Google翻译结果仍包含中文: "${translatedText}"，尝试下一个服务`);
+        translatedText = null;
+      }
+    } catch (googleError) {
+      logger.debug(`Google Translate 异常: ${googleError.message}`);
     }
 
-    // 如果 Google 失败，尝试 MyMemory
-    translatedText = await translateWithMyMemory(text);
-    if (translatedText) {
-      logger.info(`✅ 翻译成功 (MyMemory): "${text}" -> "${translatedText}"`);
-      return translatedText;
+    // ⭐ 如果 Google 失败，尝试 MyMemory（第二优先）
+    try {
+      translatedText = await translateWithMyMemory(text);
+      if (translatedText && !containsChinese(translatedText)) {
+        logger.info(`✅ 翻译成功 (MyMemory): "${text}" -> "${translatedText}"`);
+        return translatedText;
+      } else if (translatedText && containsChinese(translatedText)) {
+        logger.warn(`⚠️  MyMemory翻译结果仍包含中文: "${translatedText}"`);
+        translatedText = null;
+      }
+    } catch (myMemoryError) {
+      logger.debug(`MyMemory Translate 异常: ${myMemoryError.message}`);
     }
 
-    // 所有翻译服务都失败，返回原文
-    logger.warn(`⚠️  所有翻译服务都失败，使用原文进行搜索: "${text}"`);
-    return text;
+    // ⭐ 所有翻译服务都失败，抛出错误（不再返回原文）
+    logger.error(`❌ 所有翻译服务都失败，无法翻译: "${text}"`);
+    throw new Error('翻译失败：所有翻译服务不可用，请使用英文进行搜索或稍后重试');
   } catch (error) {
+    // ⭐ 翻译异常，向上抛出错误（不再返回原文）
     logger.error(`❌ 翻译异常: ${error.message}`);
-    logger.warn(`⚠️  翻译异常，使用原文进行搜索: "${text}"`);
-    return text;
+    throw error;
   }
 }
 
@@ -180,41 +194,41 @@ async function smartTranslate(query) {
     };
   }
 
-  // 包含中文，进行翻译（带超时保护）
+  // ⭐ 包含中文，必须翻译完成（带超时保护）
   try {
     const translated = await Promise.race([
       translateToEnglish(originalQuery),
-      new Promise((_, reject) => setTimeout(() => reject(new Error('翻译超时，请稍后重试')), 9000)) // 9秒超时，确保有足够时间完成翻译
+      new Promise((_, reject) => setTimeout(() => reject(new Error('翻译超时（10秒），请使用英文进行搜索或稍后重试')), 10000)) // ⭐ 增加到10秒超时
     ]);
     
-    // 只缓存成功的翻译（翻译结果不包含中文）
-    const translationSuccessful = translated && !containsChinese(translated);
+    // ⭐ 严格验证翻译结果：必须不包含中文
+    const translationSuccessful = translated && 
+                                  translated.trim().length > 0 && 
+                                  !containsChinese(translated);
     
-    if (translationSuccessful) {
-      // 保存到缓存
-      if (translationCache.size >= CACHE_MAX_SIZE) {
-        const firstKey = translationCache.keys().next().value;
-        translationCache.delete(firstKey);
-      }
-      translationCache.set(originalQuery, translated);
-      logger.info(`✅ 翻译成功并缓存: "${originalQuery}" -> "${translated}"`);
-    } else {
-      logger.warn(`⚠️ 翻译失败（结果仍包含中文），不缓存: "${originalQuery}" -> "${translated}"`);
+    if (!translationSuccessful) {
+      // ⭐ 翻译失败，抛出错误（不返回原文）
+      logger.error(`❌ 翻译验证失败: "${originalQuery}" -> "${translated}"`);
+      throw new Error('翻译结果无效（仍包含中文或为空），请使用英文进行搜索');
     }
+    
+    // ⭐ 翻译成功，保存到缓存
+    if (translationCache.size >= CACHE_MAX_SIZE) {
+      const firstKey = translationCache.keys().next().value;
+      translationCache.delete(firstKey);
+    }
+    translationCache.set(originalQuery, translated);
+    logger.info(`✅ 翻译完成并验证通过: "${originalQuery}" -> "${translated}"`);
     
     return {
       original: originalQuery,
       translated: translated,
-      isTranslated: translationSuccessful
+      isTranslated: true  // ⭐ 只有成功才返回 true
     };
   } catch (error) {
-    // 翻译失败或超时，使用原文
-    logger.warn(`⚠️ 翻译超时或失败，使用原文: ${error.message}`);
-    return {
-      original: originalQuery,
-      translated: originalQuery,
-      isTranslated: false
-    };
+    // ⭐ 翻译失败或超时，向上抛出错误（不再返回原文）
+    logger.error(`❌ 翻译失败: ${error.message}`);
+    throw error;  // ⭐ 抛出错误，阻止继续搜索
   }
 }
 

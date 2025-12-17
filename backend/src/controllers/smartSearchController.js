@@ -156,9 +156,10 @@ exports.smartSearch = async (req, res, next) => {
     try {
       logger.info(`🚀 开始向量搜索: query="${finalVectorQuery}"${brandImageIds.length > 0 ? `, 限制在 ${brandImageIds.length} 张品牌图片中` : ''}`);
       
-      // 获取足够多的结果用于分页
-      // 统一返回100-500个结果（默认200个），支持更多翻页
-      const searchLimit = Math.min(Math.max(parseInt(limit) * 10, 100), 500);
+      // ⭐ 获取足够多的结果用于分页
+      // 大幅提升限制：支持加载所有匹配结果（最多2000个）
+      // 前端每页50张，2000个结果可支持40页，基本覆盖所有场景
+      const searchLimit = Math.min(Math.max(parseInt(limit) * 10, 200), 2000);
       
       // 如果有品牌筛选，传入图片 ID 列表作为 filter
       const searchOptions = {

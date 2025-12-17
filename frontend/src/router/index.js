@@ -160,7 +160,23 @@ const routes = [
 const router = new VueRouter({
   mode: 'history',
   base: process.env.BASE_URL,
-  routes
+  routes,
+  // ⭐ 配置页面切换时的滚动行为
+  scrollBehavior(to, from, savedPosition) {
+    // 如果有保存的滚动位置（浏览器后退/前进按钮），则恢复到该位置
+    if (savedPosition) {
+      return savedPosition
+    }
+    // 如果是锚点跳转，滚动到锚点位置
+    if (to.hash) {
+      return {
+        selector: to.hash,
+        behavior: 'smooth'
+      }
+    }
+    // 其他情况，始终滚动到页面顶部
+    return { x: 0, y: 0 }
+  }
 })
 
 // 全局路由守卫

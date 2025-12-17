@@ -80,7 +80,9 @@
               <img 
                 v-if="getModelImageUrl(model)" 
                 :src="getModelImageUrl(model)" 
-                :alt="model.name" 
+                :alt="model.name"
+                loading="lazy"
+                decoding="async"
               />
               <div v-else-if="model.isLoadingImage" class="loading-image">
                 <i class="el-icon-loading"></i>
@@ -139,6 +141,8 @@
               :src="getModelImageUrl(previewModel)"
               :alt="previewModel.name"
               class="preview-image"
+              loading="lazy"
+              decoding="async"
             />
             <div v-else-if="isLoadingImage" class="loading-preview-image">
               <i class="el-icon-loading"></i>
@@ -209,24 +213,39 @@ export default {
   methods: {
     // 获取车型图片URL的辅助方法（优先使用coverUrl）
     getModelImageUrl(model) {
-      // 1. 首先尝试使用模型自身的coverUrl（封面图）
-      if (model.coverUrl && typeof model.coverUrl === 'string' && model.coverUrl.trim() !== '') {
-        return model.coverUrl;
-      }
-      
-      // 2. 检查是否有Images集合并且不为空
+      // ⭐ 1. 首先尝试从Images中获取缩略图（最优）
       if (model.Images && Array.isArray(model.Images) && model.Images.length > 0) {
         return this.getImageUrl(model.Images[0]);
       }
       
-      // 3. 如果找不到任何图片，返回null（让模板显示占位符）
+      // 2. 其次尝试使用模型自身的thumbnail
+      if (model.thumbnail && typeof model.thumbnail === 'string' && model.thumbnail.trim() !== '') {
+        return model.thumbnail;
+      }
+      
+      // 3. 最后尝试使用coverUrl
+      if (model.coverUrl && typeof model.coverUrl === 'string' && model.coverUrl.trim() !== '') {
+        return model.coverUrl;
+      }
+      
+      // 4. 如果找不到任何图片，返回null（让模板显示占位符）
       return null;
     },
     getImageUrl(image) {
+      // ⭐ 优先使用缩略图和小尺寸图片
+      // 优先级：thumbnailUrl > mediumUrl > smallUrl > url > originalUrl > largeUrl
+      if (image.Assets && Array.isArray(image.Assets)) {
+        // 从Assets中查找缩略图
+        const thumbnail = image.Assets.find(a => a.variant === 'thumbnail' || a.variant === 'thumb');
+        if (thumbnail && thumbnail.url) return thumbnail.url;
+        
+        const medium = image.Assets.find(a => a.variant === 'medium' || a.variant === 'small');
+        if (medium && medium.url) return medium.url;
+      }
+      if (image.thumbnailUrl) return image.thumbnailUrl;
+      if (image.mediumUrl) return image.mediumUrl;
       if (image.url) return image.url;
       if (image.originalUrl) return image.originalUrl;
-      if (image.mediumUrl) return image.mediumUrl;
-      if (image.thumbnailUrl) return image.thumbnailUrl;
       if (image.largeUrl) return image.largeUrl;
       return '/images/default-car.jpg';
     },

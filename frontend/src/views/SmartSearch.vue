@@ -151,11 +151,13 @@
               @click="openImageModal(image)"
             >
               <div class="image-wrapper">
-                <!-- 缩略图（列表显示）- 始终渲染，让浏览器可以加载 -->
+                <!-- 缩略图（列表显示）- ⭐ 优化加载性能 -->
                 <img 
                   :src="getThumbnailUrl(image)" 
                   :alt="image.filename || '图片'"
                   loading="lazy"
+                  decoding="async"
+                  fetchpriority="low"
                   @load="onImageLoad(image, $event)"
                   @error="onImageError($event, image)"
                   class="image-thumbnail"
@@ -338,7 +340,7 @@ export default {
       hasMore: false,
       pagination: {
         page: 1,
-        limit: 20,
+        limit: 50, // ⭐ 从20增加到50，提升加载效率
         total: 0,
         pages: 0
       },
@@ -554,7 +556,7 @@ export default {
       }
     },
 
-    // ⭐ 防抖优化的滚动处理
+    // ⭐ 防抖优化的滚动处理 - 提前更多距离加载
     handleScroll() {
       if (this.loadingMore || !this.hasMore || this.loading) {
         return
@@ -570,8 +572,8 @@ export default {
         const windowHeight = window.innerHeight
         const documentHeight = document.documentElement.scrollHeight
 
-        // 提前300px触发加载
-        if (scrollTop + windowHeight >= documentHeight - 300) {
+        // ⭐ 提前600px触发加载（从300px增加），让用户感觉不到加载
+        if (scrollTop + windowHeight >= documentHeight - 600) {
           this.loadMore()
         }
       })
@@ -614,32 +616,37 @@ export default {
       this.pagination.page = 1
     },
 
-    // ⭐ 获取缩略图URL，优先使用缩略图
+    // ⭐ 获取缩略图URL，优先使用最小尺寸以提升加载速度
     getThumbnailUrl(image) {
       if (!image) {
         console.warn('getThumbnailUrl: image 为空')
         return ''
       }
       
-      // 优先使用后端返回的 thumbnailUrl
-      if (image.thumbnailUrl) {
-        return image.thumbnailUrl
-      }
-      
-      // 如果没有，尝试从 Assets 中查找
-      if (image.Assets && Array.isArray(image.Assets)) {
+      // ⭐ 优先级调整：Assets缩略图 > thumbnailUrl > medium > small > bestUrl > url
+      // 1. 首先尝试从 Assets 中查找最小的缩略图（最优）
+      if (image.Assets && Array.isArray(image.Assets) && image.Assets.length > 0) {
+        // 优先级：thumbnail > thumb > small > medium
         const thumbnail = image.Assets.find(a => a.variant === 'thumbnail' || a.variant === 'thumb')
         if (thumbnail && thumbnail.url) {
           return thumbnail.url
         }
-        // 如果没有缩略图，使用 medium
+        const small = image.Assets.find(a => a.variant === 'small')
+        if (small && small.url) {
+          return small.url
+        }
         const medium = image.Assets.find(a => a.variant === 'medium')
         if (medium && medium.url) {
           return medium.url
         }
       }
       
-      // 最后回退到 bestUrl 或原图
+      // 2. 使用后端返回的 thumbnailUrl
+      if (image.thumbnailUrl) {
+        return image.thumbnailUrl
+      }
+      
+      // 3. 回退到 bestUrl 或原图（性能最差）
       const fallbackUrl = image.bestUrl || image.url || ''
       if (!fallbackUrl) {
         console.warn('⚠️ 图片没有可用的URL:', image.id, image)
@@ -1193,17 +1200,23 @@ export default {
   color: white;
 }
 
-/* 图片网格 - 每行5张图 */
+/* 图片网格 - 每行5张图 - ⭐ 优化性能 */
 .image-grid {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
   gap: 16px;
   margin-bottom: 48px;
+  /* ⭐ GPU加速 - 启用硬件加速 */
+  transform: translateZ(0);
+  will-change: contents;
 }
 
 .image-item {
   animation: fadeInUp 0.4s ease;
   animation-fill-mode: both;
+  /* ⭐ GPU加速 */
+  transform: translateZ(0);
+  backface-visibility: hidden;
 }
 
 .image-item:nth-child(1) { animation-delay: 0.05s; }
@@ -1219,6 +1232,10 @@ export default {
   aspect-ratio: 16 / 9;
   box-shadow: var(--shadow-sm);
   transition: var(--transition);
+  /* ⭐ GPU加速 - 优化hover和动画性能 */
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  will-change: transform;
 }
 
 .image-wrapper:hover {
@@ -1231,10 +1248,13 @@ export default {
   height: 100%;
   object-fit: cover;
   transition: var(--transition);
+  /* ⭐ GPU加速 - 图片缩放动画更流畅 */
+  transform: translateZ(0);
+  will-change: transform;
 }
 
 .image-wrapper:hover img {
-  transform: scale(1.05);
+  transform: scale(1.05) translateZ(0);
 }
 
 /* ⭐ 图片占位符 */

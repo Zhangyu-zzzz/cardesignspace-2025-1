@@ -24,7 +24,7 @@
           @contextmenu="$handleLinkContextMenu($event, `/model/${item.id}`, { modelId: item.id })"
         >
           <div class="slide-image-container">
-            <!-- 车型图片 -->
+            <!-- 车型图片 - ⭐ 添加loading优化 -->
             <img 
               v-if="item.type === 'model' && getModelImageUrl(item)" 
               :src="getModelImageUrl(item)"
@@ -33,6 +33,8 @@
               @error="handleModelImageError"
               @contextmenu.stop="handleImageContextMenu($event, item.Images && item.Images.length > 0 ? item.Images[0] : null, item.name)"
               class="slide-image"
+              loading="eager"
+              decoding="async"
             >
 
                           <!-- 占位符 -->
@@ -638,7 +640,7 @@ export default {
       this.showBrands = !this.showBrands;
     },
     
-    // 获取车型图片URL的辅助方法
+    // 获取车型图片URL的辅助方法 - ⭐ 优化为优先使用缩略图
     getModelImageUrl(model) {
       // 防御性检查，确保model是对象
       if (!model || typeof model !== 'object') {
@@ -646,9 +648,29 @@ export default {
         return '/images/default-car.jpg';
       }
       
-      // 1. 首先尝试使用模型自身的coverUrl（封面图）
-      if (model.coverUrl && typeof model.coverUrl === 'string' && model.coverUrl.trim() !== '') {
-        return model.coverUrl;
+      // ⭐ 1. 首先尝试使用缩略图（最小尺寸，加载最快）
+      if (model.Images && Array.isArray(model.Images) && model.Images.length > 0) {
+        const image = model.Images[0];
+        // 尝试从Assets中获取缩略图
+        if (image.Assets && Array.isArray(image.Assets)) {
+          // 优先级：thumbnail > thumb > medium > small > 原图
+          const thumbnail = image.Assets.find(a => a.variant === 'thumbnail' || a.variant === 'thumb');
+          if (thumbnail && thumbnail.url) {
+            return thumbnail.url;
+          }
+          const medium = image.Assets.find(a => a.variant === 'medium' || a.variant === 'small');
+          if (medium && medium.url) {
+            return medium.url;
+          }
+        }
+        // 如果没有Assets，尝试thumbnailUrl
+        if (image.thumbnailUrl) {
+          return image.thumbnailUrl;
+        }
+        // 回退到原图
+        if (image.url) {
+          return image.url;
+        }
       }
       
       // 2. 其次尝试使用模型自身的thumbnail属性
@@ -656,13 +678,9 @@ export default {
         return model.thumbnail;
       }
       
-      // 3. 检查是否有Images集合并且不为空
-      if (model.Images && Array.isArray(model.Images) && model.Images.length > 0) {
-        // 获取第一张图片的URL
-        const image = model.Images[0];
-        if (image && image.url) {
-          return image.url;
-        }
+      // 3. 尝试使用模型自身的coverUrl（封面图）
+      if (model.coverUrl && typeof model.coverUrl === 'string' && model.coverUrl.trim() !== '') {
+        return model.coverUrl;
       }
       
       // 4. 如果找不到任何图片，返回默认图片
@@ -1123,8 +1141,8 @@ export default {
             }
           });
         }, {
-          rootMargin: '50px', // 减少提前加载距离，节省带宽
-          threshold: 0.2 // 当图片20%进入视口时开始加载，减少不必要的加载
+          rootMargin: '300px', // ⭐ 增加提前加载距离，提升滚动流畅度
+          threshold: 0.01 // ⭐ 当图片刚进入视口时就开始加载
         });
         
         // 观察所有懒加载图片
@@ -2789,6 +2807,10 @@ export default {
   border: 1px solid rgba(255, 255, 255, 0.08);
   aspect-ratio: 4/5;
   min-height: 200px;
+  /* ⭐ GPU加速优化 */
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  will-change: transform;
 }
 
 .model-display-card:hover {
@@ -2813,6 +2835,9 @@ export default {
   height: 100%;
   object-fit: cover;
   transition: transform 0.3s ease;
+  /* ⭐ GPU加速优化 */
+  transform: translateZ(0);
+  will-change: transform;
 }
 
 .model-display-card:hover .model-display-img {

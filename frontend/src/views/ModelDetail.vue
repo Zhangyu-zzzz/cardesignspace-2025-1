@@ -210,7 +210,8 @@ import Sortable from 'sortablejs';
         modelTypeOptions: ['轿车', 'SUV', 'MPV', 'WAGON', 'SHOOTINGBRAKE', '皮卡', '跑车', 'Hatchback', '其他'],
         sortableInstance: null,
         isSavingOrder: false,
-        isDragging: false
+        isDragging: false,
+        isMobile: false // 是否为移动端
       };
     },
     computed: {
@@ -537,8 +538,27 @@ import Sortable from 'sortablejs';
           this.loading = false;
         }
       },
+      // 检测是否为移动端
+      checkIsMobile() {
+        const userAgent = navigator.userAgent || navigator.vendor || window.opera;
+        // 检测移动设备
+        const isMobileDevice = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent.toLowerCase());
+        // 检测触摸屏
+        const isTouchScreen = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+        // 检测屏幕宽度
+        const isSmallScreen = window.innerWidth <= 768;
+        
+        this.isMobile = isMobileDevice || (isTouchScreen && isSmallScreen);
+        console.log('设备检测:', { isMobileDevice, isTouchScreen, isSmallScreen, isMobile: this.isMobile });
+      },
       // 初始化拖拽排序
       initSortable() {
+        // 移动端不启用拖拽功能
+        if (this.isMobile) {
+          console.log('移动端检测：禁用图片拖拽功能');
+          return;
+        }
+
         this.$nextTick(() => {
           const gridElement = this.$refs.imagesGrid;
           if (!gridElement || this.sortableInstance) {
@@ -784,6 +804,8 @@ import Sortable from 'sortablejs';
       }
     },
     mounted() {
+      // 检测设备类型
+      this.checkIsMobile();
       this.fetchModelDetails();
     },
     beforeDestroy() {
@@ -1011,12 +1033,23 @@ import Sortable from 'sortablejs';
   background-color: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.1);
   position: relative;
-  cursor: move; /* 拖拽时显示移动光标 */
+  cursor: move; /* 桌面端拖拽时显示移动光标 */
   aspect-ratio: 1;
 }
   
   .image-card:hover {
     cursor: move;
+  }
+
+  /* 移动端禁用拖拽样式，使用正常点击样式 */
+  @media (max-width: 768px) {
+    .image-card {
+      cursor: pointer;
+    }
+    
+    .image-card:hover {
+      cursor: pointer;
+    }
   }
   
 /* 拖拽排序样式 */

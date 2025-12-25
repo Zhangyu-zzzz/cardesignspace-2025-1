@@ -20,9 +20,16 @@
           :key="item.type + '-' + item.id"
           :class="{ active: currentSlide === index }"
           :style="{ transform: `translateX(${(index - currentSlide) * 100}%)` }"
+          :data-model-id="item.id"
           @click="$handleLinkClick($event, `/model/${item.id}`, { modelId: item.id })"
-          @contextmenu="$handleLinkContextMenu($event, `/model/${item.id}`, { modelId: item.id })"
         >
+          <!-- 隐藏的链接用于原生右键菜单 -->
+          <a 
+            :href="`/model/${item.id}`" 
+            class="carousel-hidden-link"
+            @click.prevent="goToModelDetail(item.id)"
+            aria-label="查看车型详情"
+          ></a>
           <div class="slide-image-container">
             <!-- 车型图片 - ⭐ 添加loading优化 -->
             <img 
@@ -31,7 +38,7 @@
               :alt="item.name"
               @load="handleModelImageLoad"
               @error="handleModelImageError"
-              @contextmenu.stop="handleImageContextMenu($event, item.Images && item.Images.length > 0 ? item.Images[0] : null, item.name)"
+              @contextmenu="handleImageContextMenu($event, item.Images && item.Images.length > 0 ? item.Images[0] : null, item.name)"
               class="slide-image"
               loading="eager"
               decoding="async"
@@ -304,13 +311,13 @@
           <p class="empty-text">暂无车型数据</p>
         </div>
         <div v-else class="models-grid">
-          <div 
-            class="model-display-card" 
+          <a
+            class="model-display-card model-display-link" 
             v-for="model in displayModels" 
             :key="model.id"
+            :href="`/model/${model.id}`"
             :data-model-id="model.id"
-            @click="$handleLinkClick($event, `/model/${model.id}`, { modelId: model.id })"
-            @contextmenu="$handleLinkContextMenu($event, `/model/${model.id}`, { modelId: model.id })"
+            @click.prevent="goToModelDetail(model.id)"
           >
             <div class="model-display-image">
               <img 
@@ -319,7 +326,6 @@
                 :alt="model.name"
                 @load="handleModelImageLoad"
                 @error="handleModelImageError"
-                @contextmenu.stop="handleImageContextMenu($event, model.Images && model.Images.length > 0 ? model.Images[0] : null, model.name)"
                 class="model-display-img lazy-load"
                 src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='200'%3E%3Crect width='100%25' height='100%25' fill='%23f8f9fa'/%3E%3C/svg%3E"
               >
@@ -346,7 +352,7 @@
             <div class="model-display-info">
               <h3 class="model-display-name">{{ model.name || '车型名称' }}</h3>
             </div>
-          </div>
+          </a>
         </div>
         
         <!-- 加载状态指示器 -->
@@ -376,7 +382,6 @@ import chineseToPinyin from 'chinese-to-pinyin'
 import scrollPositionMixin from '@/utils/scrollPositionMixin';
 import scrollPositionManager from '@/utils/scrollPositionManager';
 import axios from 'axios';
-import imageContextMenu from '@/utils/imageContextMenu';
 
 export default {
   name: 'Home',
@@ -781,6 +786,11 @@ export default {
       this.saveScrollPosition();
       
       this.$router.push(`/model/${modelId}`);
+    },
+    
+    // 跳转到车型详情页 - 用于<a>标签的点击处理
+    goToModelDetail(modelId) {
+      this.goToModel(modelId);
     },
 
     // 调试方法：手动测试滚动位置功能
@@ -2032,31 +2042,8 @@ export default {
       }
     },
 
-    // 处理图片右键菜单 - 使用浏览器默认菜单
-    handleImageContextMenu(event, image, title) {
-      // 获取图片URL - 优先使用原图URL
-      let imageUrl = '';
-      if (typeof image === 'string') {
-        // 如果传入的是字符串，直接使用
-        imageUrl = image;
-      } else if (image) {
-        // 优先使用原图URL，如果没有则使用其他URL
-        imageUrl = image.url || image.originalUrl || image.displayUrl || image.optimizedUrl || '';
-      }
-      
-      // 如果还是没有URL，尝试从事件目标获取
-      if (!imageUrl && event.target) {
-        imageUrl = event.target.src || event.target.getAttribute('src') || '';
-      }
-      
-      const imageTitle = title || image?.title || '图片';
-      
-      // 使用浏览器默认菜单
-      imageContextMenu.show(event, imageUrl, {
-        title: imageTitle,
-        useBrowserMenu: true
-      });
-    },
+    // 处理图片右键菜单 - 使用浏览器默认菜单（已移除，现在通过<a>标签原生支持）
+    // handleImageContextMenu 方法已不再需要，保留此注释以说明变更
 
     // 从图片元素获取车型ID
     getModelIdFromImg(img) {
@@ -2445,6 +2432,18 @@ export default {
   transition: transform 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
 
+/* 轮播图隐藏链接 - 用于支持原生右键菜单 */
+.carousel-hidden-link {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  opacity: 0;
+  cursor: pointer;
+}
+
 .slide-image-container {
   position: relative;
   width: 100%;
@@ -2571,6 +2570,8 @@ export default {
   display: flex;
   align-items: center;
   gap: 8px;
+  position: relative;
+  z-index: 2;
 }
 
 .view-details-btn:hover {
@@ -2811,6 +2812,10 @@ export default {
   transform: translateZ(0);
   backface-visibility: hidden;
   will-change: transform;
+  /* 确保<a>标签显示为块级元素 */
+  display: block;
+  text-decoration: none;
+  color: inherit;
 }
 
 .model-display-card:hover {

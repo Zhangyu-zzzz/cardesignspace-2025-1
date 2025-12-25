@@ -248,10 +248,21 @@ export default {
         // 移除resetTransform()，保持我们设置的初始缩放值
         // this.resetTransform();
         document.addEventListener('keydown', this.handleKeyDown);
-        document.addEventListener('wheel', this.handleWheel, { passive: false });
+        // 注意：wheel事件监听器应该添加到图片容器上，而不是整个document
+        // 这样可以避免阻止页面的正常滚动
+        this.$nextTick(() => {
+          const imageContainer = this.$refs.imageContainer;
+          if (imageContainer) {
+            imageContainer.addEventListener('wheel', this.handleWheel, { passive: false });
+          }
+        });
       } else {
         document.removeEventListener('keydown', this.handleKeyDown);
-        document.removeEventListener('wheel', this.handleWheel);
+        // 移除图片容器上的wheel监听器
+        const imageContainer = this.$refs.imageContainer;
+        if (imageContainer) {
+          imageContainer.removeEventListener('wheel', this.handleWheel);
+        }
         this.exitFullscreen();
       }
     },

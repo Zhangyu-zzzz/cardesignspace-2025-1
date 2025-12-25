@@ -262,13 +262,57 @@ export default {
     window.addEventListener('resize', this.handleResize)
     // 监听认证错误事件（由 apiClient 拦截器触发）
     window.addEventListener('auth:error', this.handleAuthError)
+    
+    // 添加滚动恢复机制 - 防止某些情况下页面滚动失效
+    this.setupScrollRestoration()
   },
   beforeDestroy() {
     window.removeEventListener('resize', this.handleResize)
     window.removeEventListener('auth:error', this.handleAuthError)
+    // 清理滚动恢复监听器
+    if (this.scrollRestorationUnwatch) {
+      this.scrollRestorationUnwatch()
+    }
+    // 清理定时器
+    if (this.scrollCheckInterval) {
+      clearInterval(this.scrollCheckInterval)
+    }
   },
       methods: {
     ...mapActions(['login', 'logout', 'updateUser', 'checkAuth']),
+    
+    // 设置滚动恢复机制
+    setupScrollRestoration() {
+      // 监听路由变化，确保页面滚动始终正常
+      this.scrollRestorationUnwatch = this.$router.afterEach((to, from) => {
+        // 确保body和html的overflow属性正常
+        this.$nextTick(() => {
+          // 移除可能被误设置的overflow: hidden
+          if (document.body.style.overflow === 'hidden') {
+            document.body.style.overflow = ''
+          }
+          // 确保html元素可以滚动
+          if (document.documentElement.style.overflow === 'hidden') {
+            document.documentElement.style.overflow = ''
+          }
+        })
+      })
+      
+      // 定期检查滚动状态（每5秒）- 作为防御性措施
+      this.scrollCheckInterval = setInterval(() => {
+        // 如果没有打开任何模态框或图片查看器，确保页面可以滚动
+        const hasModal = document.querySelector('.el-dialog__wrapper') || 
+                        document.querySelector('.image-viewer-overlay') ||
+                        document.querySelector('.inspiration-image-modal')
+        
+        if (!hasModal) {
+          if (document.body.style.overflow === 'hidden') {
+            console.warn('检测到页面滚动被锁定，正在恢复...')
+            document.body.style.overflow = ''
+          }
+        }
+      }, 5000)
+    },
     
     // 处理窗口大小变化
     handleResize() {

@@ -11,22 +11,24 @@ export const scrollPositionMixin = {
   },
 
   beforeDestroy() {
-    // 组件销毁前保存当前滚动位置
-    this.saveScrollPosition();
+    // ⭐ 禁用滚动位置保存，提升性能
+    // 不再保存滚动位置
+    // this.saveScrollPosition();
   },
 
   watch: {
     // 监听路由变化
     '$route'(to, from) {
       if (from.path !== to.path) {
-        // 保存旧路由的滚动位置
-        scrollPositionManager.savePosition(from.path);
-        // 恢复新路由的滚动位置（延迟执行）
-        this.$nextTick(() => {
-          setTimeout(() => {
-            this.restoreScrollPosition();
-          }, 100);
-        });
+        // ⭐ 禁用滚动位置恢复功能，提升页面切换性能
+        // 不再保存和恢复滚动位置，让页面始终从顶部开始
+        // scrollPositionManager.savePosition(from.path);
+        // 不再自动恢复滚动位置
+        // this.$nextTick(() => {
+        //   setTimeout(() => {
+        //     this.restoreScrollPosition();
+        //   }, 100);
+        // });
       }
     }
   },

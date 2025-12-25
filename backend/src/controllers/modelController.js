@@ -84,7 +84,15 @@ exports.getAllModels = async (req, res) => {
         required: false, // 允许没有图片的车型也显示
         separate: true, // 使用单独的查询，确保排序和limit正确工作
         limit: 1, // 每个车型只获取第一张图片
-        order: [['sortOrder', 'ASC'], ['createdAt', 'ASC']] // 按sortOrder排序，获取排序后的第一张图片
+        order: [['sortOrder', 'ASC'], ['createdAt', 'ASC']], // 按sortOrder排序，获取排序后的第一张图片
+        include: [
+          {
+            model: ImageAsset,
+            as: 'Assets',
+            attributes: ['variant', 'url', 'width', 'height', 'size'],
+            required: false
+          }
+        ]
       });
     }
     

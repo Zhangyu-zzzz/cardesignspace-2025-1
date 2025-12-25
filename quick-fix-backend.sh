@@ -151,3 +151,5 @@ echo "  ssh ${SERVER_USER}@${SERVER_IP} 'docker logs auto-gallery-backend'"
 
 
 
+
+

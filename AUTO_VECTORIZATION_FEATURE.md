@@ -351,3 +351,5 @@ node backend/scripts/vectorize_existing_images.js --limit 5
 
 
 
+
+

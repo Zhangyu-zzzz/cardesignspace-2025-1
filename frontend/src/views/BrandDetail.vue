@@ -83,6 +83,7 @@
                 :alt="model.name"
                 loading="lazy"
                 decoding="async"
+                fetchpriority="low"
               />
               <div v-else-if="model.isLoadingImage" class="loading-image">
                 <i class="el-icon-loading"></i>
@@ -177,7 +178,7 @@ export default {
       error: null,
       currentType: '全部车型',
       allTypes: ['轿车', 'SUV', 'MPV', 'WAGON', 'SHOOTINGBRAKE', '皮卡', '跑车', '其他'],
-      viewMode: 'list', // 'grid' 或 'list'
+      viewMode: 'grid', // 'grid' 或 'list' - ⭐ 默认使用网格模式
       // 图片预览相关
       previewVisible: false,
       previewModel: null,
@@ -211,43 +212,102 @@ export default {
     }
   },
   methods: {
-    // 获取车型图片URL的辅助方法（优先使用coverUrl）
+    // 获取车型图片URL的辅助方法（与首页保持一致：400x300，90%质量，优先medium变体）
     getModelImageUrl(model) {
-      // ⭐ 1. 首先尝试从Images中获取缩略图（最优）
-      if (model.Images && Array.isArray(model.Images) && model.Images.length > 0) {
-        return this.getImageUrl(model.Images[0]);
+      // 防御性检查，确保model是对象
+      if (!model || typeof model !== 'object') {
+        console.error('无效的模型数据:', model);
+        return '/images/default-car.jpg';
       }
       
-      // 2. 其次尝试使用模型自身的thumbnail
+      // ⭐ 卡片显示的目标尺寸（4:3比例，适合卡片显示，与首页保持一致）
+      const CARD_IMAGE_WIDTH = 400;
+      const CARD_IMAGE_HEIGHT = 300;
+      
+      // ⭐ 1. 首先尝试从Images中获取合适的变体（优先使用medium，更清晰）
+      if (model.Images && Array.isArray(model.Images) && model.Images.length > 0) {
+        const image = model.Images[0];
+        // 尝试从Assets中获取合适的变体（优先使用medium，更清晰）
+        if (image.Assets && Array.isArray(image.Assets)) {
+          // ⭐ 优先级调整：medium > small > thumbnail > thumb > 原图（优先使用更大更清晰的变体）
+          const medium = image.Assets.find(a => a.variant === 'medium');
+          if (medium && medium.url) {
+            return medium.url;
+          }
+          const small = image.Assets.find(a => a.variant === 'small');
+          if (small && small.url) {
+            return small.url;
+          }
+          const thumbnail = image.Assets.find(a => a.variant === 'thumbnail' || a.variant === 'thumb');
+          if (thumbnail && thumbnail.url) {
+            return thumbnail.url;
+          }
+        }
+        // 如果没有Assets，尝试thumbnailUrl
+        if (image.thumbnailUrl) {
+          return image.thumbnailUrl;
+        }
+        // ⭐ 回退到原图时，使用buildFallbackImageUrl限制尺寸，但保持较高质量
+        if (image.url) {
+          return this.buildFallbackImageUrl(image.url, CARD_IMAGE_WIDTH, CARD_IMAGE_HEIGHT, true);
+        }
+      }
+      
+      // 2. 其次尝试使用模型自身的thumbnail属性
       if (model.thumbnail && typeof model.thumbnail === 'string' && model.thumbnail.trim() !== '') {
         return model.thumbnail;
       }
       
-      // 3. 最后尝试使用coverUrl
+      // 3. 尝试使用模型自身的coverUrl（封面图），也限制尺寸但保持质量
       if (model.coverUrl && typeof model.coverUrl === 'string' && model.coverUrl.trim() !== '') {
-        return model.coverUrl;
+        return this.buildFallbackImageUrl(model.coverUrl, CARD_IMAGE_WIDTH, CARD_IMAGE_HEIGHT, true);
       }
       
-      // 4. 如果找不到任何图片，返回null（让模板显示占位符）
-      return null;
+      // 4. 如果找不到任何图片，返回默认图片
+      return '/images/default-car.jpg';
     },
     getImageUrl(image) {
-      // ⭐ 优先使用缩略图和小尺寸图片
-      // 优先级：thumbnailUrl > mediumUrl > smallUrl > url > originalUrl > largeUrl
+      // ⭐ 与首页保持一致：优先使用medium变体，更清晰
       if (image.Assets && Array.isArray(image.Assets)) {
-        // 从Assets中查找缩略图
+        // 优先级调整：medium > small > thumbnail > thumb
+        const medium = image.Assets.find(a => a.variant === 'medium');
+        if (medium && medium.url) return medium.url;
+        
+        const small = image.Assets.find(a => a.variant === 'small');
+        if (small && small.url) return small.url;
+        
         const thumbnail = image.Assets.find(a => a.variant === 'thumbnail' || a.variant === 'thumb');
         if (thumbnail && thumbnail.url) return thumbnail.url;
-        
-        const medium = image.Assets.find(a => a.variant === 'medium' || a.variant === 'small');
-        if (medium && medium.url) return medium.url;
       }
       if (image.thumbnailUrl) return image.thumbnailUrl;
       if (image.mediumUrl) return image.mediumUrl;
-      if (image.url) return image.url;
-      if (image.originalUrl) return image.originalUrl;
+      if (image.url) return this.buildFallbackImageUrl(image.url, 400, 300, true);
+      if (image.originalUrl) return this.buildFallbackImageUrl(image.originalUrl, 400, 300, true);
       if (image.largeUrl) return image.largeUrl;
       return '/images/default-car.jpg';
+    },
+    // ⭐ 构建回退图片URL（与首页保持一致：90%质量）
+    buildFallbackImageUrl(url, width, height, highQuality = false) {
+      if (!url) return '';
+
+      const safeWidth = width || 600;
+      const safeHeight = height || 400;
+      
+      // ⭐ 根据用途设置质量：卡片使用90%（清晰），其他使用80%
+      // highQuality为true时使用90%质量，确保卡片图片非常清晰
+      const quality = highQuality ? 90 : (width <= 300 ? 80 : 85);
+
+      if (url.includes('cardesignspace-cos-1-1259492452.cos.ap-shanghai.myqcloud.com')) {
+        const separator = url.includes('?') ? '&' : '?';
+        return `${url}${separator}imageMogr2/thumbnail/${safeWidth}x${safeHeight}/quality/${quality}`;
+      }
+
+      if (url.includes('/api/') || url.startsWith('/')) {
+        const separator = url.includes('?') ? '&' : '?';
+        return `${url}${separator}w=${safeWidth}&h=${safeHeight}&q=${quality}&f=webp`;
+      }
+
+      return url;
     },
     getDisplayName(modelName) {
       if (!modelName || !this.brand.name) return modelName;
@@ -389,12 +449,12 @@ export default {
           return;
         }
         
-        // 然后获取车型列表 - 只加载车型基本信息，不加载图片
+        // 然后获取车型列表 - 包含图片信息，确保使用车型详情页的首张图片（按sortOrder排序）
         const modelsResponse = await modelAPI.getAll({ 
           brandId, 
           limit: 1000,  // 设置一个较大的限制，获取所有车型
           page: 1,
-          includeImages: false  // 不包含图片信息，大幅提升加载速度
+          includeImages: true  // ⭐ 包含图片信息，使用按sortOrder排序后的首张图片
         });
         
         // 处理车型列表
@@ -536,11 +596,12 @@ export default {
 .brand-header {
   max-width: 1200px;
   margin: 0 auto 30px auto;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 12px;
-  padding: 30px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  /* ⭐ 移除背景框，让界面更简洁 */
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 30px 0;
+  box-shadow: none;
   display: flex;
   align-items: center;
   gap: 30px;
@@ -549,12 +610,14 @@ export default {
 .brand-logo {
   width: 120px;
   height: 120px;
-  background: rgba(255, 255, 255, 0.05);
+  /* ⭐ 添加白色背景，确保深色logo在深色背景下可见 */
+  background: #fff;
   border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  padding: 15px;
 }
 
 .brand-logo img {
@@ -588,11 +651,12 @@ export default {
 .model-filter-section {
   max-width: 1200px;
   margin: 0 auto 20px auto;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 12px;
-  padding: 25px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  /* ⭐ 移除背景框，让筛选器更简洁 */
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 0 0 20px 0;
+  box-shadow: none;
 }
 
 .model-filter-section h2 {
@@ -646,11 +710,12 @@ export default {
 .model-list {
   max-width: 1200px;
   margin: 0 auto;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 12px;
-  padding: 25px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  /* ⭐ 移除背景框，让车型网格更突出 */
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 0;
+  box-shadow: none;
 }
 
 .no-models {
@@ -673,12 +738,20 @@ export default {
   transition: all 0.3s;
   background: rgba(255, 255, 255, 0.03);
   aspect-ratio: 1;
+  /* ⭐ GPU加速优化，提升渲染性能 */
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  will-change: transform;
 }
 
 .model-card:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 15px rgba(224, 52, 38, 0.3);
   border-color: #e03426;
+}
+
+.model-card:hover .model-image img {
+  transform: scale(1.05);
 }
 
 .model-image {
@@ -695,6 +768,10 @@ export default {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  /* ⭐ GPU加速优化，提升渲染性能 */
+  transform: translateZ(0);
+  will-change: transform;
+  transition: transform 0.3s ease;
 }
 
 .no-image {

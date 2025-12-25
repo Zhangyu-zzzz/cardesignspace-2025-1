@@ -33,8 +33,8 @@
           <div class="slide-image-container">
             <!-- 车型图片 - ⭐ 添加loading优化 -->
             <img 
-              v-if="item.type === 'model' && getModelImageUrl(item)" 
-              :src="getModelImageUrl(item)"
+              v-if="item.type === 'model' && getCarouselImageUrl(item)" 
+              :src="getCarouselImageUrl(item)"
               :alt="item.name"
               @load="handleModelImageLoad"
               @error="handleModelImageError"
@@ -46,7 +46,7 @@
 
                           <!-- 占位符 -->
               <div class="slide-placeholder" :class="{ 
-                show: !getModelImageUrl(item) || 
+                show: !getCarouselImageUrl(item) || 
                       modelImageLoadError[item.id] 
               }">
               <div class="placeholder-content">
@@ -646,6 +646,52 @@ export default {
     },
     
     // 获取车型图片URL的辅助方法 - ⭐ 优化为优先使用缩略图
+    // ⭐ 获取轮播图高质量图片URL（不压缩，最高清）
+    getCarouselImageUrl(model) {
+      // 防御性检查，确保model是对象
+      if (!model || typeof model !== 'object') {
+        console.error('无效的模型数据:', model);
+        return '/images/default-car.jpg';
+      }
+      
+      // ⭐ 轮播图优先使用高质量变体或原图
+      if (model.Images && Array.isArray(model.Images) && model.Images.length > 0) {
+        const image = model.Images[0];
+        // 尝试从Assets中获取高质量变体
+        if (image.Assets && Array.isArray(image.Assets)) {
+          // 优先级：large > medium > webp > small > thumb > 原图
+          const large = image.Assets.find(a => a.variant === 'large');
+          if (large && large.url) {
+            return large.url;
+          }
+          const medium = image.Assets.find(a => a.variant === 'medium');
+          if (medium && medium.url) {
+            return medium.url;
+          }
+          const webp = image.Assets.find(a => a.variant === 'webp');
+          if (webp && webp.url) {
+            return webp.url;
+          }
+        }
+        // 如果没有Assets，直接使用原图（不压缩）
+        if (image.url) {
+          return image.url;
+        }
+        if (image.bestUrl) {
+          return image.bestUrl;
+        }
+      }
+      
+      // 尝试使用模型自身的coverUrl（封面图）
+      if (model.coverUrl && typeof model.coverUrl === 'string' && model.coverUrl.trim() !== '') {
+        return model.coverUrl;
+      }
+      
+      // 如果找不到任何图片，返回默认图片
+      return '/images/default-car.jpg';
+    },
+    
+    // 获取车型卡片图片URL（优化尺寸，平衡质量和性能）
     getModelImageUrl(model) {
       // 防御性检查，确保model是对象
       if (!model || typeof model !== 'object') {
@@ -653,28 +699,36 @@ export default {
         return '/images/default-car.jpg';
       }
       
+      // ⭐ 卡片显示的目标尺寸（4:3比例，适合卡片显示，增大尺寸提升清晰度）
+      const CARD_IMAGE_WIDTH = 400;
+      const CARD_IMAGE_HEIGHT = 300;
+      
       // ⭐ 1. 首先尝试使用缩略图（最小尺寸，加载最快）
       if (model.Images && Array.isArray(model.Images) && model.Images.length > 0) {
         const image = model.Images[0];
-        // 尝试从Assets中获取缩略图
+        // 尝试从Assets中获取合适的变体（优先使用medium，更清晰）
         if (image.Assets && Array.isArray(image.Assets)) {
-          // 优先级：thumbnail > thumb > medium > small > 原图
+          // ⭐ 优先级调整：medium > small > thumbnail > thumb > 原图（优先使用更大更清晰的变体）
+          const medium = image.Assets.find(a => a.variant === 'medium');
+          if (medium && medium.url) {
+            return medium.url;
+          }
+          const small = image.Assets.find(a => a.variant === 'small');
+          if (small && small.url) {
+            return small.url;
+          }
           const thumbnail = image.Assets.find(a => a.variant === 'thumbnail' || a.variant === 'thumb');
           if (thumbnail && thumbnail.url) {
             return thumbnail.url;
-          }
-          const medium = image.Assets.find(a => a.variant === 'medium' || a.variant === 'small');
-          if (medium && medium.url) {
-            return medium.url;
           }
         }
         // 如果没有Assets，尝试thumbnailUrl
         if (image.thumbnailUrl) {
           return image.thumbnailUrl;
         }
-        // 回退到原图
+        // ⭐ 回退到原图时，使用buildFallbackImageUrl限制尺寸，但保持较高质量
         if (image.url) {
-          return image.url;
+          return this.buildFallbackImageUrl(image.url, CARD_IMAGE_WIDTH, CARD_IMAGE_HEIGHT, true);
         }
       }
       
@@ -683,9 +737,9 @@ export default {
         return model.thumbnail;
       }
       
-      // 3. 尝试使用模型自身的coverUrl（封面图）
+      // 3. 尝试使用模型自身的coverUrl（封面图），也限制尺寸但保持质量
       if (model.coverUrl && typeof model.coverUrl === 'string' && model.coverUrl.trim() !== '') {
-        return model.coverUrl;
+        return this.buildFallbackImageUrl(model.coverUrl, CARD_IMAGE_WIDTH, CARD_IMAGE_HEIGHT, true);
       }
       
       // 4. 如果找不到任何图片，返回默认图片
@@ -778,12 +832,11 @@ export default {
     // 导航到车型详情页
     goToModel(modelId) {
       // 保存当前滚动位置和车型ID
-      const currentPosition = window.pageYOffset || document.documentElement.scrollTop;
-      console.log(`🚀 跳转到车型详情页前，当前滚动位置: ${currentPosition}px`);
-      
-      // 保存车型位置信息
-      scrollPositionManager.saveModelPosition(this.$route.path, modelId, currentPosition);
-      this.saveScrollPosition();
+      // ⭐ 禁用滚动位置保存，提升性能
+      // 不再保存滚动位置
+      // const currentPosition = window.pageYOffset || document.documentElement.scrollTop;
+      // scrollPositionManager.saveModelPosition(this.$route.path, modelId, currentPosition);
+      // this.saveScrollPosition();
       
       this.$router.push(`/model/${modelId}`);
     },
@@ -809,71 +862,11 @@ export default {
       console.log('========================');
     },
 
-    // 简化的滚动位置恢复 - 只在必要时进行最小预加载
+    // ⭐ 禁用滚动位置恢复功能，提升页面加载性能
+    // ⭐ 禁用滚动位置恢复功能，提升页面加载性能
     async preloadDataForScrollRestore() {
-      // 检查组件是否仍然活跃
-      if (!this.isComponentActive) {
-        return;
-      }
-      
-      // 检查是否已经在加载中，避免重复调用
-      if (this.displayModelsLoading || this.isInitializing) {
-        console.log('车型数据正在加载中或初始化中，跳过预加载');
-        return;
-      }
-      
-      // 移除路由检查，允许图片变体请求功能
-      // if (this.$route.path !== '/') {
-      //   console.log('不在首页，跳过滚动位置恢复');
-      //   return;
-      // }
-      
-      const modelPosition = scrollPositionManager.getModelPosition(this.$route.path);
-      const targetPosition = modelPosition ? modelPosition.position : scrollPositionManager.getPosition(this.$route.path);
-      
-      if (targetPosition <= 0) {
-        console.log('没有需要恢复的滚动位置，跳过预加载');
-        return;
-      }
-
-      console.log(`🎯 需要恢复到滚动位置: ${targetPosition}px`);
-      
-      // 简化的估算：只加载必要的1-2页数据
-      const carouselHeight = 600;
-      const brandsHeight = 300;
-      const headerHeight = 150;
-      const paddingHeight = 200;
-      const itemHeight = 250;
-      
-      const fixedHeight = carouselHeight + brandsHeight + headerHeight + paddingHeight;
-      const availableHeight = targetPosition - fixedHeight;
-      
-      // 只在目标位置明显超出当前内容时才预加载
-      if (availableHeight > 0 && this.displayModels.length < 20) {
-        console.log(`📊 需要预加载约 ${Math.ceil(availableHeight / itemHeight)} 个车型`);
-        
-        // 最多预加载1页，避免过度加载
-        if (this.hasMoreDisplayModels && !this.displayModelsLoading) {
-          try {
-            this.currentDisplayPage = 2;
-            await this.fetchDisplayModels();
-            console.log(`✅ 预加载完成，共加载 ${this.displayModels.length} 个车型`);
-          } catch (error) {
-            console.error('预加载数据失败:', error);
-          }
-        }
-      }
-      
-      // 延迟恢复滚动位置，给页面渲染时间
-      this.$nextTick(() => {
-        setTimeout(() => {
-          if (modelPosition) {
-            this.restoreToModelPosition(modelPosition.modelId, targetPosition);
-          } else {
-            this.scrollToPosition(targetPosition);
-          }
-        }, 200);
-      });
+      // 不再执行滚动位置恢复相关的预加载
+      return;
     },
 
     // 根据车型ID恢复位置
@@ -1151,7 +1144,7 @@ export default {
             }
           });
         }, {
-          rootMargin: '300px', // ⭐ 增加提前加载距离，提升滚动流畅度
+          rootMargin: '150px', // ⭐ 优化：减少提前加载距离，避免同时加载过多图片导致卡顿
           threshold: 0.01 // ⭐ 当图片刚进入视口时就开始加载
         });
         
@@ -1204,7 +1197,8 @@ export default {
           setTimeout(() => {
             if (this.isComponentActive) {
               const img = new Image();
-              img.src = this.getOptimizedImageUrl(model.Images[0], 300, 200);
+              // ⭐ 使用优化的尺寸进行预加载（400x300，与卡片显示一致）
+              img.src = this.getOptimizedImageUrl(model.Images[0], 400, 300);
               // 不需要处理onload/onerror，只是预加载
             }
           }, index * 1000); // 每1秒预加载一张图片，大幅减少并发
@@ -1213,14 +1207,15 @@ export default {
     },
     
     // 根据上下文返回最佳图片URL（优先使用变体）
-    getOptimizedImageUrl(imageInput, width = 300, height = 200, context = 'card') {
+    getOptimizedImageUrl(imageInput, width = 400, height = 300, context = 'card') {
       // 检查组件是否仍然活跃
       if (!this.isComponentActive) {
         // 如果请求原图，直接返回原图URL，不添加压缩参数
         if (context === 'original') {
           return imageInput?.url || '';
         }
-        return this.buildFallbackImageUrl(imageInput?.url || '', width, height);
+        // ⭐ 卡片场景使用高质量
+        return this.buildFallbackImageUrl(imageInput?.url || '', width, height, context === 'card');
       }
       
       const { imageId, url, image } = this.normalizeImageInput(imageInput);
@@ -1266,7 +1261,8 @@ export default {
         });
       }
 
-      return this.buildFallbackImageUrl(url, width, height);
+      // ⭐ 卡片场景使用高质量，确保图片清晰
+      return this.buildFallbackImageUrl(url, width, height, context === 'card');
     },
     
     // 队列管理变体请求
@@ -1343,20 +1339,24 @@ export default {
       return `${imageId}|${context}|${width || ''}|${height || ''}`;
     },
 
-    buildFallbackImageUrl(url, width, height) {
+    buildFallbackImageUrl(url, width, height, highQuality = false) {
       if (!url) return '';
 
       const safeWidth = width || 600;
       const safeHeight = height || 400;
+      
+      // ⭐ 根据用途设置质量：卡片使用90%（更清晰），其他使用80%
+      // highQuality为true时使用90%质量，确保卡片图片非常清晰
+      const quality = highQuality ? 90 : (width <= 300 ? 80 : 85);
 
       if (url.includes('cardesignspace-cos-1-1259492452.cos.ap-shanghai.myqcloud.com')) {
         const separator = url.includes('?') ? '&' : '?';
-        return `${url}${separator}imageMogr2/thumbnail/${safeWidth}x${safeHeight}/quality/80`;
+        return `${url}${separator}imageMogr2/thumbnail/${safeWidth}x${safeHeight}/quality/${quality}`;
       }
 
       if (url.includes('/api/') || url.startsWith('/')) {
         const separator = url.includes('?') ? '&' : '?';
-        return `${url}${separator}w=${safeWidth}&h=${safeHeight}&q=80&f=webp`;
+        return `${url}${separator}w=${safeWidth}&h=${safeHeight}&q=${quality}&f=webp`;
       }
 
       return url;
@@ -1456,7 +1456,8 @@ export default {
       }
 
       if (cacheKey && !this.imageVariantCache[cacheKey]) {
-        const fallback = this.buildFallbackImageUrl(fallbackUrl, width, height);
+        // ⭐ 卡片场景使用高质量
+        const fallback = this.buildFallbackImageUrl(fallbackUrl, width, height, context === 'card');
         this.$set(this.imageVariantCache, cacheKey, fallback);
         this.applyOptimizedUrlToImage(imageId, fallback, imageRef);
       }
@@ -1764,32 +1765,10 @@ export default {
           return;
         }
         
-        // 检查是否需要恢复滚动位置，如果是，需要加载更多数据
-        const targetPosition = scrollPositionManager.getPosition(this.$route.path);
+        // ⭐ 禁用滚动位置恢复功能，提升页面加载性能
+        // 不再检查是否需要恢复滚动位置，始终从第一页开始加载
         let needMoreData = false;
         let estimatedPages = 1;
-        
-        if (targetPosition > 0 && this.currentDisplayPage === 1) {
-          // 更保守的估算：考虑轮播图、品牌区域、间距等
-          const carouselHeight = 600; // 轮播图高度（增加）
-          const brandsHeight = 300; // 品牌区域高度（增加）
-          const headerHeight = 150; // 头部高度（增加）
-          const paddingHeight = 200; // 各种间距（增加）
-          const itemHeight = 250; // 每个车型卡片的高度（减少，更保守）
-          
-          const fixedHeight = carouselHeight + brandsHeight + headerHeight + paddingHeight;
-          const availableHeight = targetPosition - fixedHeight;
-          const estimatedItemsNeeded = Math.ceil(availableHeight / itemHeight);
-          estimatedPages = Math.ceil(estimatedItemsNeeded / this.displayPageSize);
-          
-          // 保守策略：至少加载估算页数的2倍
-          const conservativePages = Math.max(estimatedPages * 2, 3);
-          needMoreData = conservativePages > 1;
-          
-          console.log(`🎯 需要恢复位置: ${targetPosition}px`);
-          console.log(`📏 高度分析: 固定高度${fixedHeight}px, 可用高度${availableHeight}px`);
-          console.log(`📊 估算需要加载: ${conservativePages}页数据 (约${estimatedItemsNeeded * 2}个车型)`);
-        }
         
         // 构建API请求参数
         // 根据排序类型设置 sortBy 和 sortOrder
@@ -2003,8 +1982,8 @@ export default {
             }
             // 显示图片元素
             img.style.display = 'block';
-            // 重新加载图片
-            img.src = this.getOptimizedImageUrl(model.Images[0], 300, 200);
+            // 重新加载图片 - 使用优化的尺寸（400x300）
+            img.src = this.getOptimizedImageUrl(model.Images[0], 400, 300);
           }
         });
       }
@@ -2287,13 +2266,8 @@ export default {
       this.initLazyLoading();
       this.observeLazyImages();
       
-      // 检查是否需要预加载更多数据以支持滚动位置恢复
-      // 延迟执行，确保初始数据加载完成
-      setTimeout(() => {
-        if (this.isComponentActive && !this.displayModelsLoading) {
-          this.preloadDataForScrollRestore();
-        }
-      }, 1000);
+      // ⭐ 禁用滚动位置恢复功能，不再预加载数据
+      // 不再执行预加载
       
     } catch (error) {
       console.error('初始化数据失败:', error);

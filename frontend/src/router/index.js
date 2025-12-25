@@ -163,10 +163,7 @@ const router = new VueRouter({
   routes,
   // ⭐ 配置页面切换时的滚动行为
   scrollBehavior(to, from, savedPosition) {
-    // 如果有保存的滚动位置（浏览器后退/前进按钮），则恢复到该位置
-    if (savedPosition) {
-      return savedPosition
-    }
+    // ⭐ 优化：禁用滚动位置恢复，始终回到顶部，提升页面切换性能
     // 如果是锚点跳转，滚动到锚点位置
     if (to.hash) {
       return {
@@ -174,7 +171,7 @@ const router = new VueRouter({
         behavior: 'smooth'
       }
     }
-    // 其他情况，始终滚动到页面顶部
+    // 所有情况都滚动到页面顶部，包括浏览器前进/后退
     return { x: 0, y: 0 }
   }
 })
